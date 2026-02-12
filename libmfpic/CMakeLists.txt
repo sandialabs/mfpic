@@ -1,0 +1,82 @@
+add_library(libmfpic
+  AbsorbingParticleBoundary.cpp
+  BuildOutputParametersFromYaml.cpp
+  BuildParticleBoundariesFromYaml.cpp
+  BuildSpeciesMapFromYaml.cpp
+  ConjugateGradientLinearSolver.cpp
+  DGAssembly.cpp
+  DGEulerAssembly.cpp
+  DGEulerBoundaryConditionsFactory.cpp
+  DGEulerOperationsFactory.cpp
+  DGEulerInitialConditionsFactory.cpp
+  DGEulerOperations.cpp
+  DirichletBoundaryConditionsConstant.cpp
+  DirichletBoundaryConditionsFactory.cpp
+  DumpParticles.cpp
+  ElectrostaticFieldOperations.cpp
+  ElectrostaticFieldState.cpp
+  Errors.cpp
+  Euler.cpp
+  EulerFlux.cpp
+  IntegratedCharge.cpp
+  LowFidelityState.cpp
+  MeshDataWriter.cpp
+  MeshFactory.cpp
+  MeshUtilities.cpp
+  ParticleBoundary.cpp
+  ParticleContainer.cpp
+  ParticleOperations.cpp
+  PeriodicParticleBoundary.cpp
+  Pinning.cpp
+  ReflectingParticleBoundary.cpp
+  RunSimulation.cpp
+  SourcesFactory.cpp
+  TimeSteppingFactory.cpp
+  UniformMeshDistribution.cpp
+  VerletTimeIntegrator.cpp
+)
+target_include_directories(libmfpic PRIVATE
+  ${CMAKE_SOURCE_DIR}
+)
+target_include_directories(libmfpic SYSTEM PRIVATE
+  mfem
+)
+target_link_libraries(libmfpic
+  HDF5::HDF5
+  mfem
+  yaml-cpp
+)
+
+mfpic_unit_test(AbsorbingParticleBoundary)
+mfpic_unit_test(BuildOutputParametersFromYaml)
+mfpic_unit_test(BuildParticleBoundariesFromYaml)
+mfpic_unit_test(BuildParticlesFromYaml)
+mfpic_unit_test(BuildSpeciesMapFromYaml)
+mfpic_unit_test(ConjugateGradientLinearSolver)
+mfpic_unit_test(DGEulerAssembly)
+mfpic_unit_test(DGEulerBoundaryConditions)
+mfpic_unit_test(DGEulerBoundaryConditionsFactory)
+mfpic_unit_test(DGEulerInitialConditionsFactory)
+mfpic_unit_test(DGEulerOperations)
+mfpic_unit_test(DGEulerOperationsFactory)
+mfpic_unit_test(DirichletBoundaryConditionsConstant)
+mfpic_unit_test(DirichletBoundaryConditionsFactory)
+mfpic_unit_test(DumpParticles)
+mfpic_unit_test(ElectrostaticFieldOperations)
+mfpic_unit_test(ElectrostaticFieldState)
+mfpic_unit_test(ElementFaceContainer)
+mfpic_unit_test(Errors)
+mfpic_unit_test(Euler)
+mfpic_unit_test(EulerFlux)
+mfpic_unit_test(LoadUniformMaxwellianParticles)
+mfpic_unit_test(LowFidelityState)
+mfpic_unit_test(MeshDataWriter)
+mfpic_unit_test(MeshFactory)
+mfpic_unit_test(MeshUtilities)
+mfpic_unit_test(ParticleContainer)
+mfpic_unit_test(ParticleOperations)
+mfpic_unit_test(Pinning)
+mfpic_unit_test(ReflectingParticleBoundary)
+mfpic_unit_test(SourcesFactory)
+mfpic_unit_test(TimeSteppingFactory)
+mfpic_unit_test(UniformMeshDistribution)
