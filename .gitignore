@@ -1,0 +1,7 @@
+**/__pycache__
+build*
+.vscode
+.cache
+compile_commands.json
+.clangd
+*.code-workspace
