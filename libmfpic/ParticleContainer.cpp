@@ -32,4 +32,8 @@ void ParticleContainer::addParticles(const ParticleContainer &particles) {
   }
 }
 
+void ParticleContainer::cleanOutDeadParticles() {
+  std::erase_if(particle_list_, [](const Particle& particle) {return not particle.is_alive;});
+}
+
 } // namespace mfpic

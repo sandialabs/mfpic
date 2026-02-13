@@ -22,6 +22,8 @@ public:
 
   void addParticles(const ParticleContainer& particles);
 
+  void cleanOutDeadParticles();
+
 private:
   std::vector<Particle> particle_list_;
 };

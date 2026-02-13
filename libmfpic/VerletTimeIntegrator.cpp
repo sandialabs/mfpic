@@ -29,6 +29,13 @@ void VerletTimeIntegrator::advanceTimestep(
 
   particle_container = particle_operations.accelerate(dt/2, particle_container, field_state);
   particle_container = particle_operations.move(dt, particle_container);
+  particle_container.cleanOutDeadParticles();
+  double ion_weight = 0.0;
+  for (const Particle& particle : particle_container) {
+    if (particle.species.charge > 0)
+      ion_weight += particle.weight;
+  }
+  std::cout << "LTM weight is " << ion_weight << std::endl;
   total_charge.addCharge(particle_operations.assembleCharge(particle_container));
 
   field_operations.fieldSolve(field_state, total_charge);
