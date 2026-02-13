@@ -300,6 +300,7 @@ The integer is a mesh "attribute" in MFEM parlance or the index of the sideset i
 **``Type``**: The type of particle boundary.
 The options are:
 - **``Reflecting``**: Specularly reflects incident particles.
+- **``Absorbing``**: Incident particles are instantly removed from the simulation.
 
 Periodic boundaries are detected and applied automatically.
 
@@ -308,7 +309,7 @@ Periodic boundaries are detected and applied automatically.
 Particles:
     Boundary Conditions:
         - Side: left
-          Type: Reflecting
+          Type: Absorbing
         - Side: 3
           Type: Reflecting
     Default Boundary Condition: Reflecting
