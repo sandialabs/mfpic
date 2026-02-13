@@ -59,7 +59,6 @@ jobs:
         spack install --test=root
         cd build
         spack build-env mfpic -- bash
-        ctest
+        ctest --output-on-failure
         exit
         spack env deactivate
-        spack env rm -y mfpic-dev
