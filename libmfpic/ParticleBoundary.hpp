@@ -24,6 +24,9 @@ public:
    * @returns Particle with boundary condition applied.
    */
   virtual Particle applyBoundary(int element_face, const Particle& incoming_particle) const = 0;
+
+  /// Dtor.
+  virtual ~ParticleBoundary() = default;
 };
 
 /// Abstract class for creating particle boundaries.
