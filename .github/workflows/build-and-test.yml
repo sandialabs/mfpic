@@ -1,0 +1,61 @@
+name: Build and test
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build_and_test:
+    runs-on: ${{ matrix.os }}
+
+    env:
+      SPACK_DISABLE_LOCAL_CONFIG: true
+      SPACK_USER_CACHE_PATH: spack_cache
+      SPACK_VERSION: v1.1.1
+
+    strategy:
+      fail-fast: false
+
+      matrix:
+        os: [ubuntu-latest]
+        build_type: [Release, Debug]
+        compiler: [gcc, llvm]
+
+    steps:
+    - name: Cache spack
+      id: cache-spack
+      uses: actions/cache@v4
+      with:
+        path: spack
+        key: ${{env.SPACK_VERSION}}-${{matrix.os}}-${{matrix.build_type}}-${{matrix.compiler}}
+
+    - name: Check out spack
+      if: ${{ steps.cache-spack.outputs.cache-hit != 'true' }}
+      uses: actions/checkout@v4
+      with:
+        repository: spack/spack
+        path: spack
+        ref: ${{env.SPACK_VERSION}}
+
+    - name: Check out mfpic
+      uses: actions/checkout@v4
+      with:
+        path: mfpic
+
+    - name: Build and test
+      run: |
+        . spack/share/spack/setup-env.sh
+        spack bootstrap now
+        spack compiler find
+        spack env rm -y mfpic-dev || true
+        spack env create mfpic-dev
+        spack env activate mfpic-dev
+        spack repo add mfpic/spack_repo/mfpic
+        spack add mfpic build_type=${{matrix.build_type}} %${{matrix.compiler}}
+        mkdir build
+        spack develop --no-clone --path $PWD/mfpic --build-directory $PWD/build mfpic
+        spack concretize -f --test=root
+        spack install --test=root --verbose --until=build
