@@ -163,4 +163,6 @@ namespace mfpic {
     }
   }
 
+  DGAssembly::~DGAssembly() = default;
+
 } // namespace mfpic

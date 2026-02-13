@@ -133,6 +133,9 @@ public:
   /// where max_char_speed is updated during RHS evaluation
   mfem::real_t getMaxCharSpeed() const { return max_characteristic_speed_; }
 
+  /// Dtor.
+  virtual ~DGAssembly();
+
 private:
   /// Spatial dimension
   const int dim_;

@@ -24,6 +24,9 @@ public:
    * @returns Particle with boundary condition applied.
    */
   virtual Particle applyBoundary(int element_face, const Particle& incoming_particle) const = 0;
+
+  /// Dtor.
+  virtual ~ParticleBoundary();
 };
 
 /// Abstract class for creating particle boundaries.
@@ -59,6 +62,9 @@ public:
   virtual std::shared_ptr<ParticleBoundary> createBoundary(
     const Parameters& factory_params
   ) const = 0;
+
+  /// Dtor.
+  virtual ~ParticleBoundaryFactory();
 
 private:
   /// Boundary attribute to which this particle boundary will apply.
