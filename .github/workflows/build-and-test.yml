@@ -46,7 +46,6 @@ jobs:
     - name: Build and test
       run: |
         . spack/share/spack/setup-env.sh
-        spack repo update
         spack bootstrap now
         spack compiler find
         spack env create mfpic-dev
