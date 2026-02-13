@@ -25,7 +25,7 @@ jobs:
       uses: actions/cache@v4
       with:
         path: spack
-        key: ${{matrix}}
+        key: ${{matrix.os}}-${{matrix.build_type}}-${{matrix.compiler}}
 
     - name: Check out spack
       uses: actions/checkout@v4
