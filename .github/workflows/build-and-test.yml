@@ -22,12 +22,14 @@ jobs:
 
     steps:
     - name: Cache spack
+      id: cache-spack
       uses: actions/cache@v4
       with:
         path: spack
         key: ${{matrix.os}}-${{matrix.build_type}}-${{matrix.compiler}}
 
     - name: Check out spack
+      if: ${{ steps.cache-spack.outputs.cache-hit != 'true' }}
       uses: actions/checkout@v4
       with:
         repository: spack/spack
