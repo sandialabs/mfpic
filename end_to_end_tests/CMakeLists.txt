@@ -1,1 +1,2 @@
+add_subdirectory(sheath)
 add_subdirectory(twostream_instability)
