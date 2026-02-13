@@ -57,7 +57,7 @@ jobs:
         mkdir build
         spack develop --no-clone --path $PWD/mfpic --build-directory $PWD/build mfpic
         spack concretize -f --test=root
-        spack install --only=dependencies --test=root --until=cmake
+        spack install --test=root --until=cmake
         cd build
         spack build-env mfpic -- bash
         ninja
