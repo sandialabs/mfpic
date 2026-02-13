@@ -45,9 +45,6 @@ jobs:
     - name: Build and test
       run: |
         . spack/share/spack/setup-env.sh
-        cd spack
-        git pull
-        cd -
         spack repo update
         spack bootstrap now
         spack compiler find
