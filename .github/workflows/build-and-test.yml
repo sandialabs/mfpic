@@ -59,3 +59,10 @@ jobs:
         spack install --test=root
         despacktivate
         spack env rm -y mfpic-dev
+
+    - name: Temporarily save cache always
+      if: always()
+      uses: actions/cache/save@v5
+      with:
+        path: spack
+        key: ${{env.SPACK_VERSION}}-${{matrix.os}}-${{matrix.build_type}}-${{matrix.compiler}}
