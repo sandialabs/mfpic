@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.constants import proton_mass, elementary_charge, epsilon_0, electron_volt, Boltzmann
+from scipy.constants import electron_mass, proton_mass, elementary_charge, epsilon_0, electron_volt, Boltzmann
 
 number_density = 1.0e20
 temperature = 10.0 * electron_volt / Boltzmann
@@ -8,11 +8,12 @@ dx = debye_length
 num_elements = 60
 domain_length = num_elements * debye_length
 most_probable_ion_speed = np.sqrt(2.0 * Boltzmann * temperature / proton_mass)
+most_probable_electron_speed =np.sqrt(2.0 * Boltzmann * temperature / electron_mass)
 ion_acoustic_transit_time = domain_length / most_probable_ion_speed
-dt = dx / (3.0 * most_probable_ion_speed)
+dt = dx / (3.0 * most_probable_electron_speed)
 num_macroparticles_per_population = 100 * num_elements
-source_number_density_fraction = 1.0e-2
-source_num_macroparticles = num_elements
+source_number_density_fraction = 7.5e-5
+source_num_macroparticles = 5
 
 def run(mfpic_executable):
   import subprocess
@@ -34,8 +35,8 @@ Time Stepping:
   Time Step Size: {dt}
 
 Species:
-  massive_electron:
-    Mass: {proton_mass}
+  electron:
+    Mass: {electron_mass}
     Charge: {-elementary_charge}
   proton:
     Mass: {proton_mass}
@@ -47,23 +48,13 @@ Particles:
       Type: Absorbing
   Default Boundary Condition: Reflecting
   Initial Conditions:
-    - Species: [proton]
-      Number of Macroparticles per Species: {num_macroparticles_per_population}
-      Constant:
-        Temperature: {temperature}
-        Number Density: {number_density}
-    - Species: [massive_electron]
+    - Species: [proton, electron]
       Number of Macroparticles per Species: {num_macroparticles_per_population}
       Constant:
         Temperature: {temperature}
         Number Density: {number_density}
   Sources:
-    - Species: [proton]
-      Number of Macroparticles per Species: {source_num_macroparticles}
-      Constant:
-        Temperature: {temperature}
-        Number Density: {number_density * source_number_density_fraction}
-    - Species: [massive_electron]
+    - Species: [proton, electron]
       Number of Macroparticles per Species: {source_num_macroparticles}
       Constant:
         Temperature: {temperature}
