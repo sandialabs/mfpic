@@ -21,6 +21,12 @@ jobs:
         compiler: [gcc, llvm]
 
     steps:
+    - name: Cache spack
+      uses: actions/cache@v4
+      with:
+        path: spack
+        key: ${{matrix}}
+
     - name: Check out spack
       uses: actions/checkout@v4
       with:
