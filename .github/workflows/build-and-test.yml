@@ -57,7 +57,11 @@ jobs:
         spack develop --no-clone --path $PWD/mfpic --build-directory $PWD/build mfpic
         spack concretize -f --test=root
         spack install --test=root
-        despacktivate
+        cd build
+        spack build-env mfpic -- bash
+        ctest
+        exit
+        spack env deactivate
         spack env rm -y mfpic-dev
 
     - name: Temporarily save cache always
