@@ -49,7 +49,6 @@ jobs:
         spack bootstrap now
         spack compiler find
         spack env rm -y mfpic-dev || true
-        spack uninstall -y -a mfpic || true
         spack env create mfpic-dev
         spack env activate mfpic-dev
         spack repo add mfpic/spack_repo/mfpic
