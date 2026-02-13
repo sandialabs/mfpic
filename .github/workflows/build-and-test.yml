@@ -10,7 +10,7 @@ jobs:
 
     env:
       SPACK_DISABLE_LOCAL_CONFIG: true
-      SPACK_USER_CACHE_PATH: ~/spack_cache
+      SPACK_USER_CACHE_PATH: spack_cache
 
     strategy:
       fail-fast: false
@@ -25,14 +25,14 @@ jobs:
       uses: actions/checkout@v4
       with:
         repository: spack/spack
-        path: ~/spack
+        path: spack
 
     - name: Check out mfpic
       uses: actions/checkout@v4
 
     - name: Build and test
       run: >
-        . ~/spack/share/spack/setup-env.sh
+        . spack/share/spack/setup-env.sh
         spack bootstrap now
         spack compiler find
         spack env create mfpic-dev
