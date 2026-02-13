@@ -9,8 +9,8 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     env:
-      SPACK_DISABLE_LOCAL_CONFIG=true
-      SPACK_USER_CACHE_PATH=~/spack_cache
+      SPACK_DISABLE_LOCAL_CONFIG: true
+      SPACK_USER_CACHE_PATH: ~/spack_cache
 
     strategy:
       fail-fast: false
