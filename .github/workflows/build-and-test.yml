@@ -1,0 +1,50 @@
+name: Build and test
+
+on:
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build_and_test:
+    runs-on: ${{ matrix.os }}
+
+    env:
+      SPACK_DISABLE_LOCAL_CONFIG=true
+      SPACK_USER_CACHE_PATH=~/spack_cache
+
+    strategy:
+      fail-fast: false
+
+      matrix:
+        os: [ubuntu-latest]
+        build_type: [Release, Debug]
+        compiler: [gcc, llvm]
+
+    steps:
+    - name: Check out spack
+      uses: actions/checkout@v4
+      with:
+        repository: spack/spack
+        path: ~/spack
+
+    - name: Check out mfpic
+      uses: actions/checkout@v4
+
+    - name: Build and test
+      run: >
+        . ~/spack/share/spack/setup-env.sh
+        spack bootstrap now
+        spack compiler find
+        spack env create mfpic-dev
+        spack env activate mfpic-dev
+        spack repo add mfpic/spack_repo/mfpic
+        spack add mfpic build_type=${{matrix.build_type}} %${{matrix.compiler}}
+        spack concretize -f --test=root
+        spack install --test=root
+
+    # - name: Set reusable strings
+    #   # Turn repeated input strings (such as the build output directory) into step outputs. These step outputs can be used throughout the workflow file.
+    #   id: strings
+    #   shell: bash
+    #   run: |
+    #     echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
