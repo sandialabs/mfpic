@@ -10,7 +10,7 @@ namespace mfem {
 
 namespace mfpic {
 
-struct Particle;
+class Particle;
 
 /// Abstract class for applying boundary conditions to particles.
 class ParticleBoundary {
@@ -24,9 +24,6 @@ public:
    * @returns Particle with boundary condition applied.
    */
   virtual Particle applyBoundary(int element_face, const Particle& incoming_particle) const = 0;
-
-  /// Dtor.
-  virtual ~ParticleBoundary() = default;
 };
 
 /// Abstract class for creating particle boundaries.
