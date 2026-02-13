@@ -49,6 +49,7 @@ jobs:
         spack bootstrap now
         spack compiler find
         spack env rm -y mfpic-dev
+        spack uninstall -y mfpic
         spack env create mfpic-dev
         spack env activate mfpic-dev
         spack repo add mfpic/spack_repo/mfpic
@@ -56,9 +57,8 @@ jobs:
         mkdir build
         spack develop --no-clone --path $PWD/mfpic --build-directory $PWD/build mfpic
         spack concretize -f --test=root
-        spack install --test=root
+        spack install --only=dependencies --test=root
         cd build
         spack build-env mfpic -- bash
+        ninja
         ctest --output-on-failure
-        exit
-        spack env deactivate
