@@ -144,7 +144,7 @@ private:
   mfem::FiniteElementSpace &finite_element_space_;
 
   /// Base Nonlinear Form
-  std::unique_ptr<mfem::NonlinearForm> nonlinear_form_;
+  std::shared_ptr<mfem::NonlinearForm> nonlinear_form_;
   /// element-wise weak divergence (trial space ByDim)
   std::vector<mfem::DenseMatrix> weak_divergence_;
   /// element-wise inverse mass matrix (trial space ByDim)
@@ -152,17 +152,17 @@ private:
   /// global maximum characteristic speed. Updated by form integrators
   mutable mfem::real_t max_characteristic_speed_;
   /// Flux function \f$F(U)\f$ 
-  std::unique_ptr<mfem::FluxFunction> flux_function_;
+  std::shared_ptr<mfem::FluxFunction> flux_function_;
   /// Numerical flux function for computing \f$\hat{F} \cdot n\f$
-  std::unique_ptr<mfem::NumericalFlux> numerical_flux_function_;
+  std::shared_ptr<mfem::NumericalFlux> numerical_flux_function_;
   /// Element integration form. Should contain ComputeFlux
-  std::unique_ptr<mfem::HyperbolicFormIntegrator> hyperbolic_form_integrator_;
+  std::shared_ptr<mfem::HyperbolicFormIntegrator> hyperbolic_form_integrator_;
   /// Number of equations
   int num_equations_;
   /// ghost boundary condition setters
-  std::vector<std::unique_ptr<DGGhostBC>> ghost_bcs_;
+  std::vector<std::shared_ptr<DGGhostBC>> ghost_bcs_;
   /// ghost boundary condition integrators
-  std::vector<std::unique_ptr<mfem::NonlinearFormIntegrator>> ghost_bc_integrators_;
+  std::vector<std::shared_ptr<mfem::NonlinearFormIntegrator>> ghost_bc_integrators_;
 
   /// Compute element-wise inverse mass matrix
   void computeInvMass_();
