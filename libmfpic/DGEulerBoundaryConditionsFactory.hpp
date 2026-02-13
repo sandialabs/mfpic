@@ -14,7 +14,7 @@ namespace YAML {
 
 namespace mfpic {
 
-class DGGhostBC;
+struct DGGhostBC;
 
 enum class DGEulerBCType { REFLECTING };
 

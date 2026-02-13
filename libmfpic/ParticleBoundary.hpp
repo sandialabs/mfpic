@@ -10,7 +10,7 @@ namespace mfem {
 
 namespace mfpic {
 
-class Particle;
+struct Particle;
 
 /// Abstract class for applying boundary conditions to particles.
 class ParticleBoundary {
