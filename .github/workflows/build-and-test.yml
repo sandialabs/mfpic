@@ -33,7 +33,7 @@ jobs:
         path: mfpic
 
     - name: Build and test
-      run: >
+      run: |
         . spack/share/spack/setup-env.sh
         spack bootstrap now
         spack compiler find
