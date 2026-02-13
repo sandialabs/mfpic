@@ -1,3 +1,4 @@
+#include <libmfpic/AbsorbingParticleBoundary.hpp>
 #include <libmfpic/BuildParticleBoundariesFromYaml.hpp>
 #include <libmfpic/Errors.hpp>
 #include <libmfpic/MeshUtilities.hpp>
@@ -16,6 +17,9 @@ std::shared_ptr<ParticleBoundaryFactory> createParticleBoundaryFactoryFromTypeNo
   const std::string type = type_node.as<std::string>();
   if (type == "Reflecting") {
     boundary_factory = std::make_shared<ReflectingParticleBoundaryFactory>();
+  }
+  else if (type == "Absorbing") {
+    boundary_factory = std::make_shared<AbsorbingParticleBoundaryFactory>();
   } else {
     errorWithUserMessage(formatParseMessage(type_node, "Invalid particle boundary type!"));
   }
