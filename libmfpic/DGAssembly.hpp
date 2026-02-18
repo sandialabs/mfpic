@@ -38,8 +38,8 @@ public:
   */
   DGAssembly(
     mfem::FiniteElementSpace &finite_element_space,
-    std::unique_ptr<mfem::FluxFunction> &&flux_function,
-    std::unique_ptr<mfem::NumericalFlux> &&numerical_flux_function
+    std::shared_ptr<mfem::FluxFunction> flux_function,
+    std::shared_ptr<mfem::NumericalFlux> numerical_flux_function
   );
   
   /**
