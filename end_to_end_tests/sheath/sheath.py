@@ -5,19 +5,20 @@ number_density = 1.0e20
 temperature = 10.0 * electron_volt / Boltzmann
 debye_length = np.sqrt(epsilon_0 * Boltzmann * temperature / (number_density * elementary_charge**2.0))
 dx = debye_length
-num_elements = 60
+num_elements = 120
 domain_length = num_elements * debye_length
 most_probable_ion_speed = np.sqrt(2.0 * Boltzmann * temperature / proton_mass)
 most_probable_electron_speed =np.sqrt(2.0 * Boltzmann * temperature / electron_mass)
 ion_acoustic_transit_time = domain_length / most_probable_ion_speed
-dt = dx / (3.0 * most_probable_electron_speed)
-num_macroparticles_per_population = 100 * num_elements
+electron_plasma_frequency = np.sqrt(number_density * elementary_charge**2.0 / electron_mass / epsilon_0)
+dt = min(dx / (3.0 * most_probable_electron_speed), 0.1 / electron_plasma_frequency)
+num_macroparticles_per_population = 1000 * num_elements
 bohm_speed = np.sqrt(Boltzmann * temperature / proton_mass)
 bohm_current_density = number_density * elementary_charge * bohm_speed * np.exp(-0.5)
-ion_wall_flux_density = bohm_current_density / elementary_charge
+ion_wall_flux_density = 2 * bohm_current_density / elementary_charge
 source_number_density = ion_wall_flux_density / domain_length * dt
 source_number_density_fraction = source_number_density / number_density
-source_num_macroparticles = 5
+source_num_macroparticles = int(source_number_density_fraction * num_macroparticles_per_population)
 
 def run(mfpic_executable):
   import subprocess
@@ -27,6 +28,8 @@ Fields:
   Basis Order: 1
   Boundary Conditions:
     - Side: left
+      Value: 0.0
+    - Side: right
       Value: 0.0
 
 Mesh:
@@ -47,10 +50,8 @@ Species:
     Charge: {elementary_charge}
 
 Particles:
-  Boundary Conditions:
-    - Side: left
-      Type: Absorbing
-  Default Boundary Condition: Reflecting
+  Boundary Conditions: []
+  Default Boundary Condition: Absorbing
   Initial Conditions:
     - Species: [proton, electron]
       Number of Macroparticles per Species: {num_macroparticles_per_population}
