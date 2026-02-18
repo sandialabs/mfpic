@@ -12,7 +12,11 @@ most_probable_electron_speed =np.sqrt(2.0 * Boltzmann * temperature / electron_m
 ion_acoustic_transit_time = domain_length / most_probable_ion_speed
 dt = dx / (3.0 * most_probable_electron_speed)
 num_macroparticles_per_population = 100 * num_elements
-source_number_density_fraction = 7.5e-5
+bohm_speed = np.sqrt(Boltzmann * temperature / proton_mass)
+bohm_current_density = number_density * elementary_charge * bohm_speed * np.exp(-0.5)
+ion_wall_flux_density = bohm_current_density / elementary_charge
+source_number_density = ion_wall_flux_density / domain_length * dt
+source_number_density_fraction = source_number_density / number_density
 source_num_macroparticles = 5
 
 def run(mfpic_executable):
