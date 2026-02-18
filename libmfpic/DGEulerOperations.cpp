@@ -23,28 +23,40 @@ namespace mfpic {
     const LowFidelityState& current_state,
     const ElectromagneticFieldsEvaluator& field_evaluator) const
   {
+    auto& message = std::cout;
+    message << "DGEulerOperations::accelerate" << std::endl;
+    message << "current_state.numSpecies() = " << current_state.numSpecies() << std::endl;
+
     LowFidelityState updated_state(current_state);
 
     for (int ispecies = 0; ispecies < current_state.numSpecies(); ++ispecies) {
+      message << "ispecies = " << ispecies << std::endl;
       const LowFidelitySpeciesState& current_species_state = current_state.getSpeciesState(ispecies);
       LowFidelitySpeciesState& updated_species_state = updated_state.getSpeciesState(ispecies);
 
+      message << "compute sources" << std::endl;
       temp_vector_ = 0.;
       dg_assemblers_[ispecies]->computeSources(current_species_state, field_evaluator, temp_vector_);
+      message << "applyInverseMass" << std::endl;
       dg_assemblers_[ispecies]->applyInverseMass(temp_vector_, rhs_);
 
       temp_vector_ = 0.;
+      message << "computeIntegratedKineticEnergy" << std::endl;
       dg_assemblers_[ispecies]->computeIntegratedKineticEnergy(current_species_state, temp_vector_);
       temp_vector_ *= -1.;
 
       // TODO BWR at some point we may not want to deep copy updated_state so this is more safe
 
+      message << "add" << std::endl;
       mfem::GridFunction& updated_species_grid_function = updated_species_state.getGridFunction();
       updated_species_grid_function.Add(dt, rhs_);
 
+      message << "computeIntegratedKineticEnergy" << std::endl;
       dg_assemblers_[ispecies]->computeIntegratedKineticEnergy(updated_species_state, temp_vector_);
+      message << "applyInverseMass" << std::endl;
       dg_assemblers_[ispecies]->applyInverseMass(temp_vector_, rhs_);
 
+      message << "Add" << std::endl;
       updated_species_grid_function.Add(1., rhs_);
     }
 
