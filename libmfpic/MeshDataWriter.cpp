@@ -9,13 +9,16 @@ MeshDataWriter::MeshDataWriter(const std::string& name, mfem::Mesh& mesh) : para
 
 void MeshDataWriter::output(
   ElectrostaticFieldState& electrostatic_field_state,
-  std::vector<LowFidelityState>& low_fidelity_states,
+  std::vector<LowFidelityState>& /*low_fidelity_states*/,
   const int i_time_step,
   const double time)
 {
+  auto& message = std::cout;
+  message << "MeshDataWrite::output" << std::endl;
   paraview_data_collection_.SetCycle(i_time_step);
   paraview_data_collection_.SetTime(time);
 
+  message << "potential" << std::endl;
   mfem::GridFunction potential_grid_function = electrostatic_field_state.getPotential();
   paraview_data_collection_.RegisterField("electrostatic_potential", &potential_grid_function);
 
@@ -23,6 +26,7 @@ void MeshDataWriter::output(
   //  space not an HGRAD element space, also this is always being output to nodes in Paraview which is also skewing things.
   const int mesh_dim = paraview_data_collection_.GetMesh()->Dimension();
 
+  message << "electric field" << std::endl;
   std::vector<mfem::GridFunction> electric_field_grid_functions;
   electric_field_grid_functions.reserve(3);
   for (int i_dim = 0; i_dim < 3; ++i_dim) {
@@ -37,18 +41,26 @@ void MeshDataWriter::output(
     paraview_data_collection_.RegisterField("E_" + std::to_string(i_dim), &electric_field_grid_functions[i_dim]);
   }
 
-  if (low_fidelity_states.size() > 0) {
-    LowFidelityState& low_fidelity_state = low_fidelity_states[0];
-    for (int i_species = 0; i_species < low_fidelity_state.numSpecies(); ++i_species) {
-      LowFidelitySpeciesState& species_state = low_fidelity_state.getSpeciesState(i_species);
-      mfem::GridFunction& grid_function = species_state.getGridFunction();
+  // message << "low fidelity states" << std::endl;
+  // if (low_fidelity_states.size() > 0) {
+  //   message << "first low fidelity state" << std::endl;
+  //   LowFidelityState& low_fidelity_state = low_fidelity_states[0];
+  //   for (int i_species = 0; i_species < low_fidelity_state.numSpecies(); ++i_species) {
+  //     message << "i_species = " << i_species << std::endl;
+  //     LowFidelitySpeciesState& species_state = low_fidelity_state.getSpeciesState(i_species);
+  //     mfem::GridFunction& grid_function = species_state.getGridFunction();
+  //     message << "grid_function.Size() = " << grid_function.Size() << std::endl;
 
-      const std::string field_name = "species_" + std::to_string(i_species);
-      paraview_data_collection_.RegisterField(field_name, &grid_function);
-    }
-  }
+  //     message << "register field" << std::endl;
+  //     const std::string field_name = "species_" + std::to_string(i_species);
+  //     message << "&grid_function = " << &grid_function << std::endl;
+  //     paraview_data_collection_.RegisterField(field_name, &grid_function);
+  //   }
+  // }
 
+  message << "save" << std::endl;
   paraview_data_collection_.Save();
+  message << "after save" << std::endl;
 }
 
 }
