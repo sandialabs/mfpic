@@ -1,1 +1,2 @@
+add_subdirectory(sod_shock_tube)
 add_subdirectory(twostream_instability)

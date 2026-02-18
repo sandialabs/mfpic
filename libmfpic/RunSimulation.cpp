@@ -30,6 +30,7 @@
 namespace mfpic {
 
 void runSimulation(int argc, char* argv[]) {
+  auto& message = std::cout;
   std::string input_deck_filename = "mfpic.yaml";
 
   mfem::OptionsParser options_parser(argc, argv);
@@ -56,6 +57,7 @@ void runSimulation(int argc, char* argv[]) {
 
   std::unordered_map<std::string, Species> species_map = buildSpeciesMapFromYaml(main["Species"]);
 
+  message << "particles" << std::endl;
   const auto [particle_boundary_factories, default_particle_boundary_factory] = buildParticleBoundariesFromYaml(
     main["Particles"],
     mesh_dimension
@@ -75,6 +77,7 @@ void runSimulation(int argc, char* argv[]) {
   );
   dumpParticles(particle_container, 0.0);
 
+  message << "fluids" << std::endl;
   std::vector<LowFidelityState> low_fidelity_states;
   std::vector<std::unique_ptr<LowFidelityOperations>> low_fidelity_operations;
   if (main["Euler Fluids"]) {
@@ -85,7 +88,7 @@ void runSimulation(int argc, char* argv[]) {
     std::vector<std::unique_ptr<SourceParameters>> list_of_parameters = buildListOfSourceParametersFromYAML(
       euler_fluids["Initial Conditions"], species_map);
     LowFidelityState dg_euler_state = buildEulerState(dg_euler_discretization, list_of_parameters);
-    std::vector<LowFidelityState> low_fidelity_states{dg_euler_state};
+    low_fidelity_states.push_back(dg_euler_state);
 
     std::vector<Species> species_list = dg_euler_state.getSpeciesList();
     std::vector<std::unique_ptr<DGGhostBC>> dg_euler_bcs;
@@ -96,18 +99,25 @@ void runSimulation(int argc, char* argv[]) {
       dg_euler_bcs);
     low_fidelity_operations.push_back(std::move(dg_euler_operations));
   }
+  message << "std::ssize(low_fidelity_states) = " << std::ssize(low_fidelity_states) << std::endl;
+  message << "std::ssize(low_fidelity_operations) = " << std::ssize(low_fidelity_operations) << std::endl;
 
+  message << "output" << std::endl;
   OutputParameters output_parameters;
   if (main["Output"].IsDefined())
     output_parameters = buildOutputParametersFromYAML(main["Output"]);
 
   MeshDataWriter mesh_data_writer(output_parameters.mesh_output_folder_name, *mesh);
 
+  message << "integrated charge" << std::endl;
   IntegratedCharge integrated_charge = particle_operations.assembleCharge(particle_container);
 
+  message << "field solve" << std::endl;
   electrostatic_field_operations.fieldSolve(electrostatic_field_state, integrated_charge);
+  message << "output mesh data" << std::endl;
   mesh_data_writer.output(electrostatic_field_state, low_fidelity_states, 0, 0.);
 
+  message << "csv" << std::endl;
   std::ofstream csv_file("output.csv");
   csv_file << std::setprecision(std::numeric_limits<double>::digits);
   csv_file << "# Time_Step Time Field_Energy" << std::endl;
@@ -133,6 +143,7 @@ void runSimulation(int argc, char* argv[]) {
       timestep_size
     );
 
+    message << "cfl" << std::endl;
     double cfl = 0.;
 
     for (size_t i_lf_model = 0; i_lf_model < low_fidelity_operations.size(); ++i_lf_model)
@@ -140,6 +151,7 @@ void runSimulation(int argc, char* argv[]) {
 
     std::cout << "    Maximum CFL: " << cfl << std::endl;
 
+    message << "particle sources" << std::endl;
     if (main["Particles"]["Sources"].IsDefined()) {
       particle_container.addParticles(buildParticlesFromYaml(
         main["Particles"]["Sources"],
@@ -149,6 +161,7 @@ void runSimulation(int argc, char* argv[]) {
       ));
     }
 
+    message << "dump" << std::endl;
     if (i_timestep % output_parameters.output_stride == 0) {
       dumpParticles(particle_container, end_time, output_parameters.particle_dump_filename);
       mesh_data_writer.output(electrostatic_field_state, low_fidelity_states, i_timestep, end_time);

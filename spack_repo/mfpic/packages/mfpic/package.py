@@ -52,6 +52,7 @@ class Mfpic(CMakePackage):
     depends_on("python@3:", type="test")
     depends_on("py-numpy", type="test")
     depends_on("py-scipy", type="test")
+    depends_on("vtk~mpi~opengl2+python", type="test")
     depends_on("yaml-cpp")
     depends_on("hdf5", when="build_type=Release")
     depends_on("hdf5 build_type=Debug", when="build_type=Debug")
