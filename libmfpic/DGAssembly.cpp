@@ -10,13 +10,13 @@ namespace mfpic {
 
   DGAssembly::DGAssembly(
     mfem::FiniteElementSpace &finite_element_space,
-    std::unique_ptr<mfem::FluxFunction> &&flux_function,
-    std::unique_ptr<mfem::NumericalFlux> &&numerical_flux_function) :
+    std::shared_ptr<mfem::FluxFunction> flux_function,
+    std::shared_ptr<mfem::NumericalFlux> numerical_flux_function) :
       dim_(finite_element_space.GetMesh()->SpaceDimension()),
       finite_element_space_(finite_element_space),
-      flux_function_(std::move(flux_function)),
-      numerical_flux_function_(std::move(numerical_flux_function)),
-      hyperbolic_form_integrator_(std::make_unique<mfem::HyperbolicFormIntegrator>(*numerical_flux_function_)),
+      flux_function_(flux_function),
+      numerical_flux_function_(numerical_flux_function),
+      hyperbolic_form_integrator_(std::make_shared<mfem::HyperbolicFormIntegrator>(*numerical_flux_function_)),
       num_equations_(hyperbolic_form_integrator_->num_equations)
     {
       if (finite_element_space_.GetOrdering() != mfem::Ordering::byNODES) {
@@ -162,5 +162,7 @@ namespace mfpic {
       rhs.SetSubVector(vector_dofs, vector_rhs_in_current_element);
     }
   }
+
+  DGAssembly::~DGAssembly() = default;
 
 } // namespace mfpic

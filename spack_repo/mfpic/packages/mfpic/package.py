@@ -67,3 +67,9 @@ class Mfpic(CMakePackage):
         policy="one_of",
         msg="builds only with a GCC or Clang that support C++ 23",
     )
+
+    requires(
+        "^mfem~static",
+        when="%llvm",
+        msg="Clang compiler requires PIC mfem",
+    )

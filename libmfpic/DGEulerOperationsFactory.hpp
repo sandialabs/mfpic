@@ -5,11 +5,11 @@
 
 namespace mfpic {
 
-class DGGhostBC;
+struct DGGhostBC;
 class Discretization;
 class LowFidelityOperations;
 class LowFidelityState;
-class Species;
+struct Species;
 
 /**
   * @brief Build DGEulerOperations

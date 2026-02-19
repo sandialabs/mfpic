@@ -62,23 +62,19 @@ public:
 
 private:
 
-  const mfem::real_t charge_over_mass_;
-
   DGEulerAssembly(
     mfem::FiniteElementSpace &finite_element_space,
-    std::unique_ptr<EulerFlux> &&euler_flux,
-    std::unique_ptr<mfem::RusanovFlux> &&numerical_euler_flux,
-    mfem::real_t charge_over_mass) :
-      DGAssembly(finite_element_space, std::move(euler_flux), std::move(numerical_euler_flux)),
-      charge_over_mass_(charge_over_mass) {}
+    std::shared_ptr<EulerFlux> euler_flux,
+    std::shared_ptr<mfem::RusanovFlux> numerical_euler_flux) :
+      DGAssembly(finite_element_space, euler_flux, numerical_euler_flux) {}
 
   static DGEulerAssembly CreateDGEulerAssembly_(
     mfem::FiniteElementSpace &finite_element_space,
     const Species & species)
   {
-    auto euler_flux = std::make_unique<EulerFlux>(finite_element_space.GetMesh()->SpaceDimension(), species);
-    auto numerical_euler_flux = std::make_unique<mfem::RusanovFlux>(*euler_flux);
-    return DGEulerAssembly(finite_element_space, std::move(euler_flux), std::move(numerical_euler_flux), species.charge_over_mass);
+    auto euler_flux = std::make_shared<EulerFlux>(finite_element_space.GetMesh()->SpaceDimension(), species);
+    auto numerical_euler_flux = std::make_shared<mfem::RusanovFlux>(*euler_flux);
+    return DGEulerAssembly(finite_element_space, euler_flux, numerical_euler_flux);
   }
 };
   

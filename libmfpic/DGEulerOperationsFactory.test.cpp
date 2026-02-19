@@ -21,7 +21,7 @@ constexpr Species species_3{.charge = -2.0, .mass = 1.5, .specific_heat_ratio = 
 
 const std::vector<Species> species_list{species_0,species_1,species_2,species_3};
 
-constexpr std::vector<std::unique_ptr<DGGhostBC>> empty_bcs{};
+const std::vector<std::unique_ptr<DGGhostBC>> empty_bcs{};
 
 TEST(DGEulerOperationsFactory, ErrorsOutIfDiscretizationIsWrong) {
   constexpr int nx = 5;
