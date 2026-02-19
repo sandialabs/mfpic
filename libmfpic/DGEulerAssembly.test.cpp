@@ -602,7 +602,7 @@ TEST(DGEulerAssembly, computeSourcesElectrostatic) {
   mfem::Vector rhs(fluid_discretization.getFeSpace().GetTrueVSize());
   constexpr double rhs_offset = 123.456;
 
-  rhs += rhs_offset;
+  rhs = rhs_offset;
 
   EXPECT_TRUE(rhs.Size() == fluid_grid_function.Size());
   op.computeSources(fluid_state, es_field_state, rhs);
@@ -715,7 +715,7 @@ TEST(DGEulerAssembly, computeIntegratedKineticEnergy) {
   mfem::Vector rhs(fluid_discretization.getFeSpace().GetTrueVSize());
   constexpr double rhs_offset = 123.456;
 
-  rhs += rhs_offset;
+  rhs = rhs_offset;
 
   EXPECT_TRUE(rhs.Size() == fluid_grid_function.Size());
   op.computeIntegratedKineticEnergy(fluid_state, rhs);
