@@ -14,6 +14,7 @@ struct SourceStateParameters {
   double number_density;
   mfem::Vector bulk_velocity{0., 0., 0.};
   double temperature;
+  double kappa = -1;
 };
 
 /**
@@ -56,7 +57,8 @@ struct ConstantSourceParameters : public SourceParameters {
     const Species& species,
     const double number_density,
     const double temperature,
-    const mfem::Vector& bulk_velocity=mfem::Vector({0., 0., 0.}));
+    const mfem::Vector& bulk_velocity=mfem::Vector({0., 0., 0.}),
+    const double kappa=-1);
 
   /**
    * @brief Get an mfem::VectorCoefficient that represents an constant euler fluid with parameters in this struct
