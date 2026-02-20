@@ -2,6 +2,7 @@
 
 #include <libmfpic/Errors.hpp>
 #include <libmfpic/LoadUniformMaxwellianParticles.hpp>
+#include <libmfpic/LoadUniformKappaParticles.hpp>
 #include <libmfpic/ParticleContainer.hpp>
 #include <libmfpic/SourcesFactory.hpp>
 
@@ -44,15 +45,32 @@ ParticleContainer buildParticlesFromYaml(
   ParticleContainer particles;
   for (const std::unique_ptr<SourceParameters>& parameters : list_of_parameters) {
     auto constant_parameters = dynamic_cast<const ConstantSourceParameters&>(*parameters);
-    particles.addParticles(loadUniformMaxwellianParticles(
-      parameters->species,
-      constant_parameters.constant_state.bulk_velocity,
-      constant_parameters.constant_state.temperature,
-      constant_parameters.constant_state.number_density,
-      parameters->num_particles,
-      generator,
-      mesh
-    ));
+
+    if (constant_parameters.constant_state.kappa == -1)
+    {
+      particles.addParticles(loadUniformMaxwellianParticles(
+        parameters->species,
+        constant_parameters.constant_state.bulk_velocity,
+        constant_parameters.constant_state.temperature,
+        constant_parameters.constant_state.number_density,
+        parameters->num_particles,
+        generator,
+        mesh
+      ));
+    }
+    else
+    {
+      particles.addParticles(loadUniformKappaParticles(
+        parameters->species,
+        constant_parameters.constant_state.bulk_velocity,
+        constant_parameters.constant_state.temperature,
+        constant_parameters.constant_state.kappa,
+        constant_parameters.constant_state.number_density,
+        parameters->num_particles,
+        generator,
+        mesh
+      ));
+    }
   }
 
   return particles;

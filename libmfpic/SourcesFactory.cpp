@@ -22,9 +22,10 @@ ConstantSourceParameters::ConstantSourceParameters(
   const Species& species,
   const double number_density,
   const double temperature,
-  const mfem::Vector& bulk_velocity)
-  : SourceParameters(species)
-  , constant_state{.number_density = number_density, .bulk_velocity = bulk_velocity, .temperature = temperature}
+  const mfem::Vector& bulk_velocity,
+  const double kappa)
+  : SourceParameters(species,kappa)
+  , constant_state{.number_density = number_density, .bulk_velocity = bulk_velocity, .temperature = temperature, .kappa = kappa}
 {}
 
 std::unique_ptr<mfem::VectorCoefficient> ConstantSourceParameters::getEulerVectorCoefficient() const {
@@ -96,10 +97,21 @@ SourceStateParameters buildSourceStateParametersFromYAML(const YAML::Node& state
     errorWithUserMessage(formatParseMessage(state_node["Temperature"], "Temperature is negative!"));
   }
 
+  double kappa=-1;
+  if (state_node["kappa"]) 
+  {
+    kappa = state_node["kappa"].as<double>();
+    if (kappa <= 0.5) {
+      errorWithUserMessage(formatParseMessage(state_node["kappa"], "kappa must be > 0.5!"));
+    }
+  }
+
   SourceStateParameters state_parameters{
     .number_density = number_density,
     .bulk_velocity = bulk_velocity,
-    .temperature = temperature};
+    .temperature = temperature,
+    .kappa = kappa
+  };
   return state_parameters;
 }
 
