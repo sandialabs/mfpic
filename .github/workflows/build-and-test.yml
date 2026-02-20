@@ -50,6 +50,7 @@ jobs:
         . spack/share/spack/setup-env.sh
         spack bootstrap now
         spack compiler find
+        spack install ${{matrix.compiler}}
         spack env rm -y mfpic-dev || true
         spack env create mfpic-dev
         spack env activate mfpic-dev
