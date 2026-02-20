@@ -4,6 +4,7 @@
 #include <libmfpic/BuildParticlesFromYaml.hpp>
 #include <libmfpic/BuildSpeciesMapFromYaml.hpp>
 #include <libmfpic/DGGhostBC.hpp>
+#include <libmfpic/DGEulerBoundaryConditionsFactory.hpp>
 #include <libmfpic/DGEulerInitialConditionsFactory.hpp>
 #include <libmfpic/DGEulerOperationsFactory.hpp>
 #include <libmfpic/DirichletBoundaryConditions.hpp>
@@ -95,7 +96,9 @@ void runSimulation(int argc, char* argv[]) {
     low_fidelity_states.push_back(dg_euler_state);
 
     std::vector<Species> species_list = dg_euler_state.getSpeciesList();
-    std::vector<std::unique_ptr<DGGhostBC>> dg_euler_bcs;
+    std::unordered_map<int, DGEulerBCType> boundary_attribute_to_bc_type = buildBoundaryAttributeToBCTypeFromYAML(
+      euler_fluids["Boundary Conditions"], mesh_dimension);
+    std::vector<std::unique_ptr<DGGhostBC>> dg_euler_bcs = buildDGEulerBoundaryConditions(boundary_attribute_to_bc_type, *mesh);
     std::unique_ptr<LowFidelityOperations> dg_euler_operations = buildDGEulerOperations(
       dg_euler_discretization,
       electrostatic_discretization,
