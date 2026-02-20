@@ -1,6 +1,9 @@
 set(test_prefix "end_to_end_tests:sod_shock_tube")
 
 file(CREATE_LINK ${CMAKE_CURRENT_SOURCE_DIR}/sod_shock_tube.py ${CMAKE_CURRENT_BINARY_DIR}/sod_shock_tube.py SYMBOLIC)
+file(CREATE_LINK ${CMAKE_CURRENT_SOURCE_DIR}/read_mesh_data.py ${CMAKE_CURRENT_BINARY_DIR}/read_mesh_data.py SYMBOLIC)
+file(CREATE_LINK ${CMAKE_CURRENT_SOURCE_DIR}/species.py ${CMAKE_CURRENT_BINARY_DIR}/species.py SYMBOLIC)
+file(CREATE_LINK ${CMAKE_CURRENT_SOURCE_DIR}/euler.py ${CMAKE_CURRENT_BINARY_DIR}/euler.py SYMBOLIC)
 
 add_test(
   NAME "${test_prefix}:run"
