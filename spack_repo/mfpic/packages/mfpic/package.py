@@ -46,8 +46,8 @@ class Mfpic(CMakePackage):
     depends_on("c",   type="build")
     depends_on("cmake@3.10:", type="build")
     depends_on("googletest", type="test")
-    depends_on("mfem~zlib~mpi~metis@4:", when="build_type=Release")
-    depends_on("mfem~zlib~mpi~metis@4: +debug", when="build_type=Debug")
+    depends_on("mfem~zlib~mpi~metis@4.8:", when="build_type=Release")
+    depends_on("mfem~zlib~mpi~metis@4.8: +debug", when="build_type=Debug")
     depends_on("ninja", type="build")
     depends_on("python@3:", type="test")
     depends_on("py-numpy", type="test")
@@ -65,7 +65,7 @@ class Mfpic(CMakePackage):
         "%gcc@11:",
         "%clang@14:",
         policy="one_of",
-        msg="builds only with a GCC or Clang that support C++ 23",
+        msg="builds only with a GCC or Clang that supports C++ 23",
     )
 
     requires(
