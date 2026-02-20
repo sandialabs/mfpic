@@ -36,13 +36,16 @@ void runSimulation(int argc, char* argv[]) {
   options_parser.AddOption(&input_deck_filename, "-i", "--input-deck", "Input deck to read from.");
   options_parser.ParseCheck(std::cout);
 
-  const YAML::Node main = YAML::LoadFile(input_deck_filename);
+  YAML::Node main = YAML::LoadFile(input_deck_filename);
 
   const MeshParameters mesh_parameters = buildMeshParametersFromYAML(main["Mesh"]);
   auto mesh = std::make_shared<mfem::Mesh>(buildMesh(mesh_parameters));
 
-  const YAML::Node fields = main["Fields"];
-  const int electrostatic_basis_order = fields["Basis Order"].as<int>();
+  YAML::Node fields = main["Fields"];
+  int electrostatic_basis_order = 1;
+  if (fields["Basis Order"]) {
+    electrostatic_basis_order = fields["Basis Order"].as<int>();
+  }
   Discretization electrostatic_discretization(mesh.get(), electrostatic_basis_order);
 
   const int mesh_dimension = mesh->Dimension();
