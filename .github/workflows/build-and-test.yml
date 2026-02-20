@@ -22,7 +22,7 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         build_type: [Release, Debug]
-        compiler: [gcc, llvm]
+        compiler: [gcc-15, llvm-21]
 
     steps:
     - name: Cache spack
