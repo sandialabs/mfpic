@@ -77,15 +77,22 @@ void runSimulation(int argc, char* argv[]) {
 
   std::vector<LowFidelityState> low_fidelity_states;
   std::vector<std::unique_ptr<LowFidelityOperations>> low_fidelity_operations;
+
+  int dg_euler_order = 0;
   if (main["Euler Fluids"]) {
     const YAML::Node euler_fluids = main["Euler Fluids"];
-    const int dg_euler_order = euler_fluids["Basis Order"].as<int>();
-    Discretization dg_euler_discretization(mesh.get(), dg_euler_order, FETypes::DG, euler::ConservativeVariables::NUM_VARS);
+    if (euler_fluids["Basis Order"]) {
+      dg_euler_order = euler_fluids["Basis Order"].as<int>();
+    }
+  }
+  Discretization dg_euler_discretization(mesh.get(), dg_euler_order, FETypes::DG, euler::ConservativeVariables::NUM_VARS);
 
+  if (main["Euler Fluids"]) {
+    const YAML::Node euler_fluids = main["Euler Fluids"];
     std::vector<std::unique_ptr<SourceParameters>> list_of_parameters = buildListOfSourceParametersFromYAML(
       euler_fluids["Initial Conditions"], species_map);
     LowFidelityState dg_euler_state = buildEulerState(dg_euler_discretization, list_of_parameters);
-    std::vector<LowFidelityState> low_fidelity_states{dg_euler_state};
+    low_fidelity_states.push_back(dg_euler_state);
 
     std::vector<Species> species_list = dg_euler_state.getSpeciesList();
     std::vector<std::unique_ptr<DGGhostBC>> dg_euler_bcs;
