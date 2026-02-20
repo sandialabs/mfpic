@@ -15,11 +15,8 @@ ElectrostaticFieldOperations::ElectrostaticFieldOperations(
 }
 
 void ElectrostaticFieldOperations::fieldSolve(ElectrostaticFieldState& field_state, const IntegratedCharge& charge_state) {
-  auto& message = std::cout;
-  message << "ElectrostaticFieldOperations::fieldSolve" << std::endl;
   mfem::GridFunction potential = field_state.getPotential();
 
-  message << "applyBCs" << std::endl;
   dirichlet_boundary_conditions_->applyBoundaryConditions(potential);
 
   mfem::Vector integrated_charge_vector = charge_state.getIntegratedCharge();
@@ -27,7 +24,6 @@ void ElectrostaticFieldOperations::fieldSolve(ElectrostaticFieldState& field_sta
   mfem::Array<int> dirichlet_dof_indices = dirichlet_boundary_conditions_->getDirichletBoundaryDofIndices();
   mfem::Vector solution_vector;
   mfem::Vector rhs_vector;
-  message << "formLinearSystem" << std::endl;
   electrostatic_bilinear_form_.FormLinearSystem(
     dirichlet_dof_indices,
     potential,
@@ -36,13 +32,10 @@ void ElectrostaticFieldOperations::fieldSolve(ElectrostaticFieldState& field_sta
     solution_vector,
     rhs_vector);
 
-  message << "solve" << std::endl;
   cg_linear_solver_.solve(negative_eps_laplace_matrix_, solution_vector, rhs_vector);
 
-  message << "RecoverFEMSolution" << std::endl;
   electrostatic_bilinear_form_.RecoverFEMSolution(solution_vector, integrated_charge_vector, potential);
 
-  message << "setPotential" << std::endl;
   field_state.setPotential(potential);
 }
 
