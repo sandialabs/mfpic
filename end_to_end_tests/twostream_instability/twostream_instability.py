@@ -24,7 +24,6 @@ def run(mfpic_executable):
   input_deck_contents = f"""
 Fields:
   Basis Order: 1
-  Boundary Conditions: []
 
 Mesh:
   Type: line

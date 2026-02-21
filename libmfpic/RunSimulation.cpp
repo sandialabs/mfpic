@@ -4,6 +4,7 @@
 #include <libmfpic/BuildParticlesFromYaml.hpp>
 #include <libmfpic/BuildSpeciesMapFromYaml.hpp>
 #include <libmfpic/DGGhostBC.hpp>
+#include <libmfpic/DGEulerBoundaryConditionsFactory.hpp>
 #include <libmfpic/DGEulerInitialConditionsFactory.hpp>
 #include <libmfpic/DGEulerOperationsFactory.hpp>
 #include <libmfpic/DirichletBoundaryConditions.hpp>
@@ -36,13 +37,16 @@ void runSimulation(int argc, char* argv[]) {
   options_parser.AddOption(&input_deck_filename, "-i", "--input-deck", "Input deck to read from.");
   options_parser.ParseCheck(std::cout);
 
-  const YAML::Node main = YAML::LoadFile(input_deck_filename);
+  YAML::Node main = YAML::LoadFile(input_deck_filename);
 
   const MeshParameters mesh_parameters = buildMeshParametersFromYAML(main["Mesh"]);
   auto mesh = std::make_shared<mfem::Mesh>(buildMesh(mesh_parameters));
 
-  const YAML::Node fields = main["Fields"];
-  const int electrostatic_basis_order = fields["Basis Order"].as<int>();
+  YAML::Node fields = main["Fields"];
+  int electrostatic_basis_order = 1;
+  if (fields["Basis Order"]) {
+    electrostatic_basis_order = fields["Basis Order"].as<int>();
+  }
   Discretization electrostatic_discretization(mesh.get(), electrostatic_basis_order);
 
   const int mesh_dimension = mesh->Dimension();
@@ -77,18 +81,24 @@ void runSimulation(int argc, char* argv[]) {
 
   std::vector<LowFidelityState> low_fidelity_states;
   std::vector<std::unique_ptr<LowFidelityOperations>> low_fidelity_operations;
-  if (main["Euler Fluids"]) {
-    const YAML::Node euler_fluids = main["Euler Fluids"];
-    const int dg_euler_order = euler_fluids["Basis Order"].as<int>();
-    Discretization dg_euler_discretization(mesh.get(), dg_euler_order, FETypes::DG, euler::ConservativeVariables::NUM_VARS);
 
-    std::vector<std::unique_ptr<SourceParameters>> list_of_parameters = buildListOfSourceParametersFromYAML(
-      euler_fluids["Initial Conditions"], species_map);
+  YAML::Node euler_fluids = main["Euler Fluids"];
+  int dg_euler_order = 0;
+  if (euler_fluids["Basis Order"]) {
+    dg_euler_order = euler_fluids["Basis Order"].as<int>();
+  }
+  Discretization dg_euler_discretization(mesh.get(), dg_euler_order, FETypes::DG, euler::ConservativeVariables::NUM_VARS);
+
+  std::vector<std::unique_ptr<SourceParameters>> list_of_parameters = buildListOfSourceParametersFromYAML(
+    euler_fluids["Initial Conditions"], species_map);
+  if (not list_of_parameters.empty()) {
     LowFidelityState dg_euler_state = buildEulerState(dg_euler_discretization, list_of_parameters);
-    std::vector<LowFidelityState> low_fidelity_states{dg_euler_state};
+    low_fidelity_states.push_back(dg_euler_state);
 
     std::vector<Species> species_list = dg_euler_state.getSpeciesList();
-    std::vector<std::unique_ptr<DGGhostBC>> dg_euler_bcs;
+    std::unordered_map<int, DGEulerBCType> boundary_attribute_to_bc_type = buildBoundaryAttributeToBCTypeFromYAML(
+      euler_fluids["Boundary Conditions"], mesh_dimension);
+    std::vector<std::unique_ptr<DGGhostBC>> dg_euler_bcs = buildDGEulerBoundaryConditions(boundary_attribute_to_bc_type, *mesh);
     std::unique_ptr<LowFidelityOperations> dg_euler_operations = buildDGEulerOperations(
       dg_euler_discretization,
       electrostatic_discretization,
