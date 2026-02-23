@@ -13,7 +13,7 @@ using namespace mfpic;
 constexpr int one_mesh_dimension = 1;
 
 TEST(BuildParticleBoundariesFromYaml, InvalidBoundaryConditionThrows) {
-  const std::string yaml ="Boundary Conditions: {Side: 2, Type: Invalid}";
+  const std::string yaml ="Boundary Conditions: [Side: 2, Type: Invalid]";
   const YAML::Node node = YAML::Load(yaml);
 
   EXPECT_ANY_THROW(buildParticleBoundariesFromYaml(node, one_mesh_dimension));
@@ -33,6 +33,16 @@ TEST(BuildParticleBoundariesFromYaml, NonSequenceBoundaryConditionsIsIgnored) {
   auto [boundary_factories, default_factory] = buildParticleBoundariesFromYaml(node, one_mesh_dimension);
 
   EXPECT_EQ(boundary_factories.size(), 0);
+}
+
+TEST(BuildParticleBoundariesFromYaml, EmptyParticlesPassAndGivesDefaultDefaultBoundaryCondition) {
+  const std::string yaml = "";
+  YAML::Node main = YAML::Load(yaml);
+
+  auto [boundary_factories, default_factory] = buildParticleBoundariesFromYaml(main["Particles"], one_mesh_dimension);
+
+  EXPECT_EQ(0, boundary_factories.size());
+  EXPECT_TRUE(std::dynamic_pointer_cast<ReflectingParticleBoundaryFactory>(default_factory));
 }
 
 TEST(BuildParticleBoundariesFromYaml, BoundaryAttributesSetCorrectly) {
