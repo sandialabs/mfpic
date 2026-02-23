@@ -41,10 +41,6 @@ num_time_steps = int(initial_final_time / dt)
 final_time = num_time_steps * dt
 
 input_deck_contents = f"""
-Fields:
-  Basis Order: 1
-  Boundary Conditions: []
-
 Mesh:
   Type: line
   Lengths: [{domain_length}]
@@ -73,11 +69,11 @@ Euler Fluids:
           Number Density: {number_density_right}
           Temperature: {temperature_right}
           Bulk Velocity: [{bulk_velocity_right[0]}, {bulk_velocity_right[1]}, {bulk_velocity_right[2]}]
-
-Particles:
-  Boundary Conditions: []
-  Default Boundary Condition: Reflecting
-  Initial Conditions:
+  Boundary Conditions:
+    - Side: left
+      Type: Reflecting
+    - Side: right
+      Type: Reflecting
 
 Output:
   Stride: 1
