@@ -8,10 +8,12 @@ mfpic uses SI units. When appropriate, the expected units are listed below in br
 
 Details for the electrostatic solve are specified under the ``Fields`` key.
 The only option at the top level is the basis order given with key ``Basis Order``.
+This block is optional but a default electrostatic fields will be generated if left unspecified.
+If this block is omitted and only neutral species are used, then the electrostatic fields will have no effect.
 
 ```yaml
 Fields:
-    Basis Order: int
+    Basis Order: int (default = 1)
 ```
 
 ### Electrostatic Boundary Conditions
@@ -26,6 +28,7 @@ For meshes loaded from files the side is an integer specifying mesh attribute or
 
 If a boundary condition isn't specified on a side, then that side will have natural boundary conditions.
 If all boundaries are natural then pinning will be applied to keep the problem from being underdetermined.
+If all natural boundary conditions are desired this block can be omitted.
 
 ```yaml
 Fields:
@@ -319,10 +322,11 @@ Particles:
 Fluids that obey the Euler equations can be added under the ``Euler Fluids`` key.
 The only option at the top level is ``Basis Order`` which specifies the discontinuous Galerkin finite element basis order that
 will be used for all Euler fluids.
+This block is optional and can be omitted if no Euler fluids are desired.
 
 ```yaml
 Euler Fluids:
-    Basis Order: int
+    Basis Order: int (default = 0)
 ```
 
 ### Euler Fluids Initial Conditions
