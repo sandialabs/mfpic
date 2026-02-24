@@ -291,7 +291,7 @@ Particles:
         - Side: string or integer
           Type: boundary condition type string (options below)
         ...
-    Default Boundary Condition: boundary condition type string (options below)
+    Default Boundary Condition: boundary condition type string (options below, default = "Reflecting")
 ```
 
 **``Side``**: The side on which to apply the boundary condition.
