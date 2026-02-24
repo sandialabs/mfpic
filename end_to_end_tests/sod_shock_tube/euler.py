@@ -2,12 +2,12 @@ import numpy as np
 from scipy.constants import Boltzmann as boltzmann_constant
 
 def kinetic_energy_density(mass_density, momentum_density):
-    return 0.5 / mass_density * np.dot(momentum_density, momentum_density)
+    return 0.5 / mass_density * np.einsum('i...,i...->...', momentum_density, momentum_density)
 
-def pressure(number_density, temperature):
+def pressure_from_number_density(number_density, temperature):
     return number_density * temperature * boltzmann_constant
 
-def pressure(species, internal_energy_density):
+def pressure_from_species(species, internal_energy_density):
     return (species.specific_heat_ratio - 1.) * internal_energy_density
 
 def internal_energy_per_unit_mass(species, mass_density, pressure):
@@ -48,7 +48,7 @@ def get_pressure_from_conservative_state(conservative_state, species):
     total_energy_density = conservative_state[4]
     kinetic_energy_density = get_kinetic_energy_density_from_conservative_state(conservative_state)
     internal_energy_density = total_energy_density - kinetic_energy_density
-    return pressure(species, internal_energy_density)
+    return pressure_from_species(species, internal_energy_density)
 
 def get_temperature_from_conservative_state(conservative_state, species):
     number_density = get_number_density_from_conservative_state(conservative_state, species)
@@ -64,7 +64,7 @@ def get_bulk_velocity_from_primitive_state(primitive_state):
 def get_pressure_from_primitive_state(primitive_state):
     number_density = primitive_state[0]
     temperature = primitive_state[4]
-    return pressure(number_density, temperature)
+    return pressure_from_number_density(number_density, temperature)
 
 def get_internal_energy_density_from_primitive_state(primitive_state, species):
     mass_density = get_mass_density_from_primitive_state(primitive_state, species)
