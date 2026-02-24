@@ -32,7 +32,7 @@ public:
    * @param field_state - where to store new field state, also initial guess for linear solver
    * @param charge_state - integrated charge for right hand side of system, \int_{\Omega} \rho \phi dV
    */
-  void fieldSolve(ElectrostaticFieldState& field_state, const IntegratedCharge& charge_state);
+  virtual void fieldSolve(ElectrostaticFieldState& field_state, const IntegratedCharge& charge_state);
 
   /**
    * @brief Compute the energy of the given field state.
@@ -43,7 +43,7 @@ public:
    */
   double fieldEnergy(const ElectrostaticFieldState& field_state) const;
 
-private:
+protected:
   /// bilinear form for electrostatic system, -eps Laplace or eps (grad potential, grad phi)
   mfem::BilinearForm electrostatic_bilinear_form_;
 

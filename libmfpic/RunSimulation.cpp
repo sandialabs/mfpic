@@ -1,3 +1,4 @@
+#include "libmfpic/ElectrostaticFieldOperationsWithBoltzmannElectrons.hpp"
 #include "libmfpic/MeshUtilities.hpp"
 #include <libmfpic/BuildOutputParametersFromYaml.hpp>
 #include <libmfpic/BuildParticleBoundariesFromYaml.hpp>
@@ -55,7 +56,7 @@ void runSimulation(int argc, char* argv[]) {
   std::unique_ptr<DirichletBoundaryConditions> dirichlet_bcs = buildDirichletBoundaryConditions(
     boundary_attribute_to_dirichlet_value, electrostatic_discretization);
 
-  ElectrostaticFieldOperations electrostatic_field_operations(electrostatic_discretization, std::move(dirichlet_bcs));
+  ElectrostaticFieldOperationsWithBoltzmannElectrons electrostatic_field_operations(electrostatic_discretization, std::move(dirichlet_bcs));
   ElectrostaticFieldState electrostatic_field_state(electrostatic_discretization);
 
   std::unordered_map<std::string, Species> species_map = buildSpeciesMapFromYaml(main["Species"]);
