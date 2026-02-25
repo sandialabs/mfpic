@@ -55,8 +55,8 @@ class Mfpic(CMakePackage):
     depends_on("vtk~mpi~opengl2+python", type="test")
     depends_on("py-matplotlib", type="test")
     depends_on("yaml-cpp")
-    depends_on("hdf5", when="build_type=Release")
-    depends_on("hdf5 build_type=Debug", when="build_type=Debug")
+    depends_on("hdf5+hl", when="build_type=Release")
+    depends_on("hdf5+hl build_type=Debug", when="build_type=Debug")
     depends_on("gdb", when="build_type=Debug")
 
     @property
