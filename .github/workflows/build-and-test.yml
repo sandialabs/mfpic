@@ -14,7 +14,7 @@ jobs:
     env:
       SPACK_DISABLE_LOCAL_CONFIG: true
       SPACK_USER_CACHE_PATH: spack_cache
-      SPACK_VERSION: v1.1.1
+      SPACK_VERSION: v1.0.4
 
     strategy:
       fail-fast: false
