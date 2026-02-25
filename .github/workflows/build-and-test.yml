@@ -22,7 +22,7 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         build_type: [Release, Debug]
-        compiler: [gcc@15.2.0, llvm@21.1.4]
+        compiler: [gcc, llvm]
 
     steps:
     - name: Cache spack
@@ -50,7 +50,6 @@ jobs:
         . spack/share/spack/setup-env.sh
         spack bootstrap now
         spack compiler find
-        spack install ${{matrix.compiler}}
         spack env rm -y mfpic-dev || true
         spack env create mfpic-dev
         spack env activate mfpic-dev
