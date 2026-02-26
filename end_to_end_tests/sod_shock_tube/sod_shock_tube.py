@@ -2,6 +2,7 @@ import euler
 import euler_exact_riemann_solver
 import read_mesh_data
 import species
+import verification
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -39,17 +40,26 @@ max_wavespeed = euler_exact_riemann_solver.compute_max_wavespeed(
 domain_length = 1.0
 discontinuity_location = 0.5 * domain_length
 
-max_cfl = 0.9
+max_cfl = 0.8
 final_time = 0.4 * domain_length / max_wavespeed
 
+base_num_elements = 50
+refinement_levels = [2, 4]
+
+
+def format_mesh_folder_name(refinement_level):
+    return f"MeshOutput{refinement_level:02}"
+
+
 def get_input_deck(refinement_level):
-    base_num_elements = 50
     num_elements = base_num_elements * refinement_level
     dx = domain_length / num_elements
     max_dt = max_cfl * dx / max_wavespeed
 
     num_time_steps = int(np.ceil(final_time / max_dt))
     dt = final_time / num_time_steps
+
+    mesh_folder_name = format_mesh_folder_name(refinement_level)
 
     input_deck_contents = f"""
 Mesh:
@@ -88,47 +98,33 @@ Euler Fluids:
 
 Output:
   Stride: 1
-  Mesh Output Folder: MeshOutput{refinement_level}
+  Mesh Output Folder: {mesh_folder_name}
 
 """
     return input_deck_contents
 
 
 def run(mfpic_executable):
+    for refinement_level in refinement_levels:
+        input_deck_contents = get_input_deck(refinement_level)
+        yaml = "sod_shock_tube.yaml"
+        with open(yaml, "w") as input_deck:
+            input_deck.write(input_deck_contents)
 
-    input_deck_contents = get_input_deck(1)
-    yaml = "sod_shock_tube.yaml"
-    with open(yaml, "w") as input_deck:
-        input_deck.write(input_deck_contents)
+        result = subprocess.run([mfpic_executable, "-i", yaml])
+        result.check_returncode()
 
-    result = subprocess.run([mfpic_executable, "-i", yaml])
-    result.check_returncode()
+
+def compute_error(data, points, exact_solution):
+    numerical_solution = verification.create_1D_interpolater(data, points)
+    exact_solution_at_final_time = lambda x: exact_solution(x, final_time)
+    error = verification.compute_L1_relative_error_1D(
+        numerical_solution, exact_solution_at_final_time, points
+    )
+    return error
 
 
 def analyze():
-    import verification
-
-    timesteps, mesh_data = read_mesh_data.read_mesh_data()
-
-    final_time = timesteps[-1]
-
-    points = mesh_data[-1]["points"]
-    x_points = points[:, 0]
-
-    fluid_data = np.transpose(mesh_data[-1]["species_0"])
-
-    numerical_mass_density = verification.create_1D_interpolater(
-        fluid_data[0], x_points
-    )
-    bulk_velocity_data = euler.get_bulk_velocity_from_conservative_state(fluid_data)
-    numerical_velocity = verification.create_1D_interpolater(
-        bulk_velocity_data[0], x_points
-    )
-    pressure_data = euler.get_pressure_from_conservative_state(
-        fluid_data, electron_species
-    )
-    numerical_pressure = verification.create_1D_interpolater(pressure_data, x_points)
-
     exact_mass_density, exact_velocity, exact_pressure = (
         euler_exact_riemann_solver.form_exact_solutions(
             left_state_primitive,
@@ -138,76 +134,132 @@ def analyze():
         )
     )
 
-    exact_mass_density_at_final_time = lambda x: exact_mass_density(x, final_time)
-    mass_density_L2_error = verification.compute_L2_error_1D(
-        numerical_mass_density, exact_mass_density_at_final_time, x_points
-    )
-    print(f"mass_density_L2_error = {mass_density_L2_error}")
+    mass_density_errors = []
+    velocity_errors = []
+    pressure_errors = []
+    h_list = []
+    for refinement_level in refinement_levels:
+        mesh_folder_name = format_mesh_folder_name(refinement_level)
+        _, mesh_data = read_mesh_data.read_mesh_data(mesh_folder_name)
 
-    exact_velocity_at_final_time = lambda x: exact_velocity(x, final_time)
-    velocity_L2_error = verification.compute_L2_error_1D(numerical_velocity, exact_velocity_at_final_time, x_points)
-    print(f"velocity_L2_error = {velocity_L2_error}")
+        points = mesh_data[-1]["points"]
+        x_points = points[:, 0]
+        dx = x_points[1] - x_points[0]
+        h_list.append(dx)
 
-    exact_pressure_at_final_time = lambda x: exact_pressure(x, final_time)
-    pressure_L2_error = verification.compute_L2_error_1D(numerical_pressure, exact_pressure_at_final_time, x_points)
-
-
-def plot():
-    timesteps, mesh_data = read_mesh_data.read_mesh_data()
-
-    points = mesh_data[0]["points"]
-    x_points = points[:, 0]
-    num_cells = int(0.5 * x_points.shape[0])
-
-    exact_mass_density, exact_velocity, exact_pressure = (
-        euler_exact_riemann_solver.form_exact_solutions(
-            left_state_primitive,
-            right_state_primitive,
-            electron_species,
-            discontinuity_location,
-        )
-    )
-    x_plot = np.linspace(0, domain_length, 10 * num_cells)
-
-    os.makedirs("Figures", exist_ok=True)
-    for i in range(len(timesteps)):
-        fluid_data = np.transpose(mesh_data[i]["species_0"])
-        time = timesteps[i]
-
-        mass_density_data = fluid_data[0]
-        fig, axes = plt.subplots()
-        axes.plot(x_points, mass_density_data, label="Numerical Solution")
-        axes.plot(x_plot, exact_mass_density(x_plot, time), label="Exact Solution")
-        axes.legend()
-        axes.set_title(f"Mass Density At Time = {time}")
-        axes.set_xlabel("x")
-        axes.set_ylabel("rho")
-        fig.savefig(f"Figures/MassDensity{i:03}.png")
-        plt.close(fig)
+        fluid_data = np.transpose(mesh_data[-1]["species_0"])
+        mass_density_error = compute_error(fluid_data[0], x_points, exact_mass_density)
 
         bulk_velocity_data = euler.get_bulk_velocity_from_conservative_state(fluid_data)
-        fig, axes = plt.subplots()
-        axes.plot(x_points, bulk_velocity_data[0], label="Numerical Solution")
-        axes.plot(x_plot, exact_velocity(x_plot, time), label="Exact Solution")
-        axes.legend()
-        axes.set_title(f"Velocity At Time = {time}")
-        axes.set_xlabel("x")
-        axes.set_ylabel("v")
-        fig.savefig(f"Figures/Velocity{i:03}.png")
-        plt.close(fig)
+        velocity_error = compute_error(bulk_velocity_data[0], x_points, exact_velocity)
 
         pressure_data = euler.get_pressure_from_conservative_state(
             fluid_data, electron_species
         )
-        fig, axes = plt.subplots()
-        axes.plot(x_points, pressure_data, label="Numerical Solution")
-        axes.plot(x_plot, exact_pressure(x_plot, time), label="Exact Solution")
-        axes.legend()
-        axes.set_title(f"Pressure At Time = {time}")
-        axes.set_xlabel("x")
-        axes.set_ylabel("P")
-        fig.savefig(f"Figures/Pressure{i:03}.png")
-        plt.close(fig)
+        pressure_error = compute_error(pressure_data, x_points, exact_pressure)
+
+        mass_density_errors.append(mass_density_error)
+        velocity_errors.append(velocity_error)
+        pressure_errors.append(pressure_error)
+
+    mass_density_rates = verification.compute_convergence_rates(
+        mass_density_errors, h_list
+    )
+    velocity_rates = verification.compute_convergence_rates(velocity_errors, h_list)
+    pressure_rates = verification.compute_convergence_rates(pressure_errors, h_list)
+
+    # since there is a contact wave in this problem the expected convergence rate is
+    # only 1/2
+    minimum_convergence_rate = 0.5
+    assert (
+        np.min(mass_density_rates) > minimum_convergence_rate
+    ), f"The mass density is not converging at the correct rate. The expected rate is {minimum_convergence_rate} and the actual rates are {mass_density_rates}"
+    assert (
+        np.min(velocity_rates) > minimum_convergence_rate
+    ), f"The velocity is not converging at the correct rate. The expected rate is {minimum_convergence_rate} and the actual rates are {velocity_rates}"
+    assert (
+        np.min(pressure_rates) > minimum_convergence_rate
+    ), f"The pressure is not converging at the correct rate. The expected rate is {minimum_convergence_rate} and the actual rates are {pressure_rates}"
+
+
+def plot_quantity(
+    data, points, exact_solution, plot_points, time, name, i, figures_directory
+):
+    fig, axes = plt.subplots()
+    axes.plot(points, data, label="Numerical Solution")
+    axes.plot(plot_points, exact_solution(plot_points, time), label="Exact Solution")
+    axes.legend()
+    axes.set_title(f"{name} At Time = {time}")
+    axes.set_xlabel("x")
+    axes.set_ylabel("rho")
+    fig.savefig(f"{figures_directory}/{name}{i:03}.png")
+    plt.close(fig)
+
+
+def plot():
+    for refinement_level in refinement_levels:
+        mesh_folder_name = format_mesh_folder_name(refinement_level)
+        timesteps, mesh_data = read_mesh_data.read_mesh_data(mesh_folder_name)
+
+        points = mesh_data[0]["points"]
+        x_points = points[:, 0]
+        num_cells = int(0.5 * x_points.shape[0])
+
+        exact_mass_density, exact_velocity, exact_pressure = (
+            euler_exact_riemann_solver.form_exact_solutions(
+                left_state_primitive,
+                right_state_primitive,
+                electron_species,
+                discontinuity_location,
+            )
+        )
+        x_plot = np.linspace(0, domain_length, 10 * num_cells)
+
+        figures_directory = f"Figures{refinement_level:02}"
+        os.makedirs(figures_directory, exist_ok=True)
+        for i in range(len(timesteps)):
+            fluid_data = np.transpose(mesh_data[i]["species_0"])
+            time = timesteps[i]
+
+            mass_density_data = fluid_data[0]
+            plot_quantity(
+                mass_density_data,
+                x_points,
+                exact_mass_density,
+                x_plot,
+                time,
+                "MassDensity",
+                i,
+                figures_directory,
+            )
+
+            bulk_velocity_data = euler.get_bulk_velocity_from_conservative_state(
+                fluid_data
+            )
+            plot_quantity(
+                bulk_velocity_data[0],
+                x_points,
+                exact_velocity,
+                x_plot,
+                time,
+                "Velocity",
+                i,
+                figures_directory,
+            )
+
+            pressure_data = euler.get_pressure_from_conservative_state(
+                fluid_data, electron_species
+            )
+            plot_quantity(
+                pressure_data,
+                x_points,
+                exact_pressure,
+                x_plot,
+                time,
+                "Pressure",
+                i,
+                figures_directory,
+            )
 
 
 if __name__ == "__main__":
@@ -215,5 +267,7 @@ if __name__ == "__main__":
 
     if "run" in sys.argv[1:]:
         run(sys.argv[2])
+    elif "plot" in sys.argv[1:]:
+        plot()
     else:
         analyze()
