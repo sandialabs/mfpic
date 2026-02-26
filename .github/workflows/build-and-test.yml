@@ -7,6 +7,10 @@ on:
   pull_request:
     branches: [ "main" ]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref_name != 'main' }}
+
 jobs:
   build_and_test:
     runs-on: ${{ matrix.os }}
@@ -25,15 +29,15 @@ jobs:
         compiler: [gcc, llvm]
 
     steps:
-    - name: Cache spack
-      id: cache-spack
-      uses: actions/cache@v4
+    - name: Restore spack cache
+      id: restore-spack-cache
+      uses: actions/cache/restore@v4
       with:
         path: spack
         key: ${{env.SPACK_VERSION}}-${{matrix.os}}-${{matrix.build_type}}-${{matrix.compiler}}
 
     - name: Check out spack
-      if: ${{ steps.cache-spack.outputs.cache-hit != 'true' }}
+      if: ${{ steps.restore-spack-cache.outputs.cache-hit != 'true' }}
       uses: actions/checkout@v4
       with:
         repository: spack/spack
@@ -61,3 +65,10 @@ jobs:
         spack concretize -f --test=root
         spack install --test=root --only=dependencies
         spack install --test=root --verbose --until=build
+
+    - name: Save spack cache if on main branch
+      if: ${{ github.ref_name == 'main' }}
+      uses: actions/cache/save@v4
+      with:
+        path: spack
+        key: ${{env.SPACK_VERSION}}-${{matrix.os}}-${{matrix.build_type}}-${{matrix.compiler}}
