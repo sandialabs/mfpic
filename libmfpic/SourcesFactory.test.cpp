@@ -20,6 +20,27 @@ const std::unordered_map<std::string, Species> species_map{
   {electron_species_name, electron_species},
   {proton_species_name, proton_species}};
 
+mfem::Vector evaluateVectorCoefficientAtPoint(
+  mfem::VectorCoefficient& coefficient,
+  const double x,
+  const double dx,
+  const mfem::Mesh& mesh)
+{
+  const int element_index = x / dx;
+
+  mfem::IsoparametricTransformation element_transformation;
+  mesh.GetElementTransformation(element_index, &element_transformation);
+
+  const mfem::Vector x_vec{x};
+  mfem::IntegrationPoint integration_point;
+  element_transformation.TransformBack(x_vec, integration_point);
+  element_transformation.SetIntPoint(&integration_point);
+
+  mfem::Vector state_out(euler::ConservativeVariables::NUM_VARS);
+  coefficient.Eval(state_out, element_transformation, integration_point);
+  return state_out;
+}
+
 TEST(SourcesFactory, SodSourceParametersEulerVectorCoefficient) {
   constexpr double discontinuity_location = 0.5;
 
@@ -35,18 +56,7 @@ TEST(SourcesFactory, SodSourceParametersEulerVectorCoefficient) {
   mfem::Mesh mesh = mfem::Mesh::MakeCartesian1D(10);
 
   const double x_left = parameters.discontinuity_location - 0.5 * dx;
-  const int element_index_left = x_left / dx;
-
-  mfem::IsoparametricTransformation element_transformation;
-  mesh.GetElementTransformation(element_index_left, &element_transformation);
-
-  const mfem::Vector x_left_vec{x_left};
-  mfem::IntegrationPoint integration_point;
-  element_transformation.TransformBack(x_left_vec, integration_point);
-  element_transformation.SetIntPoint(&integration_point);
-
-  mfem::Vector left_state_out(euler::ConservativeVariables::NUM_VARS);
-  euler_coefficient->Eval(left_state_out, element_transformation, integration_point);
+  const mfem::Vector left_state_out = evaluateVectorCoefficientAtPoint(*euler_coefficient, x_left, dx, mesh);
 
   const mfem::Vector left_state_primitive = euler::constructPrimitiveState(
     left_state.number_density, left_state.bulk_velocity, left_state.temperature);
@@ -57,22 +67,66 @@ TEST(SourcesFactory, SodSourceParametersEulerVectorCoefficient) {
   }
 
   const double x_right = parameters.discontinuity_location + 0.5 * dx;
-  const int element_index_right = x_right / dx;
-  mesh.GetElementTransformation(element_index_right, &element_transformation);
+  const mfem::Vector right_state_out = evaluateVectorCoefficientAtPoint(*euler_coefficient, x_right, dx, mesh);
 
-  const mfem::Vector x_right_vec{x_right};
-  element_transformation.TransformBack(x_right_vec, integration_point);
-  element_transformation.SetIntPoint(&integration_point);
-
-  mfem::Vector right_state_out(euler::ConservativeVariables::NUM_VARS);
-  euler_coefficient->Eval(right_state_out, element_transformation, integration_point);
-  
   const mfem::Vector right_state_primitive = euler::constructPrimitiveState(
     right_state.number_density, right_state.bulk_velocity, right_state.temperature);
   const mfem::Vector right_state_expected = euler::convertFromPrimitiveToConservative(right_state_primitive, parameters.species);
 
   for (int i = 0; i < right_state_out.Size(); ++i) {
     EXPECT_DOUBLE_EQ(right_state_expected[i], right_state_out[i]);
+  }
+}
+
+mfem::Vector evaluateGaussianAtPoint(
+  const double x,
+  const mfem::Vector& center,
+  const double standard_deviation,
+  const SourceStateParameters& offsets,
+  const SourceStateParameters& heights,
+  const Species& species)
+{
+  const double shift = x - center[0];
+  const double exponential = exp(-0.5 * shift * shift / standard_deviation);
+  const double expected_number_density = heights.number_density * exponential + offsets.number_density;
+
+  mfem::Vector expected_velocity(offsets.bulk_velocity);
+  expected_velocity.Add(exponential, heights.bulk_velocity);
+
+  const double expected_temperature = heights.temperature * exponential + offsets.temperature;
+
+  const mfem::Vector expected_state_primitive = euler::constructPrimitiveState(
+    expected_number_density, expected_velocity, expected_temperature);
+
+  const mfem::Vector expected_state_conservative = euler::convertFromPrimitiveToConservative(
+    expected_state_primitive, species);
+
+  return expected_state_conservative;
+}
+
+TEST(SourcesFactory, GaussianSourceParametersEulerVectorCoefficient) {
+  const mfem::Vector center{0.5};
+  constexpr double standard_deviation = 0.01;
+
+  const mfem::Vector bulk_velocity_offset{1., 0., 0.};
+  const mfem::Vector bulk_velocity_height{0., 0., 0.};
+  SourceStateParameters offsets{.number_density = 1e22, .bulk_velocity=bulk_velocity_offset, .temperature = 320};
+  SourceStateParameters heights{.number_density = 1e21, .bulk_velocity=bulk_velocity_height, .temperature = 0};
+
+  GaussianSourceParameters parameters(electron_species, center, standard_deviation, offsets, heights);
+  std::unique_ptr<mfem::VectorCoefficient> euler_coefficient = parameters.getEulerVectorCoefficient();
+
+  constexpr int num_elems = 11;
+  constexpr double length = 1.0;
+  constexpr double dx = length / num_elems;
+  mfem::Mesh mesh = mfem::Mesh::MakeCartesian1D(10);
+
+  for (const double& x : {0.01, 0.45, 0.5}){
+    const mfem::Vector state_out = evaluateVectorCoefficientAtPoint(*euler_coefficient, x, dx, mesh);
+    const mfem::Vector expected_state = evaluateGaussianAtPoint(x, center, standard_deviation, offsets, heights, electron_species);
+    for (int i = 0; i < expected_state.Size(); ++i) {
+      EXPECT_DOUBLE_EQ(expected_state[i], state_out[i]);
+    }
   }
 }
 
