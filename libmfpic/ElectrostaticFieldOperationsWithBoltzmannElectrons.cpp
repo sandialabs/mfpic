@@ -87,19 +87,27 @@ private:
 
 ElectrostaticFieldOperationsWithBoltzmannElectrons::ElectrostaticFieldOperationsWithBoltzmannElectrons(
   Discretization& electrostatic_discretization,
-  std::unique_ptr<DirichletBoundaryConditions> dirichlet_boundary_conditions
+  std::unique_ptr<DirichletBoundaryConditions> dirichlet_boundary_conditions,
+  double electron_reference_number_density,
+  double electron_temperature,
+  double nonlinear_solver_relative_tolerance,
+  double nonlinear_solver_max_iterations
 ) :
   ElectrostaticFieldOperations(electrostatic_discretization, std::move(dirichlet_boundary_conditions)),
   electrostatic_nonlinear_form_(&electrostatic_discretization.getFeSpace())
 {
   electrostatic_nonlinear_form_.AddDomainIntegrator(new mfem::DiffusionIntegrator(permittivity_));
-  const double reference_number_density = 3.54803829431936e+18;
-  // const double reference_number_density = 7.05e18;
-
-  const double temperature = 10.0 * constants::elementary_charge / constants::boltzmann_constant;
-  electrostatic_nonlinear_form_.AddDomainIntegrator(new BoltzmannElectronIntegrator(reference_number_density, temperature));
+  electrostatic_nonlinear_form_.AddDomainIntegrator(new BoltzmannElectronIntegrator(
+    electron_reference_number_density,
+    electron_temperature
+  ));
   mfem::Array<int> dirichlet_dof_indices = dirichlet_boundary_conditions_->getDirichletBoundaryDofIndices();
   electrostatic_nonlinear_form_.SetEssentialTrueDofs(dirichlet_dof_indices);
+
+  newton_solver_.SetOperator(electrostatic_nonlinear_form_);
+  newton_solver_.SetSolver(cg_linear_solver_);
+  newton_solver_.SetRelTol(nonlinear_solver_relative_tolerance);
+  newton_solver_.SetMaxIter(nonlinear_solver_max_iterations);
 }
 
 void ElectrostaticFieldOperationsWithBoltzmannElectrons::fieldSolve(
@@ -108,13 +116,7 @@ void ElectrostaticFieldOperationsWithBoltzmannElectrons::fieldSolve(
 ) {
   const mfem::Vector integrated_charge_vector = charge_state.getIntegratedCharge();
   mfem::GridFunction& potential = field_state.getPotential();
-
-  mfem::NewtonSolver newton_solver;
-  newton_solver.SetOperator(electrostatic_nonlinear_form_);
-  newton_solver.SetSolver(cg_linear_solver_);
-  newton_solver.SetRelTol(1.0e-8);
-  newton_solver.SetMaxIter(100);
-  newton_solver.Mult(integrated_charge_vector, potential);
+  newton_solver_.Mult(integrated_charge_vector, potential);
 }
 
 } // namespace mfpic

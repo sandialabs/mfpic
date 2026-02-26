@@ -56,7 +56,7 @@ void runSimulation(int argc, char* argv[]) {
   std::unique_ptr<DirichletBoundaryConditions> dirichlet_bcs = buildDirichletBoundaryConditions(
     boundary_attribute_to_dirichlet_value, electrostatic_discretization);
 
-  ElectrostaticFieldOperationsWithBoltzmannElectrons electrostatic_field_operations(electrostatic_discretization, std::move(dirichlet_bcs));
+  ElectrostaticFieldOperationsWithBoltzmannElectrons electrostatic_field_operations(electrostatic_discretization, std::move(dirichlet_bcs), 3.54803829431936e+18, 10.0 * constants::elementary_charge / constants::boltzmann_constant);
   ElectrostaticFieldState electrostatic_field_state(electrostatic_discretization);
 
   std::unordered_map<std::string, Species> species_map = buildSpeciesMapFromYaml(main["Species"]);
