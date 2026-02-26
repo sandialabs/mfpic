@@ -24,7 +24,20 @@ $$
 where $\rho_i = \rho_i(\vec{x})$ is the charge density due to non-adiabatic species,
 typically positively charged ions.
 
-The weak form of this modified Poisson's equation is
+The global number conservation equation for electrons is
+$$
+\frac{\mathrm{d}}{\mathrm{d} t} \int_\Omega n \, \mathrm{d} \vec{x} + \int_{\partial \Omega} \Gamma \cdot \hat{n} \, \mathrm{d} S = \int_\Omega S \, \mathrm{d} \vec{x},
+$$
+where $\Gamma \cdot \hat{n} = \frac{1}{4} n v_{\mathrm{th}}$ is the electron flux density at the boundaries,
+$v_{\mathrm{th}} = \sqrt{8 k T/\pi m}$
+is the electron thermal speed with mass $m$,
+and $S = S(\vec{x})$ is a source term.
+At steady state, the reference density is therefore given by
+$$
+n_0 = \frac{4}{v_{\mathrm{th}}} \frac{\int_\Omega S \, \mathrm{d} \vec{x}}{\int_{\partial \Omega} \exp \left( \frac{e \varphi}{kT} \right) \, \mathrm{d} A}.
+$$
+
+The weak form of Poisson's equation with Boltzmann electrons is
 $$
 \epsilon_0 \sum_{j=0}^{N-1} \varphi_j \int_\Omega \nabla \psi_i \cdot \nabla \psi_i \, \mathrm{d} \vec{x}
 - \epsilon_0 \int_{\partial \Omega} \psi_i \nabla \varphi \cdot \hat{n} \, \mathrm{d} S
