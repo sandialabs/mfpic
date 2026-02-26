@@ -47,6 +47,7 @@ jobs:
 
     - name: Build and test
       run: |
+        sudo apt install llvm
         . spack/share/spack/setup-env.sh
         spack bootstrap now
         spack compiler find
