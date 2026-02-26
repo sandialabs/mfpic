@@ -63,7 +63,7 @@ jobs:
         spack install --test=root --verbose --until=build
 
     - name: Save spack cache if on main branch
-      if: ${{ github.ref_name == "main" }}
+      if: ${{ github.ref_name == 'main' }}
       uses: actions/cache/save@v4
       with:
         path: spack
