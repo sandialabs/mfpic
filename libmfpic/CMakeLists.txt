@@ -1,5 +1,6 @@
 add_library(libmfpic
   AbsorbingParticleBoundary.cpp
+  BuildElectrostaticFieldOperationsFromYaml.cpp
   BuildOutputParametersFromYaml.cpp
   BuildParticleBoundariesFromYaml.cpp
   BuildSpeciesMapFromYaml.cpp
