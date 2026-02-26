@@ -15,12 +15,11 @@ TEST(ElectrostaticFieldOperationsWithBoltzmannElectrons, ZeroChargeAndZeroRefere
   mfem::Mesh mesh = mfem::Mesh::MakeCartesian1D(num_elems);
   constexpr int hgrad_order = 1;
   Discretization es_discretization(&mesh, hgrad_order);
-  auto pinning = std::make_unique<Pinning>();
   constexpr double reference_number_density = 0.0;
   constexpr double temperature = 1.0;
   mfpic::ElectrostaticFieldOperationsWithBoltzmannElectrons es_field_operations(
     es_discretization,
-    std::move(pinning),
+    std::make_unique<Pinning>(),
     reference_number_density,
     temperature
   );
