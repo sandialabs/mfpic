@@ -91,7 +91,7 @@ ElectrostaticFieldOperationsWithBoltzmannElectrons::ElectrostaticFieldOperations
   double electron_reference_number_density,
   double electron_temperature,
   double nonlinear_solver_relative_tolerance,
-  double nonlinear_solver_max_iterations
+  int nonlinear_solver_max_iterations
 ) :
   ElectrostaticFieldOperations(electrostatic_discretization, std::move(dirichlet_boundary_conditions)),
   electrostatic_nonlinear_form_(&electrostatic_discretization.getFeSpace())
