@@ -14,6 +14,7 @@ add_library(libmfpic
   DirichletBoundaryConditionsFactory.cpp
   DumpParticles.cpp
   ElectrostaticFieldOperations.cpp
+  ElectrostaticFieldOperationsWithBoltzmannElectrons.cpp
   ElectrostaticFieldState.cpp
   Errors.cpp
   Euler.cpp
