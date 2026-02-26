@@ -109,10 +109,9 @@ void ElectrostaticFieldOperationsWithBoltzmannElectrons::fieldSolve(
   const mfem::Vector integrated_charge_vector = charge_state.getIntegratedCharge();
   mfem::GridFunction& potential = field_state.getPotential();
 
-  mfem::CGSolver linear_solver;
   mfem::NewtonSolver newton_solver;
   newton_solver.SetOperator(electrostatic_nonlinear_form_);
-  newton_solver.SetSolver(linear_solver);
+  newton_solver.SetSolver(cg_linear_solver_);
   newton_solver.SetRelTol(1.0e-8);
   newton_solver.SetMaxIter(100);
   newton_solver.Mult(integrated_charge_vector, potential);

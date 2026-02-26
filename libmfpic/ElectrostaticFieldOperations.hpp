@@ -46,15 +46,15 @@ public:
 protected:
   std::unique_ptr<DirichletBoundaryConditions> dirichlet_boundary_conditions_;
 
+  /// conjugate gradient solver to invert negative_eps_laplace_matrix_
+  ConjugateGradientLinearSolver cg_linear_solver_;
+
 private:
   /// bilinear form for electrostatic system, -eps Laplace or eps (grad potential, grad phi)
   mfem::BilinearForm electrostatic_bilinear_form_;
 
   /// -eps Laplace operator assembled into matrix
   mfem::SparseMatrix negative_eps_laplace_matrix_;
-
-  /// conjugate gradient solver to invert negative_eps_laplace_matrix_
-  ConjugateGradientLinearSolver cg_linear_solver_;
 };
 
 } // namespace mfpic
