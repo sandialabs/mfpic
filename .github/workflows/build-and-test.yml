@@ -15,8 +15,6 @@ jobs:
       SPACK_DISABLE_LOCAL_CONFIG: true
       SPACK_USER_CACHE_PATH: spack_cache
       SPACK_VERSION: v1.1.1
-      SPACK_PATH: spack
-      SPACK_CACHE_KEY: ${{env.SPACK_VERSION}}-${{matrix.os}}-${{matrix.build_type}}-${{matrix.compiler}}
 
     strategy:
       fail-fast: false
@@ -31,8 +29,8 @@ jobs:
       id: restore-spack-cache
       uses: actions/cache/restore@v4
       with:
-        path: ${{ env.SPACK_PATH }}
-        key: ${{ env.SPACK_CACHE_KEY }}
+        path: spack
+        key: ${{env.SPACK_VERSION}}-${{matrix.os}}-${{matrix.build_type}}-${{matrix.compiler}}
 
     - name: Check out spack
       if: ${{ steps.restore-spack-cache.outputs.cache-hit != 'true' }}
@@ -68,5 +66,5 @@ jobs:
       if: ${{ github.ref_name == 'main' }}
       uses: actions/cache/save@v4
       with:
-        path: ${{ env.SPACK_PATH }}
-        key: ${{ env.SPACK_CACHE_KEY }}
+        path: spack
+        key: ${{env.SPACK_VERSION}}-${{matrix.os}}-${{matrix.build_type}}-${{matrix.compiler}}
