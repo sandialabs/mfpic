@@ -31,29 +31,58 @@ def create_1D_interpolater(field_data, points):
 
     return interpolater
 
-def compute_L2_norm_1D(function, points):
+
+def integrate_over_mesh_1D(function, points):
     # function should be function of x
     # points is (2 * n_cells) and looks like (x_0, x_1, x_1, x_2, ...)
     n_cells = int(0.5 * points.shape[0])
     points_by_cell = points.reshape(n_cells, 2)
 
-    function_to_integrate = lambda x: np.power(function(x), 2)
-    integrand = 0
+    integral = 0
     for i_cell in range(n_cells):
         x_left = points_by_cell[i_cell, 0]
         x_right = points_by_cell[i_cell, 1]
-        cell_integrand, _ = scipy.integrate.quad(function_to_integrate, x_left, x_right)
-        integrand += cell_integrand
+        cell_integral, _ = scipy.integrate.quad(function, x_left, x_right)
+        integral += cell_integral
 
+    return integral
+
+
+def compute_L1_norm_1D(function, points):
+    function_to_integrate = lambda x: np.abs(function(x))
+    L1_norm = integrate_over_mesh_1D(function_to_integrate, points)
+    return L1_norm
+
+
+def compute_L1_error_1D(numerical_solution, exact_solution, points):
+    error_function = lambda x: numerical_solution(x) - exact_solution(x)
+    return compute_L1_norm_1D(error_function, points)
+
+
+def compute_L1_relative_error_1D(numerical_solution, exact_solution, points):
+    L1_error = compute_L1_error_1D(numerical_solution, exact_solution, points)
+    exact_solution_norm = compute_L1_norm_1D(exact_solution, points)
+    L1_relative_error = L1_error / exact_solution_norm
+    return L1_relative_error
+
+
+def compute_L2_norm_1D(function, points):
+    # function should be function of x
+    # points is (2 * n_cells) and looks like (x_0, x_1, x_1, x_2, ...)
+
+    function_to_integrate = lambda x: np.power(function(x), 2)
+    integrand = integrate_over_mesh_1D(function_to_integrate, points)
     norm = np.sqrt(integrand)
     return norm
+
 
 def compute_L2_error_1D(numerical_solution, exact_solution, points):
     # numerical_solution and exact_solution should be functions of x
     # points is (2 * n_cells) and looks like (x_0, x_1, x_1, x_2, ...)
 
     error_function = lambda x: numerical_solution(x) - exact_solution(x)
-    return compute_L2_norm_1D(error_function)
+    return compute_L2_norm_1D(error_function, points)
+
 
 def compute_L2_relative_error_1D(numerical_solution, exact_solution, points):
     L2_error = compute_L2_error_1D(numerical_solution, exact_solution, points)
@@ -61,5 +90,8 @@ def compute_L2_relative_error_1D(numerical_solution, exact_solution, points):
     L2_relative_error = L2_error / exact_solution_norm
     return L2_relative_error
 
+
 def compute_convergence_rates(errors, h_array):
-    return np.log(errors[:-1] / errors[1:]) / np.log(h_array[:-1] / h_array[1:])
+    errors_np = np.array(errors)
+    h_np = np.array(h_array)
+    return np.log(errors_np[:-1] / errors_np[1:]) / np.log(h_np[:-1] / h_np[1:])
