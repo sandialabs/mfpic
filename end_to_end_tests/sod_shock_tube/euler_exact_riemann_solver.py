@@ -93,7 +93,8 @@ def solve_for_middle_pressure_and_velocity(
         pressure
     )
     initial_guess = 0.5 * (pressure_left + pressure_right)
-    pressure_middle = fsolve(func, initial_guess, xtol=1e-14)
+    sol = fsolve(func, initial_guess, xtol=1e-14)
+    pressure_middle = sol[0]
 
     velocity_middle = middle_velocity_left(pressure_middle)
     return pressure_middle, velocity_middle
@@ -213,6 +214,28 @@ def compute_wavespeeds(
 
     return smallest_left, biggest_left, contact_speed, smallest_right, biggest_right
 
+def compute_max_wavespeed(left_state_primitive, right_state_primitive, species):
+    pressure_middle, velocity_middle = solve_for_middle_pressure_and_velocity(
+        left_state_primitive, right_state_primitive, species
+    )
+    mass_density_middle_left = compute_middle_mass_density(
+        left_state_primitive, species, pressure_middle
+    )
+    mass_density_middle_right = compute_middle_mass_density(
+        right_state_primitive, species, pressure_middle
+    )
+
+    wavespeeds = compute_wavespeeds(
+        left_state_primitive,
+        right_state_primitive,
+        species,
+        pressure_middle,
+        velocity_middle,
+        mass_density_middle_left,
+        mass_density_middle_right,
+    )
+
+    return np.max(np.abs(wavespeeds))
 
 def form_rarefaction_solutions(
     primitive_state, species, discontinuity_location, is_left_going
