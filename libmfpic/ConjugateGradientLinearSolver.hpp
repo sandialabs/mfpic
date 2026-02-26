@@ -4,7 +4,7 @@
 
 namespace mfpic {
 
-class ConjugateGradientLinearSolver {
+class ConjugateGradientLinearSolver : public mfem::CGSolver {
 public:
   /**
    * @brief Construct a new Conjugate Gradient Linear Solver object
@@ -34,11 +34,6 @@ public:
 
 private:
   mfem::GSSmoother gauss_seidel_preconditioner_;
-  mfem::CGSolver mfem_cg_solver_;
-
-  double relative_tolerance_;
-  double absolute_tolerance_;
-  int maximum_number_of_iterations_;
 
   std::ofstream solver_log_;
 };
