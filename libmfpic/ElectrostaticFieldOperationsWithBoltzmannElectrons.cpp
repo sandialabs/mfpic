@@ -4,13 +4,32 @@ namespace mfpic {
 
 namespace {
 
+/// Integrates the weak form of the Boltzmann electrons modifier term.
 class BoltzmannElectronIntegrator : public mfem::NonlinearFormIntegrator {
 public:
+  /**
+   * @brief Ctor.
+   *
+   * @param[in] reference_number_density Reference number density.
+   * @param[in] temperature              Temperature.
+   */
   BoltzmannElectronIntegrator(double reference_number_density, double temperature) :
     reference_number_density_(reference_number_density),
     temperature_(temperature)
   {}
 
+  /**
+   * @brief Assembles the weak form of the Boltzmann electron charge density.
+   *
+   * \f[
+   *   e n_0 \int_\Omega \psi_i \exp \left( \frac{e \varphi_h}{k T} \right) \, \mathrm{d} \vec{x}
+   * \f]
+   *
+   * @param[in]  element                                 Finite element in which to integrate.
+   * @param[in]  element_transformation                  Physical-to-reference element transformation.
+   * @param[in]  local_potential                         Potential vector on element-local dofs.
+   * @param[out] local_boltzmann_electron_charge_density Electron charge density on element-local dofs.
+   */
   virtual void AssembleElementVector(
     const mfem::FiniteElement& element,
     mfem::ElementTransformation& element_transformation,
@@ -45,6 +64,19 @@ public:
     }
   }
 
+
+  /**
+   * @brief Assembles the weak form of the Boltzmann electron charge density Jacobian.
+   *
+   * \f[
+   *   \frac{e^2 n_0}{kT} \int_\Omega \psi_i \psi_j \exp \left( \frac{e \varphi_h}{k T} \right) \, \mathrm{d} \vec{x}
+   * \f]
+   *
+   * @param[in]  element                Finite element in which to integrate.
+   * @param[in]  element_transformation Physical-to-reference element transformation.
+   * @param[in]  local_potential        Potential vector on element-local dofs.
+   * @param[out] local_jacobian         Jacobian of electron charge density on element-local dofs.
+   */
   virtual void AssembleElementGrad(
     const mfem::FiniteElement& element,
     mfem::ElementTransformation& element_transformation,
@@ -78,8 +110,10 @@ public:
   }
 
 private:
+  /// Reference number density.
   const double reference_number_density_;
 
+  /// Temperature.
   const double temperature_;
 };
 
