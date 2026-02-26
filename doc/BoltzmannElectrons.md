@@ -9,9 +9,9 @@ where $f = f(\vec{x}, \vec{v})$ is the electron single-particle distribution fun
 $e$ is the elementary charge,
 $k$ is the Boltzmann constant,
 and $T$ is the temperature of the electrons.
-Practically, a reference number density $n_0$ is used to normalize the spatial distribution such that
+Practically, a reference number density $n_0$ is used to normalize the spatial distribution $n = n(\vec{x})$ such that
 $$
-f(\vec{x}) = \int f(\vec{x}, \vec{v}) \, \mathrm{d} \vec{v} = n_0 \exp \left( \frac{e \varphi(\vec{x})}{k T} \right).
+n = \int f(\vec{x}, \vec{v}) \, \mathrm{d} \vec{v} = n_0 \exp \left( \frac{e \varphi(\vec{x})}{k T} \right).
 $$
 Hence the charge density $\rho = \rho(\vec{x})$ is given by
 $$
