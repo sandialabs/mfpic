@@ -52,9 +52,9 @@ $$
 is solved for $\vec{\varphi}_{n+1}$,
 where $L$ is the discrete Laplacian matrix,
 $$
-k_i (\vec{u}) = k(\psi_i, u_h),
+k_i (\vec{u}) =  e n_0 \int_\Omega \psi_i \exp \left( \frac{e u_h}{k T} \right) \, \mathrm{d} \vec{x},
 $$
 $$
-J_{ij}(\vec{u}) = J(\psi_i, u_h) \psi_j,
+J_{ij}(\vec{u}) = \frac{e^2 n_0}{kT} \int_\Omega \psi_i \psi_j \exp \left( \frac{e u_h}{k T} \right) \, \mathrm{d} \vec{x},
 $$,
 and $u_h = \sum_{i=0}^{N-1} u_i \psi_i$.
