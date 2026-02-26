@@ -57,6 +57,22 @@ Fields:
 ```
 specifies a problem with the potential fixed at 1V on the left boundary and 2V on the right boundary.
 
+### Boltzmann Electrons
+
+Boltzmann electrons can optionally be enabled by including a ``Boltzmann Electrons`` key in the fields block.
+Details about Boltzmann electrons can be found [here](BoltzmannElectrons.md).
+
+```yaml
+Fields:
+    Boltzmann Electrons:
+        Reference Number Density: double #[m^-3]
+        Temperature: double #[K]
+```
+
+**``Reference Number Density``**: The number of electrons per unit volume where the electrostatic potential is zero, $n_0$.
+
+**``Temperature``**: The temperature of the electrons.
+
 ## Mesh
 
 The mesh for the problem can be created in two ways.
