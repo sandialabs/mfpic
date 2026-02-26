@@ -114,8 +114,13 @@ void ElectrostaticFieldOperationsWithBoltzmannElectrons::fieldSolve(
   ElectrostaticFieldState& field_state,
   const IntegratedCharge& charge_state
 ) {
-  const mfem::Vector integrated_charge_vector = charge_state.getIntegratedCharge();
+  mfem::Vector integrated_charge_vector = charge_state.getIntegratedCharge();
+  const mfem::Array<int> dirichlet_dof_indices = dirichlet_boundary_conditions_->getDirichletBoundaryDofIndices();
+  integrated_charge_vector.SetSubVector(dirichlet_dof_indices, 0.0);
+
   mfem::GridFunction& potential = field_state.getPotential();
+  dirichlet_boundary_conditions_->applyBoundaryConditions(potential);
+
   newton_solver_.Mult(integrated_charge_vector, potential);
 }
 
