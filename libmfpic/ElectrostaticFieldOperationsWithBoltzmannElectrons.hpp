@@ -1,12 +1,13 @@
 #pragma once
 
-#include "libmfpic/Constants.hpp"
 #include <libmfpic/ElectrostaticFieldOperations.hpp>
 
 namespace mfpic {
 
 class BoltzmannElectronIntegrator : public mfem::NonlinearFormIntegrator {
 public:
+  BoltzmannElectronIntegrator(double reference_number_density, double temperature);
+
   virtual void AssembleElementVector(
     const mfem::FiniteElement& element,
     mfem::ElementTransformation& element_transformation,
@@ -22,10 +23,9 @@ public:
   );
 
 private:
-  const double reference_number_density_ = 3.54803829431936e+18;
-  // const double reference_number_density_ = 7.05e18;
+  const double reference_number_density_;
 
-  const double temperature_ = 10.0 * constants::elementary_charge / constants::boltzmann_constant;
+  const double temperature_;
 };
 
 class ElectrostaticFieldOperationsWithBoltzmannElectrons : public ElectrostaticFieldOperations {

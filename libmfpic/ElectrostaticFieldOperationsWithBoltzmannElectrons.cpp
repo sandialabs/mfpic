@@ -2,6 +2,11 @@
 
 namespace mfpic {
 
+BoltzmannElectronIntegrator::BoltzmannElectronIntegrator(double reference_number_density, double temperature) :
+  reference_number_density_(reference_number_density),
+  temperature_(temperature)
+{}
+
 void BoltzmannElectronIntegrator::AssembleElementVector(
   const mfem::FiniteElement& element,
   mfem::ElementTransformation& element_transformation,
@@ -76,7 +81,11 @@ ElectrostaticFieldOperationsWithBoltzmannElectrons::ElectrostaticFieldOperations
   electrostatic_nonlinear_form_(&electrostatic_discretization.getFeSpace())
 {
   electrostatic_nonlinear_form_.AddDomainIntegrator(new mfem::DiffusionIntegrator(permittivity_));
-  electrostatic_nonlinear_form_.AddDomainIntegrator(new BoltzmannElectronIntegrator());
+  const double reference_number_density = 3.54803829431936e+18;
+  // const double reference_number_density = 7.05e18;
+
+  const double temperature = 10.0 * constants::elementary_charge / constants::boltzmann_constant;
+  electrostatic_nonlinear_form_.AddDomainIntegrator(new BoltzmannElectronIntegrator(reference_number_density, temperature));
   mfem::Array<int> dirichlet_dof_indices = dirichlet_boundary_conditions_->getDirichletBoundaryDofIndices();
   electrostatic_nonlinear_form_.SetEssentialTrueDofs(dirichlet_dof_indices);
 }
