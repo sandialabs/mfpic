@@ -109,9 +109,9 @@ TEST(SourcesFactory, GaussianSourceParametersEulerVectorCoefficient) {
   constexpr double standard_deviation = 0.01;
 
   const mfem::Vector bulk_velocity_offset{1., 0., 0.};
-  const mfem::Vector bulk_velocity_height{0., 0., 0.};
+  const mfem::Vector bulk_velocity_height{0.1, 0., 0.};
   SourceStateParameters offsets{.number_density = 1e22, .bulk_velocity=bulk_velocity_offset, .temperature = 320};
-  SourceStateParameters heights{.number_density = 1e21, .bulk_velocity=bulk_velocity_height, .temperature = 0};
+  SourceStateParameters heights{.number_density = 1e21, .bulk_velocity=bulk_velocity_height, .temperature = 10};
 
   GaussianSourceParameters parameters(electron_species, center, standard_deviation, offsets, heights);
   std::unique_ptr<mfem::VectorCoefficient> euler_coefficient = parameters.getEulerVectorCoefficient();

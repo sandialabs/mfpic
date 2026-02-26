@@ -84,15 +84,15 @@ GaussianSourceParameters::GaussianSourceParameters(
 {}
 
 std::unique_ptr<mfem::VectorCoefficient> GaussianSourceParameters::getEulerVectorCoefficient() const {
-  const mfem::Vector heights_primitive = constructPrimitiveState(heights);
   const mfem::Vector offsets_primitive = constructPrimitiveState(offsets);
+  const mfem::Vector heights_primitive = constructPrimitiveState(heights);
 
   auto function = [
     &standard_deviation = standard_deviation,
     &center = center,
     &species = species,
-    heights_primitive = heights_primitive,
-    offsets_primitive = offsets_primitive](const mfem::Vector& x, mfem::Vector& y)
+    offsets_primitive = offsets_primitive,
+    heights_primitive = heights_primitive](const mfem::Vector& x, mfem::Vector& y)
   {
     mfem::Vector shifted_x(x.Size());
     for (int i_dim = 0; i_dim < x.Size(); ++i_dim) {
