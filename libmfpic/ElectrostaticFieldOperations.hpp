@@ -44,6 +44,7 @@ public:
   double fieldEnergy(const ElectrostaticFieldState& field_state) const;
 
 protected:
+  /// Dirichlet boundary conditions.
   std::unique_ptr<DirichletBoundaryConditions> dirichlet_boundary_conditions_;
 
   /// conjugate gradient solver to invert negative_eps_laplace_matrix_
