@@ -34,7 +34,7 @@ TEST(ElectrostaticFieldOperationsWithBoltzmannElectrons, ZeroChargeAndZeroRefere
   mfem::ConstantCoefficient exact_potential(0.);
   const double l2_error = potential.ComputeL2Error(exact_potential);
   constexpr double expected_error = 0.;
-  EXPECT_EQ(expected_error, l2_error);
+  EXPECT_DOUBLE_EQ(expected_error, l2_error);
 }
 
 TEST(ElectrostaticFieldOperationsWithBoltzmannElectrons, BoltzmannElectronsSolverGivesSameAnswerAsStandardSolverWithZeroReferenceDensity) {
