@@ -5,8 +5,8 @@ import vtk
 import vtk.util.numpy_support as vtk_numpy_support
 
 
-def read_timesteps_and_files():
-    xml_tree = ET.parse("MeshOutput/MeshOutput.pvd")
+def read_timesteps_and_files(mesh_output_name = "MeshOutput"):
+    xml_tree = ET.parse(f"{mesh_output_name}/{mesh_output_name}.pvd")
     root = xml_tree.getroot()
     vtk_collection = root[0]
 
@@ -23,9 +23,9 @@ def read_timesteps_and_files():
     return timesteps, filenames
 
 
-def read_single_timestep(filename):
+def read_single_timestep(folder_name, filename):
     grid_reader = vtk.vtkXMLPUnstructuredGridReader()
-    grid_reader.SetFileName(f"MeshOutput/{filename}")
+    grid_reader.SetFileName(f"{folder_name}/{filename}")
     grid_reader.Update()
     output = grid_reader.GetOutput()
     points = vtk_numpy_support.vtk_to_numpy(output.GetPoints().GetData())
@@ -39,11 +39,11 @@ def read_single_timestep(filename):
     return timestep_data
 
 
-def read_mesh_data():
-    timesteps, filenames = read_timesteps_and_files()
+def read_mesh_data(mesh_output_name = "MeshOutput"):
+    timesteps, filenames = read_timesteps_and_files(mesh_output_name)
 
     mesh_data = []
     for filename in filenames:
-        mesh_data.append(read_single_timestep(filename))
+        mesh_data.append(read_single_timestep(mesh_output_name, filename))
 
     return timesteps, mesh_data
