@@ -44,6 +44,9 @@ public:
   double fieldEnergy(const ElectrostaticFieldState& field_state) const;
 
 protected:
+  std::unique_ptr<DirichletBoundaryConditions> dirichlet_boundary_conditions_;
+
+private:
   /// bilinear form for electrostatic system, -eps Laplace or eps (grad potential, grad phi)
   mfem::BilinearForm electrostatic_bilinear_form_;
 
@@ -52,8 +55,6 @@ protected:
 
   /// conjugate gradient solver to invert negative_eps_laplace_matrix_
   ConjugateGradientLinearSolver cg_linear_solver_;
-
-  std::unique_ptr<DirichletBoundaryConditions> dirichlet_boundary_conditions_;
 };
 
 } // namespace mfpic

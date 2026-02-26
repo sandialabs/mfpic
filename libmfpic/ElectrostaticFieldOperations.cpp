@@ -6,8 +6,8 @@ namespace mfpic {
 ElectrostaticFieldOperations::ElectrostaticFieldOperations(
   Discretization& electrostatic_discretization,
   std::unique_ptr<DirichletBoundaryConditions> dirichlet_boundary_conditions)
-  : electrostatic_bilinear_form_(&electrostatic_discretization.getFeSpace())
-  , dirichlet_boundary_conditions_(std::move(dirichlet_boundary_conditions))
+  : dirichlet_boundary_conditions_(std::move(dirichlet_boundary_conditions))
+  , electrostatic_bilinear_form_(&electrostatic_discretization.getFeSpace())
 {
   mfem::ConstantCoefficient permittivity(constants::permittivity);
   electrostatic_bilinear_form_.AddDomainIntegrator(new mfem::DiffusionIntegrator(permittivity));
