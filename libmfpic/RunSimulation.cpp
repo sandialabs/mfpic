@@ -55,7 +55,7 @@ void runSimulation(int argc, char* argv[]) {
   std::unique_ptr<DirichletBoundaryConditions> dirichlet_bcs = buildDirichletBoundaryConditions(
     boundary_attribute_to_dirichlet_value, electrostatic_discretization);
 
-  std::unique_ptr<ElectrostaticFieldOperations> electrostatic_field_operations = buildElectrostaticFieldOperations(
+  std::unique_ptr<ElectrostaticFieldOperations> electrostatic_field_operations = buildElectrostaticFieldOperationsFromYaml(
     fields,
     electrostatic_discretization,
     std::move(dirichlet_bcs)

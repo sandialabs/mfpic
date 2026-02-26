@@ -21,7 +21,7 @@ class ElectrostaticFieldOperations;
 
   @returns A smart pointer to electrostatic field operations.
  */
-std::unique_ptr<ElectrostaticFieldOperations> buildElectrostaticFieldOperations(
+std::unique_ptr<ElectrostaticFieldOperations> buildElectrostaticFieldOperationsFromYaml(
   const YAML::Node& fields_node,
   Discretization& electrostatic_discretization,
   std::unique_ptr<DirichletBoundaryConditions> dirichlet_boundary_conditions
