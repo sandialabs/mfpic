@@ -16,7 +16,7 @@ public:
     mfem::ElementTransformation& element_transformation,
     const mfem::Vector& local_potential,
     mfem::Vector& local_boltzmann_electron_charge_density
-  ) {
+  ) override {
     const int integration_order = 2 * element.GetOrder() + element_transformation.OrderGrad(&element) + 1;
     IntRule = &mfem::IntRules.Get(element.GetGeomType(), integration_order);
 
@@ -50,7 +50,7 @@ public:
     mfem::ElementTransformation& element_transformation,
     const mfem::Vector& local_potential,
     mfem::DenseMatrix& local_jacobian
-  ) {
+  ) override {
     const int integration_order = 2 * element.GetOrder() + element_transformation.OrderGrad(&element) + 1;
     IntRule = &mfem::IntRules.Get(element.GetGeomType(), integration_order);
 
