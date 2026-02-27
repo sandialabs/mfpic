@@ -5,7 +5,7 @@ number_density = 1.0e20
 temperature = 10.0 * electron_volt / Boltzmann
 debye_length = np.sqrt(epsilon_0 * Boltzmann * temperature / (number_density * elementary_charge**2.0))
 dx = debye_length
-num_elements = 120
+num_elements = 60
 domain_length = num_elements * debye_length
 most_probable_ion_speed = np.sqrt(2.0 * Boltzmann * temperature / proton_mass)
 ion_acoustic_transit_time = domain_length / most_probable_ion_speed
@@ -14,11 +14,11 @@ dt = min(dx / (3.0 * most_probable_ion_speed), 0.1 / ion_plasma_frequency)
 num_macroparticles_per_population = 1000 * num_elements
 bohm_speed = np.sqrt(Boltzmann * temperature / proton_mass)
 bohm_current_density = number_density * elementary_charge * bohm_speed * np.exp(-0.5)
-ion_wall_flux = 2 * bohm_current_density / elementary_charge
+ion_wall_flux = bohm_current_density / elementary_charge
 source_number_density = ion_wall_flux / domain_length * dt
 source_num_macroparticles = int(source_number_density / number_density * num_macroparticles_per_population)
 electron_thermal_speed = np.sqrt(8.0 * Boltzmann * temperature / np.pi / electron_mass)
-electron_boundary_flux_per_unit_number_density = 2.0 * electron_thermal_speed / 4.0
+electron_boundary_flux_per_unit_number_density = electron_thermal_speed / 4.0
 electron_source_rate = ion_wall_flux
 electron_reference_number_density = electron_source_rate / electron_boundary_flux_per_unit_number_density
 
@@ -33,8 +33,6 @@ Fields:
     Temperature: {temperature}
   Boundary Conditions:
     - Side: left
-      Value: 0.0
-    - Side: right
       Value: 0.0
 
 Mesh:
@@ -52,8 +50,10 @@ Species:
     Charge: {elementary_charge}
 
 Particles:
-  Boundary Conditions: []
-  Default Boundary Condition: Absorbing
+  Boundary Conditions:
+    - Side: left
+      Type: Absorbing
+  Default Boundary Condition: Reflecting
   Initial Conditions:
     - Species: [proton]
       Number of Macroparticles per Species: {num_macroparticles_per_population}
