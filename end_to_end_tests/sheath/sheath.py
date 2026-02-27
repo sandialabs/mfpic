@@ -118,32 +118,24 @@ def analyze():
   assert np.isclose(expected_sheath_entrance_potential, simulated_sheath_entrance_potential, rtol=2.5e-1), f"Expected potential at sheath entrance to be {expected_sheath_entrance_potential} V, but computed {simulated_sheath_entrance_potential} V"
 
 def plot():
+  import h5py
   import matplotlib.pyplot as plt
 
-  best_linear_regime_timestep_start, best_linear_regime_timestep_window, best_linear_regime_fit, expected_growth_rate = analyze()
+  particle_file = h5py.File("particles.h5part")
+  particle_data_at_last_timestep = particle_file[f"Step#1"]
+  sheath_entrance_element = findElementWhereIonDriftSpeedSatisfiesBohmCriterion(particle_data_at_last_timestep)
+  sheath_entrance_node = sheath_entrance_element - 1
 
-  output = np.genfromtxt("output.csv", names=True)
+  _, mesh_data = read_mesh_data.read_mesh_data()
+  mesh_data_at_last_timestep = mesh_data[-1]
 
-  simulation_times = output["Time"]
-  energy = output["Field_Energy"]
-
-  windowed_times = simulation_times[best_linear_regime_timestep_start:best_linear_regime_timestep_start+best_linear_regime_timestep_window]
-
-  plt.semilogy(simulation_times *plasma_frequency / (2.0 * np.pi), energy, label="simulation")
-  plt.semilogy(
-    windowed_times *plasma_frequency / (2.0 * np.pi),
-    np.pow(10, best_linear_regime_fit(windowed_times)),
-    label="growth fit"
+  plt.plot(
+    mesh_data_at_last_timestep["points"],
+    mesh_data_at_last_timestep["electrostatic_potential"]
   )
-  plt.semilogy(
-    windowed_times *plasma_frequency / (2.0 * np.pi),
-    energy[best_linear_regime_timestep_start] * np.pow(10, expected_growth_rate * (windowed_times - windowed_times[0])),
-    label="expected growth"
-  )
-  plt.axvline(simulation_times[best_linear_regime_timestep_start] *plasma_frequency / (2.0 * np.pi))
-  plt.axvline(simulation_times[best_linear_regime_timestep_start+best_linear_regime_timestep_window] *plasma_frequency / (2.0 * np.pi))
-  plt.xlabel("Simulation time (plasma frequencies)")
-  plt.ylabel("Electrostatic energy (J)")
+  plt.axvline(mesh_data_at_last_timestep["points"][2*sheath_entrance_node], color="C1", label="Sheath entrance")
+  plt.xlabel("x (m)")
+  plt.ylabel("Electrostatic potential (V)")
   plt.legend()
   plt.savefig("twostream.png")
 
