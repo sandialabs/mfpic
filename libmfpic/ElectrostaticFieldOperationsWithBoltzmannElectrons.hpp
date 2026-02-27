@@ -26,7 +26,7 @@ public:
     double electron_reference_number_density,
     double electron_temperature,
     double nonlinear_solver_relative_tolerance = 1.0e-8,
-    int nonlinear_solver_max_iterations = 100
+    int nonlinear_solver_max_iterations = 10
   );
 
   /**
