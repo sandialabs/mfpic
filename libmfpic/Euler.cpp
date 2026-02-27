@@ -167,7 +167,7 @@ double evaluateMaxwellian(const mfem::Vector& primitive_state, const mfem::Vecto
   exponent += (diff * diff) / sq_sigma;
   double norm = 1.0 / std::pow(std::sqrt(2.0 * M_PI) * sigma, dim);
   double velocity_pdf = norm * std::exp(-0.5 * exponent);
-  return velocity_pdf/primitive_state(euler::PrimitiveVariables::NUMBER_DENSITY);
+  return velocity_pdf * primitive_state(euler::PrimitiveVariables::NUMBER_DENSITY);
 }
 
 }
