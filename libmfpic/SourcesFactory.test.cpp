@@ -464,4 +464,27 @@ TEST(SourcesFactory, SodInitialConditionsGivesBackCorrectParameters) {
   }
 }
 
+TEST(SourcesFactory, GaussianInitialConditionsGivesBackCorrectParameters) {
+  constexpr int num_particles_per_species = 513;
+
+  const std::string model_string(
+    "Initial Conditions:\n"
+    "  - Species: [" + electron_species_name + "]\n"
+    "    Number of Macroparticles per Species: " + std::to_string(num_particles_per_species) + "\n"
+    "    Gaussian:\n"
+    "      Center: [" + std::to_string(center) + "]\n"
+    "      Standard Deviation:"
+    "      Offsets:\n"
+    "        Number Density: " + std::to_string(number_density_offset) + "\n"
+    "        Temperature: " + std::to_string(temperature_offset) + "\n"
+    "        Bulk Velocity: [" + std::to_string(bulk_velocity_offset[0]) + ", " + std::to_string(bulk_velocity_offset[1]) + ", " +
+      std::to_string(bulk_velocity_offset[2]) + "]\n"
+    "      Heights:\n"
+    "        Number Density: " + std::to_string(number_density_r) + "\n"
+    "        Temperature: " + std::to_string(temperature_r) + "\n"
+    "        Bulk Velocity: [" + std::to_string(bulk_velocity_r[0]) + ", " + std::to_string(bulk_velocity_r[1]) + ", " +
+      std::to_string(bulk_velocity_r[2]) + "]\n"
+  );
+}
+
 }
