@@ -1,10 +1,10 @@
-#include "libmfpic/LowFidelityState.hpp"
 #include <libmfpic/IntegratedCharge.hpp>
+#include <libmfpic/LowFidelityOperations.hpp>
+#include <libmfpic/LowFidelityState.hpp>
 #include <libmfpic/MeshUtilities.hpp>
 #include <libmfpic/ParticleContainer.hpp>
 #include <libmfpic/ParticleOperations.hpp>
 #include <libmfpic/PeriodicParticleBoundary.hpp>
-#include "libmfpic/LowFidelityOperations.hpp"
 
 #include <mfem/mfem.hpp>
 
