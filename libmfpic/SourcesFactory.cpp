@@ -195,10 +195,38 @@ std::vector<std::unique_ptr<SourceParameters>> buildListOfSourceParametersFromYA
         const SourceStateParameters right_state_parameters = buildSourceStateParametersFromYAML(right_state_node);
 
         for (const std::string& species_name : species_names) {
-          list_of_parameters.push_back(std::make_unique<SodSourceParameters>(species_map.at(species_name), discontinuity_location, left_state_parameters, right_state_parameters, num_particles_per_species));
+          list_of_parameters.push_back(
+            std::make_unique<SodSourceParameters>(
+              species_map.at(species_name),
+              discontinuity_location,
+              left_state_parameters,
+              right_state_parameters,
+              num_particles_per_species));
+        }
+      } else if (source["Gaussian"]) {
+        const YAML::Node& gaussian_node = source["Gaussian"];
+
+        const YAML::Node& center_node = gaussian_node["Center"];
+        mfem::Vector center(center_node.size());
+        for (int i = 0; i < std::ssize(center_node); ++i){
+          center[i] = center_node[i].as<double>();
+        }
+
+        const double standard_deviation = gaussian_node["Standard Deviation"].as<double>();
+        const SourceStateParameters offsets = buildSourceStateParametersFromYAML(gaussian_node["Offsets"]);
+        const SourceStateParameters heights = buildSourceStateParametersFromYAML(gaussian_node["Heights"]);
+
+        for (const std::string& species_name : species_names) {
+          list_of_parameters.push_back(std::make_unique<GaussianSourceParameters>(
+            species_map.at(species_name),
+            center,
+            standard_deviation,
+            offsets,
+            heights,
+            num_particles_per_species));
         }
       } else {
-        errorWithUserMessage(formatParseMessage(source, "It is required to either specify \"Constant\" or \"Sod\"."));
+        errorWithUserMessage(formatParseMessage(source, "It is required to either specify \"Constant\", \"Sod\", or \"Gaussian\"."));
       }
     }
   } else {
