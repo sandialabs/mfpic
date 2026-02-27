@@ -1,5 +1,4 @@
 #include <libmfpic/LoadUniformKappaParticles.hpp>
-
 #include <gtest/gtest.h>
 
 namespace {
@@ -11,18 +10,16 @@ const mfem::Vector zero_vector({0.0, 0.0, 0.0});
 const int num_elems = 10;
 std::shared_ptr<mfem::Mesh> simple_mesh = std::make_shared<mfem::Mesh>(mfem::Mesh::MakeCartesian1D(num_elems));
 
-TEST(LoadUniformKappaParticles, NoParticlesAddedWhenNoParticlesRequested) {
+TEST(LoadUniformMaxwellianParticles, NoParticlesAddedWhenNoParticlesRequested) {
   constexpr double temperature = 121325.0;
   constexpr double number_density = 1.0e18;
   constexpr int num_particles = 0;
-  constexpr double kappa = 2; 
   std::mt19937 generator;
 
   ParticleContainer particles = loadUniformKappaParticles(
     default_species,
     zero_vector,
     temperature,
-    kappa,
     number_density,
     num_particles,
     generator,
@@ -36,14 +33,12 @@ TEST(LoadUniformKappaParticles, NumLoadedParticlesIsAsRequested) {
   constexpr double temperature = 12415.0;
   constexpr double number_density = 1.0e18;
   constexpr int num_particles = 40;
-  constexpr double kappa = 2; 
   std::mt19937 generator;
 
   ParticleContainer particles = loadUniformKappaParticles(
     default_species,
     zero_vector,
     temperature,
-    kappa,
     number_density,
     num_particles,
     generator,
@@ -53,19 +48,17 @@ TEST(LoadUniformKappaParticles, NumLoadedParticlesIsAsRequested) {
   ASSERT_EQ(particles.numParticles(), num_particles);
 }
 
-TEST(LoadUniformKappaParticles, LoadedParticlesAllUseBulkVelocityWithZeroTemperature) {
+TEST(LoadUniformMaxwellianParticles, LoadedParticlesAllUseBulkVelocityWithZeroTemperature) {
   const mfem::Vector bulk_velocity({1.0, 2.0, 3.0});
   constexpr double temperature = 0.0;
   constexpr double number_density = 1.0e18;
   constexpr int num_particles = 5;
-  constexpr double kappa = 2; 
   std::mt19937 generator;
 
-  ParticleContainer particles = loadUniformKappaParticles(
+  ParticleContainer particles = loadUniformMaxwellianParticles(
     default_species,
     bulk_velocity,
     temperature,
-    kappa,
     number_density,
     num_particles,
     generator,
@@ -80,18 +73,16 @@ TEST(LoadUniformKappaParticles, LoadedParticlesAllUseBulkVelocityWithZeroTempera
   }
 }
 
-TEST(LoadUniformKappaParticles, ParticleWeightSetCorrectly) {
+TEST(LoadUniformMaxwellianParticles, ParticleWeightSetCorrectly) {
   constexpr double temperature = 0.0;
   constexpr double number_density = 1.0e18;
   constexpr int num_particles = 20;
-  constexpr int kappa = 2;
   std::mt19937 generator;
 
-  ParticleContainer particles = loadUniformKappaParticles(
+  ParticleContainer particles = loadUniformMaxwellianParticles(
     default_species,
     zero_vector,
     temperature,
-    kappa,
     number_density,
     num_particles,
     generator,
@@ -105,18 +96,16 @@ TEST(LoadUniformKappaParticles, ParticleWeightSetCorrectly) {
   }
 }
 
-TEST(LoadUniformKappaParticles, ParticlesAreUniformlyDistributedInSpace) {
+TEST(LoadUniformMaxwellianParticles, ParticlesAreUniformlyDistributedInSpace) {
   constexpr double temperature = 0.0;
   constexpr double number_density = 1.0e18;
   constexpr int num_particles = 20000;
-  constexpr double kappa = 2;
   std::mt19937 generator;
 
-  ParticleContainer particles = loadUniformKappaParticles(
+  ParticleContainer particles = loadUniformMaxwellianParticles(
     default_species,
     zero_vector,
     temperature,
-    kappa,
     number_density,
     num_particles,
     generator,
@@ -142,19 +131,17 @@ TEST(LoadUniformKappaParticles, ParticlesAreUniformlyDistributedInSpace) {
   }
 }
 
-TEST(LoadUniformKappaParticles, ParticleVelocitiesAreMaxwellianWithLargeKappa) {
+TEST(LoadUniformMaxwellianParticles, ParticleVelocitiesAreMaxwellian) {
   const mfem::Vector nominal_bulk_velocity({300.0, 600.0, 1000.0});
   constexpr double temperature = 11600.0;
   constexpr double number_density = 1.0e18;
   constexpr int num_particles = 20000;
-  constexpr double kappa = 1e16;
   std::mt19937 generator;
 
-  ParticleContainer particles = loadUniformKappaParticles(
+  ParticleContainer particles = loadUniformMaxwellianParticles(
     default_species,
     nominal_bulk_velocity,
     temperature,
-    kappa,
     number_density,
     num_particles,
     generator,
@@ -180,48 +167,6 @@ TEST(LoadUniformKappaParticles, ParticleVelocitiesAreMaxwellianWithLargeKappa) {
   sample_variance /= num_particles - 1;
   constexpr double expected_sample_variance = 3.0 * constants::boltzmann_constant * temperature / default_species.mass;
   EXPECT_NEAR(sample_variance, expected_sample_variance, relative_tolerance * expected_sample_variance);
-}
-
-TEST(LoadUniformKappaParticles, ParticleVelocitiesMeanAndStdAreCorrect) {
-
-  const mfem::Vector nominal_bulk_velocity({300.0, 600.0, 1000.0});
-  constexpr double temperature = 11600.0;
-  constexpr double number_density = 1.0e18;
-  constexpr int num_particles = 20000;
-  constexpr double kappa = 2.0;
-  std::mt19937 generator;
-
-  ParticleContainer particles = loadUniformKappaParticles(
-    default_species,
-    nominal_bulk_velocity,
-    temperature,
-    kappa,
-    number_density,
-    num_particles,
-    generator,
-    simple_mesh
-  );
-
-  mfem::Vector actual_bulk_velocity({0.0, 0.0, 0.0});
-  for (const Particle& particle : particles) {
-    actual_bulk_velocity += particle.velocity;
-  }
-  actual_bulk_velocity /= num_particles;
-  constexpr double relative_tolerance = 0.1;
-  for (int i = 0; i < 3; i++) {
-    EXPECT_NEAR(actual_bulk_velocity[i], nominal_bulk_velocity[i], relative_tolerance * nominal_bulk_velocity[i]);
-  }
-
-  double sample_variance = 0.0;
-  for (const Particle& particle : particles) {
-    mfem::Vector relative_velocity = particle.velocity;
-    relative_velocity -= actual_bulk_velocity;
-    sample_variance += relative_velocity * relative_velocity;
-  }
-  sample_variance /= num_particles - 1;
-  constexpr double expected_sample_variance_maxwellian = 3.0 * constants::boltzmann_constant * temperature / default_species.mass;
-  constexpr double expected_sample_variance_kappa = expected_sample_variance_maxwellian * (kappa / (kappa - 0.5));
-  EXPECT_NEAR(sample_variance, expected_sample_variance_kappa, relative_tolerance * expected_sample_variance_kappa);
 }
 
 } // namespace

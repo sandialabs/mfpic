@@ -1,8 +1,10 @@
+#include "libmfpic/LowFidelityState.hpp"
 #include <libmfpic/IntegratedCharge.hpp>
 #include <libmfpic/MeshUtilities.hpp>
 #include <libmfpic/ParticleContainer.hpp>
 #include <libmfpic/ParticleOperations.hpp>
 #include <libmfpic/PeriodicParticleBoundary.hpp>
+#include "libmfpic/LowFidelityOperations.hpp"
 
 #include <mfem/mfem.hpp>
 
@@ -167,6 +169,52 @@ IntegratedCharge ParticleOperations::assembleCharge(
       charge_state.addIntegratedChargeValue(vector_dofs[i],particle.weight * particle_charge * psi_i(i));
     }
   }
+
+  return charge_state;
+  }
+
+  IntegratedCharge ParticleOperations::assembleVarianceReducedCharge(
+  const ParticleContainer& current_particles,
+  const LowFidelityState& low_fidelity_state,
+  const LowFidelityOperations& low_fidelity_operations
+) const {
+  ParticleContainer particles = current_particles;
+  mfem::IntegrationPoint integration_point;
+  mfem::Array<int> vector_dofs;
+  mfem::FiniteElementSpace finite_element_space = discretization_.getFeSpace();
+
+  IntegratedCharge charge_state(discretization_);
+
+  charge_state.setIntegratedChargeValue(0.0);
+  mfem::Mesh &mesh = *finite_element_space.GetMesh();
+
+  for (Particle& particle : particles) {
+    if (not particle.is_alive) continue;
+
+    const int elem_id = particle.element;
+    const Species& particle_species = particle.species;
+    const double particle_charge = particle_species.charge;
+    mfem::ElementTransformation * element_transformation = mesh.GetElementTransformation(elem_id);
+    const mfem::FiniteElement *fe = finite_element_space.GetFE(elem_id);
+
+    const mfem::Vector particle_position(particle.position.GetData(), dim_); 
+    const mfem::Vector particle_velocity(particle.velocity.GetData(), dim_); 
+    element_transformation->TransformBack(particle_position, integration_point);
+    element_transformation->SetIntPoint(&integration_point);
+    mfem::Vector psi_i(fe->GetDof());
+    fe->CalcPhysShape(*element_transformation,psi_i);
+    finite_element_space.GetElementVDofs(elem_id, vector_dofs);
+
+    double low_fidelity_pdf_value = low_fidelity_operations.evaluatePDF(low_fidelity_state,particle_position,particle_velocity,particle.element,mesh,particle_species);
+    double weights = (1 - low_fidelity_pdf_value / particle.pdf_value);
+
+    for (int i = 0; i < fe->GetDof(); i++) {
+      charge_state.addIntegratedChargeValue(vector_dofs[i],particle.weight * particle_charge * psi_i(i) * weights);
+    }
+  }
+
+  IntegratedCharge low_fidelity_charge_state = low_fidelity_operations.assembleCharge(low_fidelity_state);
+  charge_state.addCharge(low_fidelity_charge_state);
 
   return charge_state;
   }

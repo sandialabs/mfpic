@@ -1,6 +1,7 @@
 #pragma once
 
 #include <libmfpic/Constants.hpp>
+#include <libmfpic/Euler.hpp>
 #include <libmfpic/MeshUtilities.hpp>
 #include <libmfpic/ParticleContainer.hpp>
 #include <libmfpic/Species.hpp>
@@ -62,6 +63,17 @@ ParticleContainer loadUniformMaxwellianParticles(
     for (int i = 0; i < random_mesh_position.Size(); i++) {
       position[i] = random_mesh_position[i];
     }
+
+    mfem::Vector primitive_state(6);
+    primitive_state(0) = number_density;
+    primitive_state(1) = bulk_velocity(0);
+    primitive_state(2) = bulk_velocity(1);
+    primitive_state(3) = bulk_velocity(2);
+    primitive_state(4) = temperature;
+    primitive_state(5) = 5.0;
+    double velocity_pdf = euler::evaluateMaxwellian(primitive_state,velocity,species);
+    double element_volume = mesh->GetElementVolume(element);
+
     particles.addParticle(Particle{
       .position = position,
       .velocity = velocity,
@@ -69,6 +81,7 @@ ParticleContainer loadUniformMaxwellianParticles(
       .species = species,
       .weight = particle_weight,
       .is_alive = true,
+      .pdf_value = velocity_pdf / element_volume,
     });
   }
 

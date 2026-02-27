@@ -70,6 +70,8 @@ public:
   */
   virtual double estimateCFL(const double & dt, const double & smallest_cell_lengthscale) const override;
 
+  virtual double evaluatePDF(const LowFidelityState &, const mfem::Vector, const mfem::Vector, const int, mfem::Mesh&, const Species&) const override; 
+
 private:
   Discretization & charge_discretization_;
   std::vector<std::shared_ptr<DGEulerAssembly>> dg_assemblers_;
