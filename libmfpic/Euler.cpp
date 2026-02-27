@@ -1,4 +1,5 @@
 #include <libmfpic/Constants.hpp>
+#include <libmfpic/Errors.hpp>
 #include <libmfpic/Euler.hpp>
 #include <libmfpic/Species.hpp>
 
@@ -155,8 +156,13 @@ double getInternalEnergyDensityFromPrimitiveState(const mfem::Vector& primitive_
 }
 
 double evaluateMaxwellian(const mfem::Vector& primitive_state, const mfem::Vector velocity, const Species& species, const int dim){
-  //TODO: Do we want a default value if sigma == 0? 
   const double sigma = sqrt(constants::boltzmann_constant * primitive_state(euler::PrimitiveVariables::TEMPERATURE) / species.mass);
+  if (sigma <= 0)
+  {
+    std::ostringstream error_message;
+    error_message << "Sigma must be > 0.\n";
+    errorWithUserMessage(error_message.str());
+  }
   double sq_sigma = sigma * sigma;
   double exponent = 0.0;
   double diff = velocity(0) - primitive_state(euler::PrimitiveVariables::X_BULK_VELOCITY);
