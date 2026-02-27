@@ -1,8 +1,14 @@
+#include "libmfpic/LowFidelityState.hpp"
+#include <libmfpic/DGEulerAssembly.hpp>
+#include <libmfpic/DGEulerOperations.hpp>
+#include <libmfpic/DGEulerInitialConditionsFactory.hpp>
 #include <libmfpic/Discretization.hpp>
 #include <libmfpic/ElectromagneticFieldsEvaluator.hpp>
+#include <libmfpic/LoadUniformMaxwellianParticles.hpp>
 #include <libmfpic/ParticleContainer.hpp>
 #include <libmfpic/ParticleOperations.hpp>
 #include <libmfpic/ReflectingParticleBoundary.hpp>
+#include <libmfpic/SourcesFactory.hpp>
 #include <libmfpic/Species.hpp>
 
 #include <gtest/gtest.h>
@@ -903,6 +909,60 @@ TEST(ParticleOperations, ParticleMovesAcrossPeriodicBoundariesIn3D) {
     EXPECT_DOUBLE_EQ(moved_particle.position[1], 0.3);
     EXPECT_DOUBLE_EQ(moved_particle.position[2], 0.3);
     EXPECT_EQ(moved_particle.element, 0);
+  }
+}
+
+TEST(ParticleOperations, VarianceReducedChargeIsExactForMaxwellianInCell1D) {
+  Species species{.charge = -constants::elementary_charge, .mass = constants::electron_mass};
+  constexpr double number_density = 1e22;
+  constexpr double temperature = 300;
+  mfem::Vector bulk_velocity({1.0,0.0,0.0});
+  //TODO: Will NAN with non-physical settings if sigma=0
+  // const mfem::Vector nominal_bulk_velocity({300.0, 600.0, 1000.0});
+  // constexpr double temperature = 11600.0;
+  // constexpr double number_density = 1.0e18;
+  constexpr int num_particles = 20;
+  std::mt19937 generator;
+
+  const int num_elems = 1;
+  constexpr int dg_order = 0;
+  constexpr int num_equations = 5;
+  std::shared_ptr<mfem::Mesh> mesh = std::make_shared<mfem::Mesh>(mfem::Mesh::MakeCartesian1D(num_elems));
+  Discretization dg_discretization(mesh.get(), dg_order, FETypes::DG, num_equations);
+
+  constexpr int charge_order = 1;
+  Discretization charge_discretization(mesh.get(), charge_order, FETypes::HGRAD);
+
+  mfem::FiniteElementSpace finite_element_space = dg_discretization.getFeSpace();
+  std::shared_ptr<DGEulerAssembly> operator_ptr = std::make_shared<DGEulerAssembly>(finite_element_space, species);
+  std::vector<std::shared_ptr<DGEulerAssembly>> dg_operators({operator_ptr});
+  DGEulerOperations dg_euler_operations(charge_discretization, dg_operators);
+
+  std::vector<std::unique_ptr<SourceParameters>> list_of_parameters;
+  list_of_parameters.push_back(std::make_unique<ConstantSourceParameters>(species, number_density, temperature,bulk_velocity));
+  LowFidelityState low_fidelity_state = buildEulerState(dg_discretization, list_of_parameters);
+  IntegratedCharge low_fidelity_charge_state = dg_euler_operations.assembleCharge(low_fidelity_state);
+  mfem::Vector integrated_charge_vector = low_fidelity_charge_state.getIntegratedCharge();
+
+  ParticleContainer particles = loadUniformMaxwellianParticles(
+    species,
+    bulk_velocity,
+    temperature,
+    number_density,
+    num_particles,
+    generator,
+    mesh
+  );
+
+  ParticleOperations particle_operations(
+    charge_discretization,
+    empty_particle_boundary_factory_list,
+    default_reflecting_particle_boundary_factory
+  );
+  IntegratedCharge variance_reduced_charge_state = particle_operations.assembleVarianceReducedCharge(particles,low_fidelity_state,dg_euler_operations);
+
+  for (int dof = 0; dof < charge_discretization.getFeSpace().GetNDofs(); dof++) {
+    EXPECT_DOUBLE_EQ(variance_reduced_charge_state.getIntegratedChargeValue(dof),integrated_charge_vector(dof));
   }
 }
 

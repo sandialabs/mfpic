@@ -154,17 +154,25 @@ double getInternalEnergyDensityFromPrimitiveState(const mfem::Vector& primitive_
   return internal_energy_density;
 }
 
-double evaluateMaxwellian(const mfem::Vector& primitive_state, const mfem::Vector velocity,const Species& species){
+double evaluateMaxwellian(const mfem::Vector& primitive_state, const mfem::Vector velocity,const Species& species,const int dim){
+  //TODO: Do we want a default value if sigma == 0? 
   const double sigma = sqrt(constants::boltzmann_constant * primitive_state(euler::PrimitiveVariables::TEMPERATURE) / species.mass);
-  const int dim = velocity.Size();
   double sq_sigma = sigma * sigma;
   double exponent = 0.0;
   double diff = velocity(0) - primitive_state(euler::PrimitiveVariables::X_BULK_VELOCITY);
   exponent += (diff * diff) / sq_sigma;
-  diff = velocity(1) - primitive_state(euler::PrimitiveVariables::Y_BULK_VELOCITY);
-  exponent += (diff * diff) / sq_sigma;
-  diff = velocity(2) - primitive_state(euler::PrimitiveVariables::Z_BULK_VELOCITY);
-  exponent += (diff * diff) / sq_sigma;
+  if (dim > 1)
+  {
+    diff = velocity(1) - primitive_state(euler::PrimitiveVariables::Y_BULK_VELOCITY);
+    exponent += (diff * diff) / sq_sigma;
+  }
+
+  if (dim > 2)
+  {
+    diff = velocity(2) - primitive_state(euler::PrimitiveVariables::Z_BULK_VELOCITY);
+    exponent += (diff * diff) / sq_sigma;
+  }
+
   double norm = 1.0 / std::pow(std::sqrt(2.0 * M_PI) * sigma, dim);
   double velocity_pdf = norm * std::exp(-0.5 * exponent);
   return velocity_pdf * primitive_state(euler::PrimitiveVariables::NUMBER_DENSITY);

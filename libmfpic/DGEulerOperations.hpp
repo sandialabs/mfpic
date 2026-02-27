@@ -70,7 +70,22 @@ public:
   */
   virtual double estimateCFL(const double & dt, const double & smallest_cell_lengthscale) const override;
 
-  virtual double evaluatePDF(const LowFidelityState &, const mfem::Vector, const mfem::Vector, const int, mfem::Mesh&, const Species&) const override; 
+  /**
+  * @brief Evaluates the particle density function for the low fidelity state at position and velocity. The PDF corresponds to a Maxwellian in velocity-space and a Uniform distribution in physical space
+  *
+  * @param current_state State including dofs and species list 
+  * @param position Location in physical space to evaluate PDF
+  * @param velocity Location in velocity space to evaluate PDF
+  * @param element  Element containing position
+  * @param species  Evaluate PDF for the given species
+  * @return PDF value 
+  */
+  virtual double evaluatePDF(
+    const LowFidelityState & current_state, 
+    const mfem::Vector position, 
+    const mfem::Vector velocity, 
+    const int element, 
+    const Species& species) const override; 
 
 private:
   Discretization & charge_discretization_;

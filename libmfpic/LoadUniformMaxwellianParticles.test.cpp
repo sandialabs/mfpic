@@ -172,17 +172,16 @@ TEST(LoadUniformMaxwellianParticles, ParticleVelocitiesAreMaxwellian) {
 }
 
 TEST(LoadUniformMaxwellianParticles, ParticlePDFsAreMaxwellian) {
-  const mfem::Vector nominal_bulk_velocity({300.0, 600.0, 1000.0});
-  constexpr double temperature = 11600.0;
-  constexpr double number_density = 1.0e18;
-  constexpr int num_particles = 20000;
+  Species species{.charge = -constants::elementary_charge, .mass = constants::electron_mass};
+  constexpr double number_density = 1e22;
+  constexpr double temperature = 300;
+  mfem::Vector bulk_velocity({1.0,2.0,3.0});
+  constexpr int num_particles = 1;
   std::mt19937 generator;
 
-
-
   ParticleContainer particles = loadUniformMaxwellianParticles(
-    default_species,
-    nominal_bulk_velocity,
+    species,
+    bulk_velocity,
     temperature,
     number_density,
     num_particles,
@@ -191,13 +190,13 @@ TEST(LoadUniformMaxwellianParticles, ParticlePDFsAreMaxwellian) {
   );
   mfem::Vector prim(5);
   prim(euler::PrimitiveVariables::NUMBER_DENSITY) = number_density;
-  prim(euler::PrimitiveVariables::X_BULK_VELOCITY) = nominal_bulk_velocity(0);
-  prim(euler::PrimitiveVariables::Y_BULK_VELOCITY) = nominal_bulk_velocity(1);
-  prim(euler::PrimitiveVariables::Z_BULK_VELOCITY) = nominal_bulk_velocity(2);
+  prim(euler::PrimitiveVariables::X_BULK_VELOCITY) = bulk_velocity(0);
+  prim(euler::PrimitiveVariables::Y_BULK_VELOCITY) = bulk_velocity(1);
+  prim(euler::PrimitiveVariables::Z_BULK_VELOCITY) = bulk_velocity(2);
   prim(euler::PrimitiveVariables::TEMPERATURE) = temperature;
   for (const Particle& particle : particles) {
   double element_volume = simple_mesh->GetElementVolume(particle.element);
-  const double expected_pdf_value = euler::evaluateMaxwellian(prim, particle.velocity, default_species);
+  const double expected_pdf_value = euler::evaluateMaxwellian(prim, particle.velocity, species,simple_mesh->SpaceDimension());
     EXPECT_DOUBLE_EQ(particle.pdf_value, expected_pdf_value/element_volume);
   }
 }

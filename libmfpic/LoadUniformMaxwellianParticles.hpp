@@ -70,7 +70,7 @@ ParticleContainer loadUniformMaxwellianParticles(
     primitive_state(2) = bulk_velocity(1);
     primitive_state(3) = bulk_velocity(2);
     primitive_state(4) = temperature;
-    double velocity_pdf = euler::evaluateMaxwellian(primitive_state,velocity,species);
+    double velocity_pdf = euler::evaluateMaxwellian(primitive_state,velocity,species,mesh->SpaceDimension());
     double element_volume = mesh->GetElementVolume(element);
 
     particles.addParticle(Particle{

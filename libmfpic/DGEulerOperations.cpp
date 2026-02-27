@@ -141,25 +141,30 @@ namespace mfpic {
     return max_speed * dt / smallest_cell_lengthscale;
   }
 
-  double DGEulerOperations::evaluatePDF(const LowFidelityState& current_state, const mfem::Vector position, const mfem::Vector velocity, const int element, mfem::Mesh& mesh, const Species& species) const
+  double DGEulerOperations::evaluatePDF(const LowFidelityState& current_state, const mfem::Vector position, const mfem::Vector velocity, const int element, const Species& species) const
   {
     mfem::FiniteElementSpace & finite_element_space = charge_discretization_.getFeSpace();
+    mfem::Mesh * mesh = finite_element_space.GetMesh();
+    int dim = mesh->SpaceDimension();
     for (int ispecies = 0; ispecies < current_state.numSpecies(); ++ispecies) {
       const LowFidelitySpeciesState& current_species_state = current_state.getSpeciesState(ispecies);
       Species current_species = current_species_state.getSpecies();
       if (current_species == species)
       {
         const mfem::GridFunction& current_species_grid_function = current_species_state.getGridFunction();
-        mfem::DenseMatrix fluid_state_at_integration_point_locations, integration_point_locations_in_physical_frame;
+        mfem::ElementTransformation *element_transformation= mesh->GetElementTransformation(element);
+
+        mfem::InverseElementTransformation inverse_element_transformation(element_transformation);
+        mfem::IntegrationPoint ip_ref;
+        int info = inverse_element_transformation.Transform(position, ip_ref);  // ip_ref is in reference coords
+        MFEM_VERIFY(info == mfem::InverseElementTransformation::Inside,
+            "Point is not inside the element.");
         mfem::Vector fluid_state_at_position;
-        mfem::Array<int> vector_dofs;
-        finite_element_space.GetElementVDofs(element, vector_dofs);
-        mfem::IntegrationPoint point;
-        point.Set3(position[0],position[1],position[2]);
-        current_species_grid_function.GetVectorValue(element, point, fluid_state_at_position);
+        current_species_grid_function.GetVectorValue(element, ip_ref, fluid_state_at_position);
+
         mfem::Vector primitive_state = euler::convertFromConservativeToPrimitive(fluid_state_at_position,current_species); 
-        double velocity_pdf = euler::evaluateMaxwellian(primitive_state,velocity,species);
-        double element_volume = mesh.GetElementVolume(element);
+        double velocity_pdf = euler::evaluateMaxwellian(primitive_state,velocity,current_species,dim);
+        double element_volume = mesh->GetElementVolume(element);
         return velocity_pdf / element_volume;
       }
     }
