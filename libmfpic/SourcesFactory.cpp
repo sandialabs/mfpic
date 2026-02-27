@@ -98,7 +98,7 @@ std::unique_ptr<mfem::VectorCoefficient> GaussianSourceParameters::getEulerVecto
     for (int i_dim = 0; i_dim < x.Size(); ++i_dim) {
       shifted_x = x[i_dim] - center[i_dim];
     }
-    const double exponential = exp(-0.5 * (shifted_x * shifted_x) / standard_deviation);
+    const double exponential = exp(-0.5 * (shifted_x * shifted_x) / (standard_deviation * standard_deviation));
     mfem::Vector primitive_state(offsets_primitive);
     primitive_state.Add(exponential, heights_primitive);
     y = euler::convertFromPrimitiveToConservative(primitive_state, species);

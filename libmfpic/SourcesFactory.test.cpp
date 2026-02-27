@@ -87,7 +87,7 @@ mfem::Vector evaluateGaussianAtPoint(
   const Species& species)
 {
   const double shift = x - center[0];
-  const double exponential = exp(-0.5 * shift * shift / standard_deviation);
+  const double exponential = exp(-0.5 * shift * shift / (standard_deviation * standard_deviation));
   const double expected_number_density = heights.number_density * exponential + offsets.number_density;
 
   mfem::Vector expected_velocity(offsets.bulk_velocity);
