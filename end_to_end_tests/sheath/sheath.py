@@ -21,6 +21,7 @@ electron_thermal_speed = np.sqrt(8.0 * Boltzmann * temperature / np.pi / electro
 electron_boundary_flux_per_unit_number_density = electron_thermal_speed / 4.0
 electron_source_rate = ion_wall_flux
 electron_reference_number_density = electron_source_rate / electron_boundary_flux_per_unit_number_density
+num_timesteps = int(np.ceil(ion_acoustic_transit_time / dt))
 
 def run(mfpic_executable):
   import subprocess
