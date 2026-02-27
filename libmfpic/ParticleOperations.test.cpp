@@ -1,10 +1,11 @@
-#include "libmfpic/LowFidelityState.hpp"
+
 #include <libmfpic/DGEulerAssembly.hpp>
 #include <libmfpic/DGEulerOperations.hpp>
 #include <libmfpic/DGEulerInitialConditionsFactory.hpp>
 #include <libmfpic/Discretization.hpp>
 #include <libmfpic/ElectromagneticFieldsEvaluator.hpp>
 #include <libmfpic/LoadUniformMaxwellianParticles.hpp>
+#include <libmfpic/LowFidelityState.hpp>
 #include <libmfpic/ParticleContainer.hpp>
 #include <libmfpic/ParticleOperations.hpp>
 #include <libmfpic/ReflectingParticleBoundary.hpp>
