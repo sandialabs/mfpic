@@ -206,10 +206,10 @@ IntegratedCharge ParticleOperations::assembleCharge(
     finite_element_space.GetElementVDofs(elem_id, vector_dofs);
 
     double low_fidelity_pdf_value = low_fidelity_operations.evaluatePDF(low_fidelity_state,particle_position,particle_velocity,particle.element,particle_species);
-    double weights = (1 - low_fidelity_pdf_value / particle.pdf_value);
+    double noise_reducing_factor = (1 - low_fidelity_pdf_value / particle.pdf_value);
 
     for (int i = 0; i < fe->GetDof(); i++) {
-      charge_state.addIntegratedChargeValue(vector_dofs[i],particle.weight * particle_charge * psi_i(i) * weights);
+      charge_state.addIntegratedChargeValue(vector_dofs[i],particle.weight * particle_charge * psi_i(i) * noise_reducing_factor);
     }
   }
 
