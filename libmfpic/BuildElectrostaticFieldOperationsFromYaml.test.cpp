@@ -16,7 +16,6 @@ TEST(BuildElectrostaticFieldOperationsFromYaml, YamlWithNoBoltzmannElectronsGets
   mfem::Mesh mesh = mfem::Mesh::MakeCartesian1D(num_elems);
   constexpr int hgrad_order = 1;
   Discretization es_discretization(&mesh, hgrad_order);
-  auto pinning = std::make_unique<Pinning>();
   const std::string fields_yaml = "";
   const YAML::Node fields_node = YAML::Load(fields_yaml);
 
