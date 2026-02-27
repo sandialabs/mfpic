@@ -44,4 +44,6 @@ double ElectrostaticFieldOperations::fieldEnergy(const ElectrostaticFieldState& 
   return 0.5 * electrostatic_bilinear_form_.InnerProduct(potential, potential);
 }
 
+ElectrostaticFieldOperations::~ElectrostaticFieldOperations() = default;
+
 }

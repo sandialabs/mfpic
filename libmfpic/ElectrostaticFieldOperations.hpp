@@ -43,6 +43,9 @@ public:
    */
   double fieldEnergy(const ElectrostaticFieldState& field_state) const;
 
+  /// Dtor.
+  virtual ~ElectrostaticFieldOperations();
+
 protected:
   /// Dirichlet boundary conditions.
   std::unique_ptr<DirichletBoundaryConditions> dirichlet_boundary_conditions_;
