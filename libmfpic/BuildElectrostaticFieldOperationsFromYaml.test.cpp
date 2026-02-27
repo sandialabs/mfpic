@@ -1,6 +1,6 @@
 #include <libmfpic/BuildElectrostaticFieldOperationsFromYaml.hpp>
 #include <libmfpic/Discretization.hpp>
-#include <libmfpic/ElectrostaticFieldOperations.hpp>
+#include <libmfpic/ElectrostaticFieldOperationsWithBoltzmannElectrons.hpp>
 #include <libmfpic/Pinning.hpp>
 
 #include <gmock/gmock.h>
@@ -26,7 +26,7 @@ TEST(BuildElectrostaticFieldOperationsFromYaml, YamlWithNoBoltzmannElectronsGets
     std::make_unique<Pinning>()
   );
 
-  EXPECT_THAT(typeid(*field_operations).name(), HasSubstr("ElectrostaticFieldOperations"));
+  ASSERT_EQ(sizeof(ElectrostaticFieldOperations), sizeof(*field_operations));
 }
 
 TEST(BuildElectrostaticFieldOperationsFromYaml, YamlWithBoltzmannElectronsGetsBoltzmannElectrons) {
@@ -48,5 +48,5 @@ Boltzmann Electrons:
     std::make_unique<Pinning>()
   );
 
-  EXPECT_THAT(typeid(*field_operations).name(), HasSubstr("ElectrostaticFieldOperationsWithBoltzmannElectrons"));
+  ASSERT_NO_THROW([[maybe_unused]] ElectrostaticFieldOperationsWithBoltzmannElectrons& casted_field_operations = dynamic_cast<ElectrostaticFieldOperationsWithBoltzmannElectrons&>(*field_operations));
 }
