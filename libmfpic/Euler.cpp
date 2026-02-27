@@ -155,35 +155,47 @@ double getInternalEnergyDensityFromPrimitiveState(const mfem::Vector& primitive_
   return internal_energy_density;
 }
 
-double evaluateMaxwellian(const mfem::Vector& primitive_state, const mfem::Vector velocity, const Species& species, const int dim){
-  const double sigma = sqrt(constants::boltzmann_constant * primitive_state(euler::PrimitiveVariables::TEMPERATURE) / species.mass);
-  if (sigma <= 0)
+double evaluateMaxwellian(const mfem::Vector& primitive_state,
+                          const mfem::Vector& velocity,
+                          const Species& species,
+                          const int dim)
   {
-    std::ostringstream error_message;
-    error_message << "Sigma must be > 0.\n";
-    errorWithUserMessage(error_message.str());
-  }
-  double sq_sigma = sigma * sigma;
-  double exponent = 0.0;
-  double diff = velocity(0) - primitive_state(euler::PrimitiveVariables::X_BULK_VELOCITY);
-  exponent += (diff * diff) / sq_sigma;
-  if (dim > 1)
-  {
-    diff = velocity(1) - primitive_state(euler::PrimitiveVariables::Y_BULK_VELOCITY);
-    exponent += (diff * diff) / sq_sigma;
-  }
+    const double temperature = primitive_state(euler::PrimitiveVariables::TEMPERATURE);
+    const double sigma = std::sqrt(constants::boltzmann_constant * temperature / species.mass);
 
-  if (dim > 2)
-  {
-    diff = velocity(2) - primitive_state(euler::PrimitiveVariables::Z_BULK_VELOCITY);
-    exponent += (diff * diff) / sq_sigma;
+    if (!(sigma > 0.0) || !std::isfinite(sigma)) {
+      return std::numeric_limits<double>::quiet_NaN();   
+    }
+
+    const double inv_sq_sigma = 1.0 / (sigma * sigma);
+
+    double exponent = 0.0;
+    double diff = 0.0;
+
+    switch (dim) {
+      case 3:
+        diff = velocity(2) - primitive_state(euler::PrimitiveVariables::Z_BULK_VELOCITY);
+        exponent += diff * diff * inv_sq_sigma;
+        [[fallthrough]];
+      case 2:
+        diff = velocity(1) - primitive_state(euler::PrimitiveVariables::Y_BULK_VELOCITY);
+        exponent += diff * diff * inv_sq_sigma;
+        [[fallthrough]];
+      case 1:
+        diff = velocity(0) - primitive_state(euler::PrimitiveVariables::X_BULK_VELOCITY);
+        exponent += diff * diff * inv_sq_sigma;
+        break;
+      default:
+          std::ostringstream error_message;
+          error_message << "Ivalid number of dimensions.\n";
+          errorWithUserMessage(error_message.str());
+    }
+
+    const double norm = 1.0 / std::pow(std::sqrt(2.0 * M_PI) * sigma, dim);
+    const double pdf  = norm * std::exp(-0.5 * exponent);
+
+    return pdf * primitive_state(euler::PrimitiveVariables::NUMBER_DENSITY);
   }
-
-  double norm = 1.0 / std::pow(std::sqrt(2.0 * M_PI) * sigma, dim);
-  double velocity_pdf = norm * std::exp(-0.5 * exponent);
-  return velocity_pdf * primitive_state(euler::PrimitiveVariables::NUMBER_DENSITY);
-}
-
 }
 
 }

@@ -122,9 +122,9 @@ TEST(Maxwellian, MaxwellianValueAtMean)
 
   for (int i = 0; i < 3; ++i)
   {
-    double val_at_mean = euler::evaluateMaxwellian(prim, bulk_velocity, species,i);
+    double val_at_mean = euler::evaluateMaxwellian(prim, bulk_velocity, species,i+1);
     double expected_at_mean =
-        number_density / std::pow(std::sqrt(2.0 * M_PI) * sigma, i);
+        number_density / std::pow(std::sqrt(2.0 * M_PI) * sigma, i+1);
     EXPECT_NEAR(val_at_mean, expected_at_mean, expected_at_mean * 1e-12);
   }
 }
