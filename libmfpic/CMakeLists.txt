@@ -1,5 +1,6 @@
 add_library(libmfpic
   AbsorbingParticleBoundary.cpp
+  BuildElectrostaticFieldOperationsFromYaml.cpp
   BuildOutputParametersFromYaml.cpp
   BuildParticleBoundariesFromYaml.cpp
   BuildSpeciesMapFromYaml.cpp
@@ -14,6 +15,7 @@ add_library(libmfpic
   DirichletBoundaryConditionsFactory.cpp
   DumpParticles.cpp
   ElectrostaticFieldOperations.cpp
+  ElectrostaticFieldOperationsWithBoltzmannElectrons.cpp
   ElectrostaticFieldState.cpp
   Errors.cpp
   Euler.cpp
@@ -48,6 +50,7 @@ target_link_libraries(libmfpic
 )
 
 mfpic_unit_test(AbsorbingParticleBoundary)
+mfpic_unit_test(BuildElectrostaticFieldOperationsFromYaml)
 mfpic_unit_test(BuildOutputParametersFromYaml)
 mfpic_unit_test(BuildParticleBoundariesFromYaml)
 mfpic_unit_test(BuildParticlesFromYaml)
@@ -63,6 +66,7 @@ mfpic_unit_test(DirichletBoundaryConditionsConstant)
 mfpic_unit_test(DirichletBoundaryConditionsFactory)
 mfpic_unit_test(DumpParticles)
 mfpic_unit_test(ElectrostaticFieldOperations)
+mfpic_unit_test(ElectrostaticFieldOperationsWithBoltzmannElectrons)
 mfpic_unit_test(ElectrostaticFieldState)
 mfpic_unit_test(ElementFaceContainer)
 mfpic_unit_test(Errors)

@@ -1,4 +1,4 @@
-#include "libmfpic/MeshUtilities.hpp"
+#include <libmfpic/BuildElectrostaticFieldOperationsFromYaml.hpp>
 #include <libmfpic/BuildOutputParametersFromYaml.hpp>
 #include <libmfpic/BuildParticleBoundariesFromYaml.hpp>
 #include <libmfpic/BuildParticlesFromYaml.hpp>
@@ -55,7 +55,11 @@ void runSimulation(int argc, char* argv[]) {
   std::unique_ptr<DirichletBoundaryConditions> dirichlet_bcs = buildDirichletBoundaryConditions(
     boundary_attribute_to_dirichlet_value, electrostatic_discretization);
 
-  ElectrostaticFieldOperations electrostatic_field_operations(electrostatic_discretization, std::move(dirichlet_bcs));
+  std::unique_ptr<ElectrostaticFieldOperations> electrostatic_field_operations = buildElectrostaticFieldOperationsFromYaml(
+    fields,
+    electrostatic_discretization,
+    std::move(dirichlet_bcs)
+  );
   ElectrostaticFieldState electrostatic_field_state(electrostatic_discretization);
 
   std::unordered_map<std::string, Species> species_map = buildSpeciesMapFromYaml(main["Species"]);
@@ -115,13 +119,13 @@ void runSimulation(int argc, char* argv[]) {
 
   IntegratedCharge integrated_charge = particle_operations.assembleCharge(particle_container);
 
-  electrostatic_field_operations.fieldSolve(electrostatic_field_state, integrated_charge);
+  electrostatic_field_operations->fieldSolve(electrostatic_field_state, integrated_charge);
   mesh_data_writer.output(electrostatic_field_state, low_fidelity_states, 0, 0.);
 
   std::ofstream csv_file("output.csv");
   csv_file << std::setprecision(std::numeric_limits<double>::digits);
   csv_file << "# Time_Step Time Field_Energy" << std::endl;
-  csv_file << 0 << " " << 0.0 << " " << electrostatic_field_operations.fieldEnergy(electrostatic_field_state) << std::endl;
+  csv_file << 0 << " " << 0.0 << " " << electrostatic_field_operations->fieldEnergy(electrostatic_field_state) << std::endl;
 
   TimeSteppingParameters time_stepping_parameters = buildTimeSteppingParametersFromYAML(main["Time Stepping"]);
   VerletTimeIntegrator verlet_time_integrator(electrostatic_discretization);
@@ -139,7 +143,7 @@ void runSimulation(int argc, char* argv[]) {
       particle_container,
       particle_operations,
       electrostatic_field_state,
-      electrostatic_field_operations,
+      *electrostatic_field_operations,
       timestep_size
     );
 
@@ -162,7 +166,7 @@ void runSimulation(int argc, char* argv[]) {
     if (i_timestep % output_parameters.output_stride == 0) {
       dumpParticles(particle_container, end_time, output_parameters.particle_dump_filename);
       mesh_data_writer.output(electrostatic_field_state, low_fidelity_states, i_timestep, end_time);
-      csv_file << i_timestep << " " << end_time << " " << electrostatic_field_operations.fieldEnergy(electrostatic_field_state) << std::endl;
+      csv_file << i_timestep << " " << end_time << " " << electrostatic_field_operations->fieldEnergy(electrostatic_field_state) << std::endl;
     }
   }
 
