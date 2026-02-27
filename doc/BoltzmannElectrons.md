@@ -9,17 +9,17 @@ where $f = f(\vec{x}, \vec{v})$ is the electron single-particle distribution fun
 $e$ is the elementary charge,
 $k$ is the Boltzmann constant,
 and $T$ is the temperature of the electrons.
-Practically, a reference number density $n_0$ is used to normalize the spatial distribution $n = n(\vec{x})$ such that
+Practically, the electron number density $n = n(\vec{x})$ is normalized with a "reference number density" $n_0$ such that
 $$
 n = \int f(\vec{x}, \vec{v}) \, \mathrm{d} \vec{v} = n_0 \exp \left( \frac{e \varphi(\vec{x})}{k T} \right).
 $$
 Hence the charge density $\rho = \rho(\vec{x})$ is given by
 $$
-\rho = -e n_0 \left( \frac{e \varphi}{k T} \right),
+\rho = - e n = -e n_0 \exp \left( \frac{e \varphi}{k T} \right),
 $$
 and Poisson's equation for the electrostatic potential becomes
 $$
-- \varepsilon_0 \Delta \varphi + e n_0 \left( \frac{e \varphi}{k T} \right) = \rho_i,
+- \varepsilon_0 \Delta \varphi + e n_0 \exp \left( \frac{e \varphi}{k T} \right) = \rho_i,
 $$
 where $\rho_i = \rho_i(\vec{x})$ is the charge density due to non-adiabatic species,
 typically positively charged ions.
