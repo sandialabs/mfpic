@@ -921,7 +921,7 @@ TEST(ParticleOperations, VarianceReducedChargeIsExactForMaxwellianInCell1D) {
   // const mfem::Vector nominal_bulk_velocity({300.0, 600.0, 1000.0});
   // constexpr double temperature = 11600.0;
   // constexpr double number_density = 1.0e18;
-  constexpr int num_particles = 20;
+  constexpr int num_particles = 20000;
   std::mt19937 generator;
 
   const int num_elems = 1;
@@ -960,9 +960,16 @@ TEST(ParticleOperations, VarianceReducedChargeIsExactForMaxwellianInCell1D) {
     default_reflecting_particle_boundary_factory
   );
   IntegratedCharge variance_reduced_charge_state = particle_operations.assembleVarianceReducedCharge(particles,low_fidelity_state,dg_euler_operations);
+  IntegratedCharge charge_state = particle_operations.assembleCharge(particles);
 
   for (int dof = 0; dof < charge_discretization.getFeSpace().GetNDofs(); dof++) {
     EXPECT_DOUBLE_EQ(variance_reduced_charge_state.getIntegratedChargeValue(dof),integrated_charge_vector(dof));
+  }
+
+  //TODO: Any way to pull sample variance to bound error?
+  for (int dof = 0; dof < charge_discretization.getFeSpace().GetNDofs(); dof++) {
+    double rel_error = abs((variance_reduced_charge_state.getIntegratedChargeValue(dof)-charge_state.getIntegratedChargeValue(dof)))/abs(charge_state.getIntegratedChargeValue(dof));
+    EXPECT_NEAR(rel_error,0,1e-2);
   }
 }
 
