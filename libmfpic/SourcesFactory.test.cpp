@@ -20,6 +20,27 @@ const std::unordered_map<std::string, Species> species_map{
   {electron_species_name, electron_species},
   {proton_species_name, proton_species}};
 
+mfem::Vector evaluateVectorCoefficientAtPoint(
+  mfem::VectorCoefficient& coefficient,
+  const double x,
+  const double dx,
+  const mfem::Mesh& mesh)
+{
+  const int element_index = x / dx;
+
+  mfem::IsoparametricTransformation element_transformation;
+  mesh.GetElementTransformation(element_index, &element_transformation);
+
+  const mfem::Vector x_vec{x};
+  mfem::IntegrationPoint integration_point;
+  element_transformation.TransformBack(x_vec, integration_point);
+  element_transformation.SetIntPoint(&integration_point);
+
+  mfem::Vector state_out(euler::ConservativeVariables::NUM_VARS);
+  coefficient.Eval(state_out, element_transformation, integration_point);
+  return state_out;
+}
+
 TEST(SourcesFactory, SodSourceParametersEulerVectorCoefficient) {
   constexpr double discontinuity_location = 0.5;
 
@@ -35,18 +56,7 @@ TEST(SourcesFactory, SodSourceParametersEulerVectorCoefficient) {
   mfem::Mesh mesh = mfem::Mesh::MakeCartesian1D(10);
 
   const double x_left = parameters.discontinuity_location - 0.5 * dx;
-  const int element_index_left = x_left / dx;
-
-  mfem::IsoparametricTransformation element_transformation;
-  mesh.GetElementTransformation(element_index_left, &element_transformation);
-
-  const mfem::Vector x_left_vec{x_left};
-  mfem::IntegrationPoint integration_point;
-  element_transformation.TransformBack(x_left_vec, integration_point);
-  element_transformation.SetIntPoint(&integration_point);
-
-  mfem::Vector left_state_out(euler::ConservativeVariables::NUM_VARS);
-  euler_coefficient->Eval(left_state_out, element_transformation, integration_point);
+  const mfem::Vector left_state_out = evaluateVectorCoefficientAtPoint(*euler_coefficient, x_left, dx, mesh);
 
   const mfem::Vector left_state_primitive = euler::constructPrimitiveState(
     left_state.number_density, left_state.bulk_velocity, left_state.temperature);
@@ -57,22 +67,66 @@ TEST(SourcesFactory, SodSourceParametersEulerVectorCoefficient) {
   }
 
   const double x_right = parameters.discontinuity_location + 0.5 * dx;
-  const int element_index_right = x_right / dx;
-  mesh.GetElementTransformation(element_index_right, &element_transformation);
+  const mfem::Vector right_state_out = evaluateVectorCoefficientAtPoint(*euler_coefficient, x_right, dx, mesh);
 
-  const mfem::Vector x_right_vec{x_right};
-  element_transformation.TransformBack(x_right_vec, integration_point);
-  element_transformation.SetIntPoint(&integration_point);
-
-  mfem::Vector right_state_out(euler::ConservativeVariables::NUM_VARS);
-  euler_coefficient->Eval(right_state_out, element_transformation, integration_point);
-  
   const mfem::Vector right_state_primitive = euler::constructPrimitiveState(
     right_state.number_density, right_state.bulk_velocity, right_state.temperature);
   const mfem::Vector right_state_expected = euler::convertFromPrimitiveToConservative(right_state_primitive, parameters.species);
 
   for (int i = 0; i < right_state_out.Size(); ++i) {
     EXPECT_DOUBLE_EQ(right_state_expected[i], right_state_out[i]);
+  }
+}
+
+mfem::Vector evaluateGaussianAtPoint(
+  const double x,
+  const mfem::Vector& center,
+  const double standard_deviation,
+  const SourceStateParameters& offsets,
+  const SourceStateParameters& heights,
+  const Species& species)
+{
+  const double shift = x - center[0];
+  const double exponential = exp(-0.5 * shift * shift / (standard_deviation * standard_deviation));
+  const double expected_number_density = heights.number_density * exponential + offsets.number_density;
+
+  mfem::Vector expected_velocity(offsets.bulk_velocity);
+  expected_velocity.Add(exponential, heights.bulk_velocity);
+
+  const double expected_temperature = heights.temperature * exponential + offsets.temperature;
+
+  const mfem::Vector expected_state_primitive = euler::constructPrimitiveState(
+    expected_number_density, expected_velocity, expected_temperature);
+
+  const mfem::Vector expected_state_conservative = euler::convertFromPrimitiveToConservative(
+    expected_state_primitive, species);
+
+  return expected_state_conservative;
+}
+
+TEST(SourcesFactory, GaussianSourceParametersEulerVectorCoefficient) {
+  const mfem::Vector center{0.5};
+  constexpr double standard_deviation = 0.01;
+
+  const mfem::Vector bulk_velocity_offset{1., 0., 0.};
+  const mfem::Vector bulk_velocity_height{0.1, 0., 0.};
+  SourceStateParameters offsets{.number_density = 1e22, .bulk_velocity=bulk_velocity_offset, .temperature = 320};
+  SourceStateParameters heights{.number_density = 1e21, .bulk_velocity=bulk_velocity_height, .temperature = 10};
+
+  GaussianSourceParameters parameters(electron_species, center, standard_deviation, offsets, heights);
+  std::unique_ptr<mfem::VectorCoefficient> euler_coefficient = parameters.getEulerVectorCoefficient();
+
+  constexpr int num_elems = 11;
+  constexpr double length = 1.0;
+  constexpr double dx = length / num_elems;
+  mfem::Mesh mesh = mfem::Mesh::MakeCartesian1D(10);
+
+  for (const double& x : {0.01, 0.45, 0.5}){
+    const mfem::Vector state_out = evaluateVectorCoefficientAtPoint(*euler_coefficient, x, dx, mesh);
+    const mfem::Vector expected_state = evaluateGaussianAtPoint(x, center, standard_deviation, offsets, heights, electron_species);
+    for (int i = 0; i < expected_state.Size(); ++i) {
+      EXPECT_DOUBLE_EQ(expected_state[i], state_out[i]);
+    }
   }
 }
 
@@ -407,6 +461,64 @@ TEST(SourcesFactory, SodInitialConditionsGivesBackCorrectParameters) {
   EXPECT_EQ(temperature_r, parameters.right_state.temperature);
   for(int i = 0; i < bulk_velocity_r.Size(); ++i){
     EXPECT_EQ(bulk_velocity_r[i], parameters.right_state.bulk_velocity[i]);
+  }
+}
+
+TEST(SourcesFactory, GaussianInitialConditionsGivesBackCorrectParameters) {
+  constexpr int num_particles_per_species = 513;
+  constexpr double center = 0.45;
+  constexpr double standard_deviation = 0.014;
+
+  constexpr double number_density_offset = 1e19;
+  constexpr double number_density_height = 5e18;
+  constexpr double temperature_offset = 300;
+  constexpr double temperature_height = 20;
+  const mfem::Vector bulk_velocity_offset{10.3, 15.2, 19.5};
+  const mfem::Vector bulk_velocity_height{2.4, 3.1, 1.9};
+
+  const std::string model_string(
+    "Initial Conditions:\n"
+    "  - Species: [" + proton_species_name + "]\n"
+    "    Number of Macroparticles per Species: " + std::to_string(num_particles_per_species) + "\n"
+    "    Gaussian:\n"
+    "      Center: [" + std::to_string(center) + "]\n"
+    "      Standard Deviation: " + std::to_string(standard_deviation) + "\n"
+    "      Offsets:\n"
+    "        Number Density: " + std::to_string(number_density_offset) + "\n"
+    "        Temperature: " + std::to_string(temperature_offset) + "\n"
+    "        Bulk Velocity: [" + std::to_string(bulk_velocity_offset[0]) + ", " + std::to_string(bulk_velocity_offset[1]) + ", " +
+      std::to_string(bulk_velocity_offset[2]) + "]\n"
+    "      Heights:\n"
+    "        Number Density: " + std::to_string(number_density_height) + "\n"
+    "        Temperature: " + std::to_string(temperature_height) + "\n"
+    "        Bulk Velocity: [" + std::to_string(bulk_velocity_height[0]) + ", " + std::to_string(bulk_velocity_height[1]) + ", " +
+      std::to_string(bulk_velocity_height[2]) + "]\n"
+  );
+
+  const YAML::Node model_node = YAML::Load(model_string);
+  const YAML::Node initial_conditions_node = model_node["Initial Conditions"];
+
+  std::vector<std::unique_ptr<SourceParameters>> list_of_parameters = buildListOfSourceParametersFromYAML(
+    initial_conditions_node, species_map);
+
+  EXPECT_EQ(1, std::ssize(list_of_parameters));
+
+  auto parameters = dynamic_cast<const GaussianSourceParameters&>(*list_of_parameters[0]);
+
+  EXPECT_EQ(proton_species, parameters.species);
+  EXPECT_EQ(num_particles_per_species, parameters.num_particles);
+  EXPECT_EQ(1, parameters.center.Size());
+  EXPECT_EQ(center, parameters.center[0]);
+  EXPECT_EQ(number_density_offset, parameters.offsets.number_density);
+  EXPECT_EQ(temperature_offset, parameters.offsets.temperature);
+  for (int i = 0; i < bulk_velocity_offset.Size(); ++i) {
+    EXPECT_EQ(bulk_velocity_offset[i], parameters.offsets.bulk_velocity[i]);
+  }
+
+  EXPECT_EQ(number_density_height, parameters.heights.number_density);
+  EXPECT_EQ(temperature_height, parameters.heights.temperature);
+  for (int i = 0; i < bulk_velocity_height.Size(); ++i) {
+    EXPECT_EQ(bulk_velocity_height[i], parameters.heights.bulk_velocity[i]);
   }
 }
 

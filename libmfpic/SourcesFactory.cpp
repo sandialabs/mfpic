@@ -69,6 +69,45 @@ std::unique_ptr<mfem::VectorCoefficient> SodSourceParameters::getEulerVectorCoef
   return euler_coefficient;
 }
 
+GaussianSourceParameters::GaussianSourceParameters(
+  const Species& species,
+  const mfem::Vector& center,
+  const double standard_deviation,
+  const SourceStateParameters& offsets,
+  const SourceStateParameters& heights,
+  const int num_particles)
+  : SourceParameters(species, num_particles)
+  , center(center)
+  , standard_deviation(standard_deviation)
+  , offsets(offsets)
+  , heights(heights)
+{}
+
+std::unique_ptr<mfem::VectorCoefficient> GaussianSourceParameters::getEulerVectorCoefficient() const {
+  const mfem::Vector offsets_primitive = constructPrimitiveState(offsets);
+  const mfem::Vector heights_primitive = constructPrimitiveState(heights);
+
+  auto function = [
+    &standard_deviation = standard_deviation,
+    &center = center,
+    &species = species,
+    offsets_primitive = offsets_primitive,
+    heights_primitive = heights_primitive](const mfem::Vector& x, mfem::Vector& y)
+  {
+    mfem::Vector shifted_x(x.Size());
+    for (int i_dim = 0; i_dim < x.Size(); ++i_dim) {
+      shifted_x = x[i_dim] - center[i_dim];
+    }
+    const double exponential = exp(-0.5 * (shifted_x * shifted_x) / (standard_deviation * standard_deviation));
+    mfem::Vector primitive_state(offsets_primitive);
+    primitive_state.Add(exponential, heights_primitive);
+    y = euler::convertFromPrimitiveToConservative(primitive_state, species);
+  };
+
+  auto euler_coefficient = std::make_unique<mfem::VectorFunctionCoefficient>(euler::ConservativeVariables::NUM_VARS, function);
+  return euler_coefficient;
+}
+
 SourceStateParameters buildSourceStateParametersFromYAML(const YAML::Node& state_node) {
   const double number_density = state_node["Number Density"].as<double>();
   if (number_density <= 0.0) {
@@ -156,11 +195,38 @@ std::vector<std::unique_ptr<SourceParameters>> buildListOfSourceParametersFromYA
         const SourceStateParameters right_state_parameters = buildSourceStateParametersFromYAML(right_state_node);
 
         for (const std::string& species_name : species_names) {
-          list_of_parameters.push_back(std::make_unique<SodSourceParameters>(species_map.at(species_name), discontinuity_location, left_state_parameters, right_state_parameters, num_particles_per_species));
+          list_of_parameters.push_back(
+            std::make_unique<SodSourceParameters>(
+              species_map.at(species_name),
+              discontinuity_location,
+              left_state_parameters,
+              right_state_parameters,
+              num_particles_per_species));
+        }
+      } else if (source["Gaussian"]) {
+        const YAML::Node& gaussian_node = source["Gaussian"];
+
+        const YAML::Node& center_node = gaussian_node["Center"];
+        mfem::Vector center(center_node.size());
+        for (int i = 0; i < std::ssize(center_node); ++i){
+          center[i] = center_node[i].as<double>();
         }
 
+        const double standard_deviation = gaussian_node["Standard Deviation"].as<double>();
+        const SourceStateParameters offsets = buildSourceStateParametersFromYAML(gaussian_node["Offsets"]);
+        const SourceStateParameters heights = buildSourceStateParametersFromYAML(gaussian_node["Heights"]);
+
+        for (const std::string& species_name : species_names) {
+          list_of_parameters.push_back(std::make_unique<GaussianSourceParameters>(
+            species_map.at(species_name),
+            center,
+            standard_deviation,
+            offsets,
+            heights,
+            num_particles_per_species));
+        }
       } else {
-        errorWithUserMessage(formatParseMessage(source, "It is required to either specify \"Constant\" or \"Sod\"."));
+        errorWithUserMessage(formatParseMessage(source, "It is required to either specify \"Constant\", \"Sod\", or \"Gaussian\"."));
       }
     }
   } else {

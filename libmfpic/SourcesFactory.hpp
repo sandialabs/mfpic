@@ -91,6 +91,35 @@ struct SodSourceParameters : public SourceParameters {
 };
 
 /**
+ * @brief parameters defining a species that is a gaussian in space, i.e. the number density is given by
+ *  n = h_n exp(-0.5 (x - mu)^2 / sigma) + o_n
+ *  where h_n is the height of the gaussian, o_n is the offset, mu is the center or mean of the gaussian, and sigma is the 
+ *  standard deviation.
+ *  The formulas for the velocity and temperature are the same except that they use their own heights and offsets
+ */
+struct GaussianSourceParameters: public SourceParameters {
+  mfem::Vector center;
+  double standard_deviation;
+  SourceStateParameters offsets;
+  SourceStateParameters heights;
+
+  GaussianSourceParameters(
+    const Species& species,
+    const mfem::Vector& center,
+    const double standard_deviation,
+    const SourceStateParameters& offsets,
+    const SourceStateParameters& heights,
+    const int num_particles = 0);
+
+  /**
+   * @brief Get an mfem::VectorCoefficient that represents a gaussian in space euler fluid with parameters in this struct
+   * 
+   * @return std::unique_ptr<mfem::VectorCoefficient>
+   */
+  std::unique_ptr<mfem::VectorCoefficient> getEulerVectorCoefficient() const override;
+};
+
+/**
  * @brief build SourceStateParameters that defines a state from YAML
  * 
  * @param state_node - the YAML defining the state

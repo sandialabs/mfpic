@@ -348,10 +348,11 @@ Euler Fluids:
 ### Euler Fluids Initial Conditions
 The fluids present in the simulation and their initial conditions are specied under ``Initial Conditions``.
 Each initial condition is an item in a list under ``Initial Conditions`` and can have more than one species.
-Only constant-in-space or Sod shock tube initial conditions are supported.
+Only constant-in-space, Sod shock tube, or Gaussian initial conditions are supported.
 If a constant in space is desired, then the ``Constant`` keyword and subparameters should be specified.
 If a Sod shock tube problem is desired, then the ``Sod`` keyword and subparameters should be specified.
-``Constant`` and ``Sod`` keys can not be used together.
+If a Gaussian initial condition is desired, then the ``Gaussian`` keyword and subparameters should be specified.
+Only one of ``Constant``, ``Sod``, and ``Gaussian`` can be used.
 
 ```yaml
 Euler Fluids:
@@ -371,13 +372,24 @@ Euler Fluids:
                 Bulk Velocity: list of doubles, length 3 (default: [0.0, 0.0, 0.0]) #[m/s]
                 Temperature: double #[K]
                 Number Density: double #[-/m^3]
+          Gaussian:
+            Center: list of doubles #[m]
+            Standard Deviation: double #[m]
+            Offsets:
+                Bulk Velocity: list of doubles, length 3 (default: [0.0, 0.0, 0.0]) #[m/s]
+                Temperature: double #[K]
+                Number Density: double #[-/m^3]
+            Heights:
+                Bulk Velocity: list of doubles, length 3 (default: [0.0, 0.0, 0.0]) #[m/s]
+                Temperature: double #[K]
+                Number Density: double #[-/m^3]
 ```
 
 **``Species``**: A list of the species that will have the given initial conditions.
 Each entry needs to be present in the top-level ``Species`` block.
 
 **``Constant``**: The parameters for a constant initial condion are specified under this key.
-Incompatible with ``Sod``.
+Incompatible with ``Sod`` and ``Gaussian``.
 
 **``Bulk Velocity``**: The bulk velocity of the fluids in meters per second.
 
@@ -388,13 +400,33 @@ This is required to be positive.
 This is required to be positive.
 
 **``Sod``**: The parameters for a Sod shock tube problem are specified under this key.
-Incompatible with ``Constant``.
+Incompatible with ``Constant`` and ``Gaussian``.
 
 **``Discontinuity Location``**: The x location of the jump/discontinuity.
 
 **``Left State``**: The state of the fluid when x is less than the discontinuity location.
 
 **``Right State``**: The state of the fluid when x is greater than or equal to the discontinuity location.
+
+**``Gaussian``**: The parameters for a Gaussian initial condition are specified under this key.
+Incompatible with ``Constant`` and ``Sod``.
+The number density, velocity, and temperature will all be Gaussian functions in space, given by the following equations,
+$$
+    n = h_n e^{-(x - c)^2 / \sigma^2} + o_n \\
+    u = h_u e^{-(x - c)^2 / \sigma^2} + o_u \\
+    T = h_T e^{-(x - c)^2 / \sigma^2} + o_T
+$$
+
+**``Center``**: The center or mean of the Gaussian function, denoted by $c$ above.
+This should a point in space and the length of this input should match the dimension of the mesh being used.
+
+**``Standard Deviation``**: The standard deviation of the Gaussian function, denoted as $\sigma$ above.
+
+**``Offsets``**: The offset of the number density, temperature, and bulk_velocity.
+This is denoted as $o_n$, $o_u$ and $o_T$ in the equations above.
+
+**``Heights``**: The height of the Gaussian above the offset at the peak.
+This is denoted as $h_n$, $h_u$ and $h_T$ in the equations above.
 
 #### Example
 
