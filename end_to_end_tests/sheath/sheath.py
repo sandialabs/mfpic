@@ -1,4 +1,8 @@
+import sys
+sys.path.append("..")
+
 import numpy as np
+import read_mesh_data
 from scipy.constants import electron_mass, proton_mass, elementary_charge, epsilon_0, electron_volt, Boltzmann
 
 number_density = 1.0e20
@@ -80,8 +84,38 @@ Output:
   result = subprocess.run([mfpic_executable, "-i", yaml])
   result.check_returncode()
 
+def driftVelocityInElement(particle_data, element):
+  weights = particle_data["weight"][:]
+  vx = particle_data["vx"][:]
+  elements = particle_data["element"][:]
+
+  num_physical_particles = np.sum(weights, where = elements == element)
+  weighted_velocity = np.sum(weights * vx, where = elements == element)
+
+  return weighted_velocity / num_physical_particles
+
+def findElementWhereIonDriftSpeedSatisfiesBohmCriterion(particle_data):
+  for element in range(num_elements):
+    if driftVelocityInElement(particle_data, element) > -bohm_speed:
+      return element
+
 def analyze():
-  return
+  import h5py
+
+  particle_file = h5py.File("particles.h5part")
+  particle_data_at_last_timestep = particle_file[f"Step#1"]
+  sheath_entrance_element = findElementWhereIonDriftSpeedSatisfiesBohmCriterion(particle_data_at_last_timestep)
+  sheath_entrance_node = sheath_entrance_element - 1
+
+  _, mesh_data = read_mesh_data.read_mesh_data()
+  mesh_data_at_last_timestep = mesh_data[-1]
+  simulated_sheath_entrance_potential = mesh_data_at_last_timestep["electrostatic_potential"][2*sheath_entrance_node]
+
+  expected_sheath_entrance_potential = Boltzmann * temperature / (2.0 * elementary_charge) * np.log(
+    proton_mass / electron_mass / 4.0 / np.pi
+  )
+
+  assert np.isclose(expected_sheath_entrance_potential, simulated_sheath_entrance_potential, rtol=1.0e-3), f"Expected potential at sheath entrance to be {expected_sheath_entrance_potential} V, but computed {simulated_sheath_entrance_potential} V"
 
 def plot():
   import matplotlib.pyplot as plt
@@ -114,8 +148,6 @@ def plot():
   plt.savefig("twostream.png")
 
 if __name__ == "__main__":
-  import sys
-
   if "run" in sys.argv[1:]:
     run(sys.argv[2])
   elif "plot" in sys.argv[1:]:
