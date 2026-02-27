@@ -14,9 +14,13 @@ ReflectingParticleBoundary::ReflectingParticleBoundary(
 Particle ReflectingParticleBoundary::applyBoundary(int element_face, const Particle &incoming_particle) const {
   Particle reflected_particle = incoming_particle;
 
+  mfem::Vector face_unit_normal({0.0, 0.0, 0.0});
+  constexpr int offset = 0;
+  face_unit_normal.SetVector(element_face_unit_normal_->at(reflected_particle.element, element_face), offset);
+
   reflected_particle.velocity.Add(
-    -2.0 * (reflected_particle.velocity * element_face_unit_normal_->at(reflected_particle.element, element_face)),
-    element_face_unit_normal_->at(reflected_particle.element, element_face)
+    -2.0 * (reflected_particle.velocity * face_unit_normal),
+    face_unit_normal
   );
 
   return reflected_particle;
