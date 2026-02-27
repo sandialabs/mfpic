@@ -154,7 +154,7 @@ double getInternalEnergyDensityFromPrimitiveState(const mfem::Vector& primitive_
   return internal_energy_density;
 }
 
-double evaluateMaxwellian(const mfem::Vector& primitive_state, const mfem::Vector velocity,const Species& species,const int dim){
+double evaluateMaxwellian(const mfem::Vector& primitive_state, const mfem::Vector velocity, const Species& species, const int dim){
   //TODO: Do we want a default value if sigma == 0? 
   const double sigma = sqrt(constants::boltzmann_constant * primitive_state(euler::PrimitiveVariables::TEMPERATURE) / species.mass);
   double sq_sigma = sigma * sigma;
