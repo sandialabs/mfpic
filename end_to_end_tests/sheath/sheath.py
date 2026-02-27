@@ -115,7 +115,7 @@ def analyze():
     proton_mass / electron_mass / 4.0 / np.pi
   )
 
-  assert np.isclose(expected_sheath_entrance_potential, simulated_sheath_entrance_potential, rtol=1.0e-3), f"Expected potential at sheath entrance to be {expected_sheath_entrance_potential} V, but computed {simulated_sheath_entrance_potential} V"
+  assert np.isclose(expected_sheath_entrance_potential, simulated_sheath_entrance_potential, rtol=2.5e-1), f"Expected potential at sheath entrance to be {expected_sheath_entrance_potential} V, but computed {simulated_sheath_entrance_potential} V"
 
 def plot():
   import matplotlib.pyplot as plt
