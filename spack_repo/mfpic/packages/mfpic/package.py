@@ -32,6 +32,7 @@ class Mfpic(CMakePackage):
     depends_on("mfem~zlib~mpi~metis@=4.8.0 +debug", when="build_type=Debug")
     depends_on("ninja", type="build")
     depends_on("python@3:", type="test")
+    depends_on("py-h5py~mpi", type="test")
     depends_on("py-numpy", type="test")
     depends_on("py-scipy", type="test")
     depends_on("vtk~mpi~opengl2+python", type="test")
