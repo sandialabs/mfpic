@@ -33,7 +33,6 @@ TEST(BuildElectrostaticFieldOperationsFromYaml, YamlWithBoltzmannElectronsGetsBo
   mfem::Mesh mesh = mfem::Mesh::MakeCartesian1D(num_elems);
   constexpr int hgrad_order = 1;
   Discretization es_discretization(&mesh, hgrad_order);
-  auto pinning = std::make_unique<Pinning>();
   const std::string fields_yaml = R"(
 Boltzmann Electrons:
   Reference Number Density: 1.0e20
