@@ -67,6 +67,9 @@ Particles:
         Temperature: {temperature}
         Number Density: {source_number_density}
 
+Output:
+  Stride: {num_timesteps}
+
   """
 
   yaml = "sheath.yaml"
