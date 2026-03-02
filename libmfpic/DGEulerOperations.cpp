@@ -170,9 +170,8 @@ namespace mfpic {
         current_species_grid_function.GetVectorValue(element, ip_ref, fluid_state_at_position);
 
         mfem::Vector primitive_state = euler::convertFromConservativeToPrimitive(fluid_state_at_position,current_species); 
-        double velocity_pdf = euler::evaluateMaxwellian(primitive_state,velocity,current_species,dim);
-        double element_volume = mesh->GetElementVolume(element);
-        return velocity_pdf / element_volume;
+        double pdf_value = euler::evaluateMaxwellian(primitive_state,velocity,current_species,dim);
+        return pdf_value;
       }
     }
     std::ostringstream error_message;
