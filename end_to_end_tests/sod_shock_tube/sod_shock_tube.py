@@ -1,3 +1,6 @@
+import sys
+sys.path.append("../python")
+
 import euler
 import euler_exact_riemann_solver
 import read_mesh_data
