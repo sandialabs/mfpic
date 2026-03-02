@@ -6,6 +6,7 @@ import euler
 import euler_exact_riemann_solver
 import read_mesh_data
 import species
+import utils
 import verification
 
 import matplotlib.pyplot as plt
@@ -52,10 +53,7 @@ def format_mesh_folder_name(refinement_level):
 def get_input_deck(refinement_level):
     num_elements = base_num_elements * refinement_level
     dx = domain_length / num_elements
-    max_dt = max_cfl * dx / max_wavespeed
-
-    num_time_steps = int(np.ceil(final_time / max_dt))
-    dt = final_time / num_time_steps
+    dt, num_time_steps = utils.compute_timestepping_that_satisfies_cfl(max_cfl, dx, max_wavespeed, final_time)
 
     mesh_folder_name = format_mesh_folder_name(refinement_level)
 
