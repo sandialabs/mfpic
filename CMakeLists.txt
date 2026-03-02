@@ -15,6 +15,7 @@ find_package(HDF5)
 
 find_package(GTest)
 find_package(Python3 COMPONENTS Interpreter)
+
 set(mfpic_enable_testing False)
 if(GTest_FOUND AND Python3_FOUND)
   set(mfpic_enable_testing True)
@@ -22,6 +23,7 @@ if(GTest_FOUND AND Python3_FOUND)
   include(GoogleTest)
   add_subdirectory(end_to_end_tests)
 endif()
+
 function(mfpic_unit_test test_name)
   if(mfpic_enable_testing)
     add_executable("${test_name}.test" "${test_name}.test.cpp")
