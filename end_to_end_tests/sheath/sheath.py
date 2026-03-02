@@ -137,7 +137,7 @@ def plot():
   plt.xlabel("x (m)")
   plt.ylabel("Electrostatic potential (V)")
   plt.legend()
-  plt.savefig("twostream.png")
+  plt.savefig("sheath.png")
 
 if __name__ == "__main__":
   if "run" in sys.argv[1:]:
