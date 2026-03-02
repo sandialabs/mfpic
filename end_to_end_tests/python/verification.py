@@ -16,16 +16,10 @@ def create_1D_interpolater(field_data, points):
         for i_cell in range(n_cells):
             x_left = points_by_cell[i_cell, 0]
             x_right = points_by_cell[i_cell, 1]
-            mask = (
-                (x >= x_left) * (x < x_right)
-                if i_cell < n_cells - 1
-                else (x >= x_left) * (x <= x_right)
-            )
+            mask = (x >= x_left) * (x < x_right) if i_cell < n_cells - 1 else (x >= x_left) * (x <= x_right)
             f_left = field_by_cell[i_cell, 0]
             f_right = field_by_cell[i_cell, 1]
-            line = f_left * (x - x_right) / (x_left - x_right) + f_right * (
-                x - x_left
-            ) / (x_right - x_left)
+            line = f_left * (x - x_right) / (x_left - x_right) + f_right * (x - x_left) / (x_right - x_left)
             result += line * mask
         return result
 
