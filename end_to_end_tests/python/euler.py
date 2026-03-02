@@ -3,11 +3,7 @@ from scipy.constants import Boltzmann as boltzmann_constant
 
 
 def kinetic_energy_density(mass_density, momentum_density):
-    return (
-        0.5
-        / mass_density
-        * np.einsum("i...,i...->...", momentum_density, momentum_density)
-    )
+    return 0.5 / mass_density * np.einsum("i...,i...->...", momentum_density, momentum_density)
 
 
 def pressure_from_number_density(number_density, temperature):
@@ -80,17 +76,13 @@ def get_kinetic_energy_density_from_conservative_state(conservative_state):
 
 def get_pressure_from_conservative_state(conservative_state, species):
     total_energy_density = conservative_state[4]
-    kinetic_energy_density = get_kinetic_energy_density_from_conservative_state(
-        conservative_state
-    )
+    kinetic_energy_density = get_kinetic_energy_density_from_conservative_state(conservative_state)
     internal_energy_density = total_energy_density - kinetic_energy_density
     return pressure_from_species(species, internal_energy_density)
 
 
 def get_temperature_from_conservative_state(conservative_state, species):
-    number_density = get_number_density_from_conservative_state(
-        conservative_state, species
-    )
+    number_density = get_number_density_from_conservative_state(conservative_state, species)
     pressure = get_pressure_from_conservative_state(conservative_state, species)
     return temperature(number_density, pressure)
 
@@ -112,16 +104,12 @@ def get_pressure_from_primitive_state(primitive_state):
 def get_internal_energy_density_from_primitive_state(primitive_state, species):
     mass_density = get_mass_density_from_primitive_state(primitive_state, species)
     pressure = get_pressure_from_primitive_state(primitive_state)
-    internal_energy_per_unit_mass_val = internal_energy_per_unit_mass(
-        species, mass_density, pressure
-    )
+    internal_energy_per_unit_mass_val = internal_energy_per_unit_mass(species, mass_density, pressure)
     return internal_energy_density(internal_energy_per_unit_mass_val, mass_density)
 
 
 def convert_from_conservative_to_primitive(conservative_state, species):
-    number_density = get_number_density_from_conservative_state(
-        conservative_state, species
-    )
+    number_density = get_number_density_from_conservative_state(conservative_state, species)
     bulk_velocity = get_bulk_velocity_from_conservative_state(conservative_state)
     temperature = get_temperature_from_conservative_state(conservative_state, species)
     return construct_primitive_state(number_density, bulk_velocity, temperature)
@@ -132,10 +120,6 @@ def convert_from_primitive_to_conservative(primitive_state, species):
     bulk_velocity = get_bulk_velocity_from_primitive_state(primitive_state)
     momentum_density = bulk_velocity * mass_density
     kinetic_energy_density_val = kinetic_energy_density(mass_density, momentum_density)
-    internal_energy_density = get_internal_energy_density_from_primitive_state(
-        primitive_state, species
-    )
+    internal_energy_density = get_internal_energy_density_from_primitive_state(primitive_state, species)
     total_energy_density = kinetic_energy_density_val + internal_energy_density
-    return construct_conservative_state(
-        mass_density, momentum_density, total_energy_density
-    )
+    return construct_conservative_state(mass_density, momentum_density, total_energy_density)

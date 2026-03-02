@@ -1,4 +1,5 @@
 import sys
+
 sys.path.append("../python")
 
 import euler
@@ -29,16 +30,10 @@ temperature_left = euler.temperature(number_density_left, pressure_left)
 number_density_right = mass_density_right / electron_species.mass
 temperature_right = euler.temperature(number_density_right, pressure_right)
 
-left_state_primitive = euler.construct_primitive_state(
-    number_density_left, bulk_velocity_left, temperature_left
-)
-right_state_primitive = euler.construct_primitive_state(
-    number_density_right, bulk_velocity_right, temperature_right
-)
+left_state_primitive = euler.construct_primitive_state(number_density_left, bulk_velocity_left, temperature_left)
+right_state_primitive = euler.construct_primitive_state(number_density_right, bulk_velocity_right, temperature_right)
 
-max_wavespeed = euler_exact_riemann_solver.compute_max_wavespeed(
-    left_state_primitive, right_state_primitive, electron_species
-)
+max_wavespeed = euler_exact_riemann_solver.compute_max_wavespeed(left_state_primitive, right_state_primitive, electron_species)
 
 domain_length = 1.0
 discontinuity_location = 0.5 * domain_length
@@ -121,20 +116,16 @@ def run(mfpic_executable):
 def compute_error(data, points, exact_solution):
     numerical_solution = verification.create_1D_interpolater(data, points)
     exact_solution_at_final_time = lambda x: exact_solution(x, final_time)
-    error = verification.compute_L1_relative_error_1D(
-        numerical_solution, exact_solution_at_final_time, points
-    )
+    error = verification.compute_L1_relative_error_1D(numerical_solution, exact_solution_at_final_time, points)
     return error
 
 
 def analyze():
-    exact_mass_density, exact_velocity, exact_pressure = (
-        euler_exact_riemann_solver.form_exact_solutions(
-            left_state_primitive,
-            right_state_primitive,
-            electron_species,
-            discontinuity_location,
-        )
+    exact_mass_density, exact_velocity, exact_pressure = euler_exact_riemann_solver.form_exact_solutions(
+        left_state_primitive,
+        right_state_primitive,
+        electron_species,
+        discontinuity_location,
     )
 
     mass_density_errors = []
@@ -156,18 +147,14 @@ def analyze():
         bulk_velocity_data = euler.get_bulk_velocity_from_conservative_state(fluid_data)
         velocity_error = compute_error(bulk_velocity_data[0], x_points, exact_velocity)
 
-        pressure_data = euler.get_pressure_from_conservative_state(
-            fluid_data, electron_species
-        )
+        pressure_data = euler.get_pressure_from_conservative_state(fluid_data, electron_species)
         pressure_error = compute_error(pressure_data, x_points, exact_pressure)
 
         mass_density_errors.append(mass_density_error)
         velocity_errors.append(velocity_error)
         pressure_errors.append(pressure_error)
 
-    mass_density_rates = verification.compute_convergence_rates(
-        mass_density_errors, h_list
-    )
+    mass_density_rates = verification.compute_convergence_rates(mass_density_errors, h_list)
     velocity_rates = verification.compute_convergence_rates(velocity_errors, h_list)
     pressure_rates = verification.compute_convergence_rates(pressure_errors, h_list)
 
@@ -185,9 +172,7 @@ def analyze():
     ), f"The pressure is not converging at the correct rate. The expected rate is {minimum_convergence_rate} and the actual rates are {pressure_rates}"
 
 
-def plot_quantity(
-    data, points, exact_solution, plot_points, time, name, i, figures_directory
-):
+def plot_quantity(data, points, exact_solution, plot_points, time, name, i, figures_directory):
     fig, axes = plt.subplots()
     axes.plot(points, data, label="Numerical Solution")
     axes.plot(plot_points, exact_solution(plot_points, time), label="Exact Solution")
@@ -208,13 +193,11 @@ def plot():
         x_points = points[:, 0]
         num_cells = int(0.5 * x_points.shape[0])
 
-        exact_mass_density, exact_velocity, exact_pressure = (
-            euler_exact_riemann_solver.form_exact_solutions(
-                left_state_primitive,
-                right_state_primitive,
-                electron_species,
-                discontinuity_location,
-            )
+        exact_mass_density, exact_velocity, exact_pressure = euler_exact_riemann_solver.form_exact_solutions(
+            left_state_primitive,
+            right_state_primitive,
+            electron_species,
+            discontinuity_location,
         )
         x_plot = np.linspace(0, domain_length, 10 * num_cells)
 
@@ -236,9 +219,7 @@ def plot():
                 figures_directory,
             )
 
-            bulk_velocity_data = euler.get_bulk_velocity_from_conservative_state(
-                fluid_data
-            )
+            bulk_velocity_data = euler.get_bulk_velocity_from_conservative_state(fluid_data)
             plot_quantity(
                 bulk_velocity_data[0],
                 x_points,
@@ -250,9 +231,7 @@ def plot():
                 figures_directory,
             )
 
-            pressure_data = euler.get_pressure_from_conservative_state(
-                fluid_data, electron_species
-            )
+            pressure_data = euler.get_pressure_from_conservative_state(fluid_data, electron_species)
             plot_quantity(
                 pressure_data,
                 x_points,
