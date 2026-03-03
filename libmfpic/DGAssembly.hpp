@@ -131,7 +131,7 @@ public:
 
   /// get global maximum characteristic speed to be used in CFL condition
   /// where max_char_speed is updated during RHS evaluation
-  mfem::real_t getMaxCharSpeed() const { return max_characteristic_speed_; }
+  mfem::real_t getMaxCharSpeed() const { return hyperbolic_form_integrator_->GetMaxCharSpeed(); }
 
   /// Dtor.
   virtual ~DGAssembly();
@@ -149,8 +149,6 @@ private:
   std::vector<mfem::DenseMatrix> weak_divergence_;
   /// element-wise inverse mass matrix (trial space ByDim)
   std::vector<mfem::DenseMatrix> inverse_mass_;
-  /// global maximum characteristic speed. Updated by form integrators
-  mutable mfem::real_t max_characteristic_speed_;
   /// Flux function \f$F(U)\f$ 
   std::shared_ptr<mfem::FluxFunction> flux_function_;
   /// Numerical flux function for computing \f$\hat{F} \cdot n\f$
