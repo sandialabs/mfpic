@@ -84,6 +84,8 @@ mfem::Vector evaluateGaussianAtPoint(
   const double standard_deviation,
   const SourceStateParameters& offsets,
   const SourceStateParameters& heights,
+  const double pressure_offset,
+  const double pressure_height,
   const Species& species)
 {
   const double shift = x - center[0];
@@ -93,7 +95,9 @@ mfem::Vector evaluateGaussianAtPoint(
   mfem::Vector expected_velocity(offsets.bulk_velocity);
   expected_velocity.Add(exponential, heights.bulk_velocity);
 
-  const double expected_temperature = heights.temperature * exponential + offsets.temperature;
+  const double expected_pressure = pressure_height * exponential + pressure_offset;
+
+  const double expected_temperature = euler::temperature(expected_number_density, expected_pressure);
 
   const mfem::Vector expected_state_primitive = euler::constructPrimitiveState(
     expected_number_density, expected_velocity, expected_temperature);
@@ -110,10 +114,14 @@ TEST(SourcesFactory, GaussianSourceParametersEulerVectorCoefficient) {
 
   const mfem::Vector bulk_velocity_offset{1., 0., 0.};
   const mfem::Vector bulk_velocity_height{0.1, 0., 0.};
-  SourceStateParameters offsets{.number_density = 1e22, .bulk_velocity=bulk_velocity_offset, .temperature = 320};
-  SourceStateParameters heights{.number_density = 1e21, .bulk_velocity=bulk_velocity_height, .temperature = 10};
+  SourceStateParameters offsets{.number_density = 1e19, .bulk_velocity=bulk_velocity_offset};
+  SourceStateParameters heights{.number_density = 1e18, .bulk_velocity=bulk_velocity_height};
 
-  GaussianSourceParameters parameters(electron_species, center, standard_deviation, offsets, heights);
+  const double pressure_offset = 0.05;
+  const double pressure_height = 0.001;
+
+  GaussianSourceParameters parameters(
+    electron_species, center, standard_deviation, offsets, heights, pressure_offset, pressure_height);
   std::unique_ptr<mfem::VectorCoefficient> euler_coefficient = parameters.getEulerVectorCoefficient();
 
   constexpr int num_elems = 11;
@@ -123,7 +131,8 @@ TEST(SourcesFactory, GaussianSourceParametersEulerVectorCoefficient) {
 
   for (const double& x : {0.01, 0.45, 0.5}){
     const mfem::Vector state_out = evaluateVectorCoefficientAtPoint(*euler_coefficient, x, dx, mesh);
-    const mfem::Vector expected_state = evaluateGaussianAtPoint(x, center, standard_deviation, offsets, heights, electron_species);
+    const mfem::Vector expected_state = evaluateGaussianAtPoint(
+      x, center, standard_deviation, offsets, heights, pressure_offset, pressure_height, electron_species);
     for (int i = 0; i < expected_state.Size(); ++i) {
       EXPECT_DOUBLE_EQ(expected_state[i], state_out[i]);
     }
@@ -471,8 +480,8 @@ TEST(SourcesFactory, GaussianInitialConditionsGivesBackCorrectParameters) {
 
   constexpr double number_density_offset = 1e19;
   constexpr double number_density_height = 5e18;
-  constexpr double temperature_offset = 300;
-  constexpr double temperature_height = 20;
+  constexpr double pressure_offset = 0.04;
+  constexpr double pressure_height = 0.005;
   const mfem::Vector bulk_velocity_offset{10.3, 15.2, 19.5};
   const mfem::Vector bulk_velocity_height{2.4, 3.1, 1.9};
 
@@ -485,12 +494,12 @@ TEST(SourcesFactory, GaussianInitialConditionsGivesBackCorrectParameters) {
     "      Standard Deviation: " + std::to_string(standard_deviation) + "\n"
     "      Offsets:\n"
     "        Number Density: " + std::to_string(number_density_offset) + "\n"
-    "        Temperature: " + std::to_string(temperature_offset) + "\n"
+    "        Pressure: " + std::to_string(pressure_offset) + "\n"
     "        Bulk Velocity: [" + std::to_string(bulk_velocity_offset[0]) + ", " + std::to_string(bulk_velocity_offset[1]) + ", " +
       std::to_string(bulk_velocity_offset[2]) + "]\n"
     "      Heights:\n"
     "        Number Density: " + std::to_string(number_density_height) + "\n"
-    "        Temperature: " + std::to_string(temperature_height) + "\n"
+    "        Pressure: " + std::to_string(pressure_height) + "\n"
     "        Bulk Velocity: [" + std::to_string(bulk_velocity_height[0]) + ", " + std::to_string(bulk_velocity_height[1]) + ", " +
       std::to_string(bulk_velocity_height[2]) + "]\n"
   );
@@ -509,17 +518,20 @@ TEST(SourcesFactory, GaussianInitialConditionsGivesBackCorrectParameters) {
   EXPECT_EQ(num_particles_per_species, parameters.num_particles);
   EXPECT_EQ(1, parameters.center.Size());
   EXPECT_EQ(center, parameters.center[0]);
+
   EXPECT_EQ(number_density_offset, parameters.offsets.number_density);
-  EXPECT_EQ(temperature_offset, parameters.offsets.temperature);
+  EXPECT_EQ(0, parameters.offsets.temperature);
   for (int i = 0; i < bulk_velocity_offset.Size(); ++i) {
     EXPECT_EQ(bulk_velocity_offset[i], parameters.offsets.bulk_velocity[i]);
   }
+  EXPECT_EQ(pressure_offset, parameters.pressure_offset);
 
   EXPECT_EQ(number_density_height, parameters.heights.number_density);
-  EXPECT_EQ(temperature_height, parameters.heights.temperature);
+  EXPECT_EQ(0, parameters.heights.temperature);
   for (int i = 0; i < bulk_velocity_height.Size(); ++i) {
     EXPECT_EQ(bulk_velocity_height[i], parameters.heights.bulk_velocity[i]);
   }
+  EXPECT_EQ(pressure_height, parameters.pressure_height);
 }
 
 }
