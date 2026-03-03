@@ -177,7 +177,7 @@ def plot_quantity(data, points, exact_solution, plot_points, time, name, i, figu
     axes.legend()
     axes.set_title(f"{name} At Time = {time}")
     axes.set_xlabel("x")
-    axes.set_ylabel("rho")
+    axes.set_ylabel(f"{name}")
     fig.savefig(f"{figures_directory}/{name}{i:03}.png")
     plt.close(fig)
 
