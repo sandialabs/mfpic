@@ -20,7 +20,7 @@ void dumpParticles(const ParticleContainer& particles, double simulation_time, c
     file_is_created = true;
   }
 
-  std::vector<double> x, y, z, vx, vy, vz, weight;
+  std::vector<double> x, y, z, vx, vy, vz, weight, pdf_value;
   std::vector<int> element;
   for (const Particle& particle : particles) {
     if (particle.is_alive) {
@@ -32,6 +32,7 @@ void dumpParticles(const ParticleContainer& particles, double simulation_time, c
       vz.push_back(particle.velocity[2]);
       weight.push_back(particle.weight);
       element.push_back(particle.element);
+      pdf_value.push_back(particle.pdf_value);
     }
   }
 
@@ -71,6 +72,9 @@ void dumpParticles(const ParticleContainer& particles, double simulation_time, c
   H5Dclose(dataset);
   dataset = H5Dcreate(step_group, "weight", H5T_NATIVE_DOUBLE, dataspace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   H5Dwrite(dataset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, weight.data());
+  H5Dclose(dataset);
+  dataset = H5Dcreate(step_group, "pdf_value", H5T_NATIVE_DOUBLE, dataspace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  H5Dwrite(dataset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, pdf_value.data());
   H5Dclose(dataset);
   dataset = H5Dcreate(step_group, "element", H5T_NATIVE_INT, dataspace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   H5Dwrite(dataset, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, element.data());
