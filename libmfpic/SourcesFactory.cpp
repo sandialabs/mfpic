@@ -75,12 +75,16 @@ GaussianSourceParameters::GaussianSourceParameters(
   const double standard_deviation,
   const SourceStateParameters& offsets,
   const SourceStateParameters& heights,
+  const double pressure_offset,
+  const double pressure_height,
   const int num_particles)
   : SourceParameters(species, num_particles)
   , center(center)
   , standard_deviation(standard_deviation)
   , offsets(offsets)
   , heights(heights)
+  , pressure_offset(pressure_offset)
+  , pressure_height(pressure_height)
 {}
 
 std::unique_ptr<mfem::VectorCoefficient> GaussianSourceParameters::getEulerVectorCoefficient() const {
@@ -88,19 +92,32 @@ std::unique_ptr<mfem::VectorCoefficient> GaussianSourceParameters::getEulerVecto
   const mfem::Vector heights_primitive = constructPrimitiveState(heights);
 
   auto function = [
-    &standard_deviation = standard_deviation,
-    &center = center,
-    &species = species,
+    standard_deviation = standard_deviation,
+    center = center,
+    species = species,
     offsets_primitive = offsets_primitive,
-    heights_primitive = heights_primitive](const mfem::Vector& x, mfem::Vector& y)
+    heights_primitive = heights_primitive,
+    pressure_offset = pressure_offset,
+    pressure_height = pressure_height](const mfem::Vector& x, mfem::Vector& y)
   {
     mfem::Vector shifted_x(x.Size());
     for (int i_dim = 0; i_dim < x.Size(); ++i_dim) {
       shifted_x = x[i_dim] - center[i_dim];
     }
     const double exponential = exp(-0.5 * (shifted_x * shifted_x) / (standard_deviation * standard_deviation));
-    mfem::Vector primitive_state(offsets_primitive);
-    primitive_state.Add(exponential, heights_primitive);
+
+    const double number_density_offset = offsets_primitive[euler::PrimitiveVariables::NUMBER_DENSITY];
+    const mfem::Vector velocity_offset = euler::getBulkVelocityFromPrimitiveState(offsets_primitive);
+    const double number_density_height = heights_primitive[euler::PrimitiveVariables::NUMBER_DENSITY];
+    const mfem::Vector velocity_height = euler::getBulkVelocityFromPrimitiveState(heights_primitive);
+
+    const double number_density = number_density_offset + exponential * number_density_height;
+    mfem::Vector velocity(velocity_offset);
+    velocity.Add(exponential, velocity_height);
+    const double pressure = pressure_offset + exponential * pressure_height;
+    const double temperature = euler::temperature(number_density, pressure);
+
+    const mfem::Vector primitive_state = euler::constructPrimitiveState(number_density, velocity, temperature);
     y = euler::convertFromPrimitiveToConservative(primitive_state, species);
   };
 
@@ -130,7 +147,10 @@ SourceStateParameters buildSourceStateParametersFromYAML(const YAML::Node& state
     }
   }
 
-  const double temperature = state_node["Temperature"].as<double>();
+  double temperature = 0.;
+  if (state_node["Temperature"]) {
+    temperature = state_node["Temperature"].as<double>();
+  }
   if (temperature < 0.0) {
     errorWithUserMessage(formatParseMessage(state_node["Temperature"], "Temperature is negative!"));
   }
@@ -208,13 +228,22 @@ std::vector<std::unique_ptr<SourceParameters>> buildListOfSourceParametersFromYA
 
         const YAML::Node& center_node = gaussian_node["Center"];
         mfem::Vector center(center_node.size());
-        for (int i = 0; i < std::ssize(center_node); ++i){
-          center[i] = center_node[i].as<double>();
+        if (center_node.IsSequence()) {
+          for (int i = 0; i < std::ssize(center_node); ++i){
+            center[i] = center_node[i].as<double>();
+          }
+        } else {
+          errorWithUserMessage(formatParseMessage(center_node, "Center must be a sequence.")); 
         }
 
         const double standard_deviation = gaussian_node["Standard Deviation"].as<double>();
         const SourceStateParameters offsets = buildSourceStateParametersFromYAML(gaussian_node["Offsets"]);
         const SourceStateParameters heights = buildSourceStateParametersFromYAML(gaussian_node["Heights"]);
+        const double pressure_offset = gaussian_node["Offsets"]["Pressure"].as<double>();
+        const double pressure_height = gaussian_node["Heights"]["Pressure"].as<double>();
+        if (pressure_offset <= 0 or pressure_height <= 0) {
+          errorWithUserMessage(formatParseMessage(gaussian_node, "Pressure must be positive."));
+        }
 
         for (const std::string& species_name : species_names) {
           list_of_parameters.push_back(std::make_unique<GaussianSourceParameters>(
@@ -223,6 +252,8 @@ std::vector<std::unique_ptr<SourceParameters>> buildListOfSourceParametersFromYA
             standard_deviation,
             offsets,
             heights,
+            pressure_offset,
+            pressure_height,
             num_particles_per_species));
         }
       } else {

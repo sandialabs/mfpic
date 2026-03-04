@@ -13,7 +13,7 @@ namespace mfpic {
 struct SourceStateParameters {
   double number_density;
   mfem::Vector bulk_velocity{0., 0., 0.};
-  double temperature;
+  double temperature = 0;
 };
 
 /**
@@ -95,13 +95,18 @@ struct SodSourceParameters : public SourceParameters {
  *  n = h_n exp(-0.5 (x - mu)^2 / sigma) + o_n
  *  where h_n is the height of the gaussian, o_n is the offset, mu is the center or mean of the gaussian, and sigma is the 
  *  standard deviation.
- *  The formulas for the velocity and temperature are the same except that they use their own heights and offsets
+ *  The formulas for the velocity and pressure are the same except that they use their own heights and offsets
  */
 struct GaussianSourceParameters: public SourceParameters {
   mfem::Vector center;
   double standard_deviation;
+
+  // temperature is ignored in these states
   SourceStateParameters offsets;
   SourceStateParameters heights;
+
+  double pressure_offset;
+  double pressure_height;
 
   GaussianSourceParameters(
     const Species& species,
@@ -109,6 +114,8 @@ struct GaussianSourceParameters: public SourceParameters {
     const double standard_deviation,
     const SourceStateParameters& offsets,
     const SourceStateParameters& heights,
+    const double pressure_offset,
+    const double pressure_height,
     const int num_particles = 0);
 
   /**
