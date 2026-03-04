@@ -129,9 +129,7 @@ namespace mfpic {
     return charge_state;
   }
 
-  double DGEulerOperations::estimateCFL(const double & dt, const double & smallest_cell_lengthscale) const 
-  {
-
+  double DGEulerOperations::estimateCFL(const double & dt, const double & smallest_cell_lengthscale) const {
     double max_speed = 0.;
     for (size_t ispecies = 0; ispecies < dg_assemblers_.size(); ++ispecies) {
       max_speed = fmax(max_speed, dg_assemblers_[ispecies]->getMaxCharSpeed());

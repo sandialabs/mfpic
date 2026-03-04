@@ -149,8 +149,9 @@ void runSimulation(int argc, char* argv[]) {
 
     double cfl = 0.;
 
-    for (size_t i_lf_model = 0; i_lf_model < low_fidelity_operations.size(); ++i_lf_model)
+    for (size_t i_lf_model = 0; i_lf_model < low_fidelity_operations.size(); ++i_lf_model) {
       cfl = fmax(cfl, low_fidelity_operations[i_lf_model]->estimateCFL(timestep_size, smallest_cell_lengthscale));
+    }
 
     std::cout << "    Maximum CFL: " << cfl << std::endl;
 

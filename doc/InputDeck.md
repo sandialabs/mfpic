@@ -378,11 +378,11 @@ Euler Fluids:
             Standard Deviation: double #[m]
             Offsets:
                 Bulk Velocity: list of doubles, length 3 (default: [0.0, 0.0, 0.0]) #[m/s]
-                Temperature: double #[K]
+                Pressure: double #[Pa]
                 Number Density: double #[-/m^3]
             Heights:
                 Bulk Velocity: list of doubles, length 3 (default: [0.0, 0.0, 0.0]) #[m/s]
-                Temperature: double #[K]
+                Pressure: double #[Pa]
                 Number Density: double #[-/m^3]
 ```
 
@@ -395,6 +395,9 @@ Incompatible with ``Sod`` and ``Gaussian``.
 **``Bulk Velocity``**: The bulk velocity of the fluids in meters per second.
 
 **``Temperature``**: The temperature in Kelvin of each fluid.
+This is required to be positive.
+
+**``Pressure``**: The pressure in Pascals of each fluid.
 This is required to be positive.
 
 **``Number Density``**: The number density of each fluid in number per meter cubed.
@@ -411,11 +414,16 @@ Incompatible with ``Constant`` and ``Gaussian``.
 
 **``Gaussian``**: The parameters for a Gaussian initial condition are specified under this key.
 Incompatible with ``Constant`` and ``Sod``.
-The number density, velocity, and temperature will all be Gaussian functions in space, given by the following equations,
+The number density, velocity, and pressure will all be Gaussian functions in space, given by the following equations,
 $$
     n = h_n e^{-(x - c)^2 / \sigma^2} + o_n \\
     u = h_u e^{-(x - c)^2 / \sigma^2} + o_u \\
-    T = h_T e^{-(x - c)^2 / \sigma^2} + o_T
+    P = h_P e^{-(x - c)^2 / \sigma^2} + o_P
+$$
+*Note*: This condition specifies pressure instead of temprature for the fluid.
+The fluid temperature will be given by the ideal gas law,
+$$
+    T = \frac{P}{n k}.
 $$
 
 **``Center``**: The center or mean of the Gaussian function, denoted by $c$ above.
@@ -424,10 +432,10 @@ This should a point in space and the length of this input should match the dimen
 **``Standard Deviation``**: The standard deviation of the Gaussian function, denoted as $\sigma$ above.
 
 **``Offsets``**: The offset of the number density, temperature, and bulk_velocity.
-This is denoted as $o_n$, $o_u$ and $o_T$ in the equations above.
+This is denoted as $o_n$, $o_u$ and $o_P$ in the equations above.
 
 **``Heights``**: The height of the Gaussian above the offset at the peak.
-This is denoted as $h_n$, $h_u$ and $h_T$ in the equations above.
+This is denoted as $h_n$, $h_u$ and $h_P$ in the equations above.
 
 #### Example
 
