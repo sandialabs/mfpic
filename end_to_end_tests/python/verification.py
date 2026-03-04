@@ -36,7 +36,7 @@ def integrate_over_mesh_1D(function, points):
     for i_cell in range(n_cells):
         x_left = points_by_cell[i_cell, 0]
         x_right = points_by_cell[i_cell, 1]
-        cell_integral, _ = scipy.integrate.quad(function, x_left, x_right)
+        cell_integral, _ = scipy.integrate.fixed_quad(function, x_left, x_right)
         integral += cell_integral
 
     return integral

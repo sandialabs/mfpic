@@ -6,6 +6,7 @@ import euler
 import read_mesh_data
 import species
 import utils
+import verification
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -14,7 +15,7 @@ import subprocess
 
 domain_length = 2.0
 base_num_elements = 500
-refinement_levels = [2]
+refinement_levels = [2, 4]
 
 gaussian_center = 0.25 * domain_length
 gaussian_standard_deviation = 0.1
@@ -107,8 +108,35 @@ def run(mfpic_executable):
         result.check_returncode()
 
 
+def compute_error(data, points, exact_solution):
+    numerical_solution = verification.create_1D_interpolater(data, points)
+    exact_solution_at_final_time = lambda x: exact_solution(x, final_time)
+    error = verification.compute_L1_relative_error_1D(numerical_solution, exact_solution_at_final_time, points)
+    return error
+
+
 def analyze():
-    pass
+    errors = []
+    h_list = []
+    for refinement_level in refinement_levels:
+        print(f"refinement_level = {refinement_level}")
+        mesh_folder_name = format_mesh_folder_name(refinement_level)
+        print("read mesh data")
+        _, mesh_data = read_mesh_data.read_mesh_data(mesh_folder_name)
+        points = mesh_data[-1]["points"]
+        x_points = points[:,0]
+        dx = x_points[1] - x_points[0]
+        print(f"dx = {dx}")
+        h_list.append(dx)
+
+        fluid_data = np.transpose(mesh_data[-1]["species_0"])
+        print("compute error")
+        error = compute_error(fluid_data[0], x_points, exact_mass_density)
+        print(f"error = {error}")
+        errors.append(error)
+
+    rates = verification.compute_convergence_rates(errors, h_list)
+    print(f"rates = {rates}")
 
 
 def plot():
