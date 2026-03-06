@@ -4,8 +4,8 @@
 # The primary mode of the electrostatic waves has wavelength equal to the length of the domain.
 # An immobile ion background is added to satisfy the compatibilty condition for the Poisson problem.
 # Problem parameters taken from https://doi.org/10.1016/j.cpc.2022.108569
+# Note for the fluid description, we need a non-zero fluid temperature
 
-## TODO BWR UPDATE THE TEXT ABOVE
 
 import numpy as np
 from scipy.constants import electron_mass, proton_mass, elementary_charge, epsilon_0
@@ -14,11 +14,14 @@ number_density = 1.0e16
 bulk_speed = 3.2e5
 plasma_frequency = np.sqrt(number_density * elementary_charge**2.0 / electron_mass / epsilon_0)
 dt = 2.0 * np.pi / plasma_frequency / 120.0
-num_time_steps = 450
 dx = bulk_speed * dt
 num_elements = 400
+cfl = .5
+dt *= cfl
+num_time_steps = int(450 / cfl)
 domain_length = num_elements * dx
 mesh_folder_name = "Output"
+temperature = 10. ## need a non-zero fluid temperature 
 
 def run(mfpic_executable):
   import subprocess
@@ -51,24 +54,24 @@ Euler Fluids:
   Initial Conditions:
     - Species: [immobile_proton]
       Constant:
-        Temperature: 10.0
+        Temperature: {temperature}
         Number Density: {number_density}
     - Species: [electron]
       Constant:
         Bulk Velocity: [{bulk_speed}, 0.0, 0.0]
-        Temperature: 10.0
+        Temperature: {temperature}
         Number Density: {number_density / 2.0}
     - Species: [electron]
       Periodic Perturbation:
         Wavevector: [{2.*np.pi/domain_length}, 0., 0.]
         Base Values:
           Bulk Velocity: [-{bulk_speed}, 0.0, 0.0]
-          Temperature: 10.0
+          Temperature: {temperature}
           Number Density: {number_density / 2.0}
         Perturbations:
           Bulk Velocity: [0., 0., 0.]
           Temperature: 0.
-          Number Density: 1e-6
+          Number Density: 1e-3
 
 Output:
   Stride: 1
