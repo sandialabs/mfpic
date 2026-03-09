@@ -13,35 +13,41 @@ import numpy as np
 import os
 import subprocess
 
-domain_length = 2.0
-base_num_elements = 500
-refinement_levels = [2, 4]
-
-gaussian_center = 0.25 * domain_length
 gaussian_standard_deviation = 0.1
+gaussian_center = 4 * gaussian_standard_deviation
+domain_length = 9 * gaussian_standard_deviation
 
+base_num_elements = 25
+refinement_levels = [16, 32, 64]
+
+N2_species = species.Species(mass=4.65e-26, specific_heat_ratio=1.4)
 number_density_offset = 1e26
-perturbation = 0.01
+perturbation = 0.001
 number_density_height = perturbation * number_density_offset
 
-pressure = 1000
-velocity = 3.0
-max_cfl = 0.8
+max_mass_density = (number_density_height + number_density_offset) * N2_species.mass
+pressure = 27613
+sound_speed = euler.speed_of_sound(N2_species, max_mass_density, pressure)
 
-final_time = 0.5 * domain_length / velocity
+mach_number = 2.5
+velocity = mach_number * sound_speed
 
-neutral_species = species.Species(mass=4.65e-26, specific_heat_ratio=1.4)
-max_mass_density = (number_density_height + number_density_offset) * neutral_species.mass
-sound_speed = euler.speed_of_sound(neutral_species, max_mass_density, pressure)
+max_cfl = 0.95
 max_wavespeed = velocity + sound_speed
 
+final_time = 10 * gaussian_standard_deviation / velocity
+
+basis_order = 0
 
 def exact_mass_density(x, t):
     sigma = gaussian_standard_deviation
     c = gaussian_center
-    exponential = np.exp(-0.5 * np.power(x - c - velocity * t, 2) / np.power(sigma, 2))
+    mask = x < np.fmod(velocity * t, domain_length)
+    number_of_periods = int(velocity * t / domain_length)
+    shift = (mask + number_of_periods) * domain_length
+    exponential = np.exp(-0.5 * np.power(shift + x - velocity * t - c, 2) / np.power(sigma, 2))
     number_density = number_density_height * exponential + number_density_offset
-    return neutral_species.mass * number_density
+    return N2_species.mass * number_density
 
 
 def format_mesh_folder_name(refinement_level):
@@ -70,12 +76,12 @@ Time Stepping:
 
 Species:
   neutral_electron:
-    Mass: {neutral_species.mass}
+    Mass: {N2_species.mass}
     Charge: 0
-    Specific Heat Ratio: {neutral_species.specific_heat_ratio}
+    Specific Heat Ratio: {N2_species.specific_heat_ratio}
 
 Euler Fluids:
-  Basis Order: 0
+  Basis Order: {basis_order}
   Initial Conditions:
     - Species: [neutral_electron]
       Gaussian:
@@ -137,6 +143,12 @@ def analyze():
 
     rates = verification.compute_convergence_rates(errors, h_list)
     print(f"rates = {rates}")
+
+    verification.plot_errors_and_expected_convergence_rate(h_list, errors, 1.0)
+
+    expected_convergence_rate = basis_order + 1
+    tolerance = 0.1
+    assert(np.all(rates > expected_convergence_rate - tolerance))
 
 
 def plot():
