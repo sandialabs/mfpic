@@ -241,7 +241,7 @@ std::vector<std::unique_ptr<SourceParameters>> buildListOfSourceParametersFromYA
         const SourceStateParameters heights = buildSourceStateParametersFromYAML(gaussian_node["Heights"]);
         const double pressure_offset = gaussian_node["Offsets"]["Pressure"].as<double>();
         const double pressure_height = gaussian_node["Heights"]["Pressure"].as<double>();
-        if (pressure_offset <= 0 or pressure_height <= 0) {
+        if (pressure_offset <= 0 or (pressure_height + pressure_offset) <= 0) {
           errorWithUserMessage(formatParseMessage(gaussian_node, "Pressure must be positive."));
         }
 
