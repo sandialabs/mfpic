@@ -2,6 +2,9 @@
 #include <libmfpic/Euler.hpp>
 #include <libmfpic/SourcesFactory.hpp>
 
+#include <mfem/linalg/densemat.hpp>
+#include <mfem/mesh/element.hpp>
+
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -34,6 +37,32 @@ mfem::Vector evaluateVectorCoefficientAtPoint(
   const mfem::Vector x_vec{x};
   mfem::IntegrationPoint integration_point;
   element_transformation.TransformBack(x_vec, integration_point);
+  element_transformation.SetIntPoint(&integration_point);
+
+  mfem::Vector state_out(euler::ConservativeVariables::NUM_VARS);
+  coefficient.Eval(state_out, element_transformation, integration_point);
+  return state_out;
+}
+
+mfem::Vector evaluateVectorCoefficientAtPoint(
+  mfem::VectorCoefficient& coefficient,
+  const mfem::Vector x,
+  mfem::Mesh& mesh)
+{
+  mfem::DenseMatrix pts(x.Size(),1);
+  for (int i = 0; i < x.Size(); ++i)
+    pts(i,0) = x(i);
+  mfem::Array<int> elem_ids;
+  mfem::Array<mfem::IntegrationPoint> ips;
+
+  mesh.FindPoints(pts, elem_ids, ips);
+  const int element_index = elem_ids[0];
+
+  mfem::IsoparametricTransformation element_transformation;
+  mesh.GetElementTransformation(element_index, &element_transformation);
+
+  mfem::IntegrationPoint integration_point;
+  element_transformation.TransformBack(x, integration_point);
   element_transformation.SetIntPoint(&integration_point);
 
   mfem::Vector state_out(euler::ConservativeVariables::NUM_VARS);
@@ -135,6 +164,61 @@ TEST(SourcesFactory, GaussianSourceParametersEulerVectorCoefficient) {
       x, center, standard_deviation, offsets, heights, pressure_offset, pressure_height, electron_species);
     for (int i = 0; i < expected_state.Size(); ++i) {
       EXPECT_DOUBLE_EQ(expected_state[i], state_out[i]);
+    }
+  }
+}
+
+mfem::Vector evaluatePeriodicPerturbationAtPoint(
+  const mfem::Vector x,
+  const mfem::Vector& wavevector,
+  const SourceStateParameters& base,
+  const SourceStateParameters& perturbations,
+  const Species& species)
+{
+  const double cos_kx = cos(wavevector * x);
+
+  const double expected_number_density = base.number_density * (1. + perturbations.number_density * cos_kx);
+  const double expected_temperature = base.temperature * (1. + perturbations.temperature * cos_kx);
+  mfem::Vector expected_velocity = base.bulk_velocity;
+
+  for (int i = 0; i < 3; ++i){
+    expected_velocity[i] *= (1. + perturbations.bulk_velocity[i] * cos_kx);
+  }
+
+  const mfem::Vector expected_state_primitive = euler::constructPrimitiveState(
+    expected_number_density, expected_velocity, expected_temperature);
+
+  const mfem::Vector expected_state_conservative = euler::convertFromPrimitiveToConservative(
+    expected_state_primitive, species);
+
+  return expected_state_conservative;
+}
+
+TEST(SourcesFactory, PeriodicPerturbationSourceParametersEulerVectorCoefficient) {
+  constexpr double length = M_PI;
+  const mfem::Vector wavevector{1.,2.,3.};
+
+  const mfem::Vector bulk_velocity_base{10.23, -21.45, .89};
+  SourceStateParameters base{.number_density = 12.23e12, .bulk_velocity=bulk_velocity_base, .temperature=273.};
+
+  const mfem::Vector bulk_velocity_perturbation{1e-2,1e-3,1e-4};
+  SourceStateParameters perturbations{.number_density=.002, .bulk_velocity=bulk_velocity_perturbation, .temperature=.04};
+
+  PeriodicPerturbationSourceParameters parameters(
+    electron_species, wavevector, base, perturbations);
+  std::unique_ptr<mfem::VectorCoefficient> euler_coefficient = parameters.getEulerVectorCoefficient();
+
+  mfem::Mesh mesh = mfem::Mesh::MakeCartesian3D(10, 10, 10, mfem::Element::HEXAHEDRON, length, length, length);
+
+  const mfem::Vector x1 {0.01 * M_PI, 0.45 * M_PI, 0.5 * M_PI};
+  const mfem::Vector x2 {0.34 * M_PI, 0.01 * M_PI, 0.89 * M_PI};
+  const mfem::Vector x3 {0.72 * M_PI, 0.99 * M_PI, 0.14 * M_PI};
+  for (const mfem::Vector& x : {x1,x2,x3}){
+    const mfem::Vector state_out = evaluateVectorCoefficientAtPoint(*euler_coefficient, x, mesh);
+    const mfem::Vector expected_state = evaluatePeriodicPerturbationAtPoint(
+      x, wavevector, base, perturbations, electron_species);
+    for (int i = 0; i < expected_state.Size(); ++i) {
+      EXPECT_DOUBLE_EQ(expected_state[i], state_out[i]) << " i : " << i;
     }
   }
 }
@@ -532,6 +616,69 @@ TEST(SourcesFactory, GaussianInitialConditionsGivesBackCorrectParameters) {
     EXPECT_EQ(bulk_velocity_height[i], parameters.heights.bulk_velocity[i]);
   }
   EXPECT_EQ(pressure_height, parameters.pressure_height);
+}
+
+TEST(SourcesFactory, PeriodicPerturbationInitialConditionsGivesBackCorrectParameters) {
+  constexpr int num_particles_per_species = 513;
+
+  constexpr double number_density_base = 4.56e12;
+  const mfem::Vector bulk_velocity_base{10.3, 15.2, 19.5};
+  constexpr double temperature_base = 123.;
+
+  constexpr double number_density_perturbation = 1e-2;
+  const mfem::Vector bulk_velocity_perturbation{1e-4, 1e-5, 1e-6};
+  constexpr double temperature_perturbation = 1e-3;
+
+  constexpr double pi = 3.141593; // to be compatible with to_string
+  const mfem::Vector wavevector{2. * pi, 2. * 2. * pi, 4. * 2. * pi};
+
+  const std::string model_string(
+    "Initial Conditions:\n"
+    "  - Species: [" + proton_species_name + "]\n"
+    "    Number of Macroparticles per Species: " + std::to_string(num_particles_per_species) + "\n"
+    "    Periodic Perturbation:\n"
+    "      Wavevector: [" + std::to_string(wavevector[0]) + ", " + std::to_string(wavevector[1]) + ", " + 
+      std::to_string(wavevector[2]) + "]\n"
+    "      Base Values:\n"
+    "        Number Density: " + std::to_string(number_density_base) + "\n"
+    "        Temperature: " + std::to_string(temperature_base) + "\n"
+    "        Bulk Velocity: [" + std::to_string(bulk_velocity_base[0]) + ", " + std::to_string(bulk_velocity_base[1]) + ", " +
+      std::to_string(bulk_velocity_base[2]) + "]\n"
+    "      Perturbations:\n"
+    "        Number Density: " + std::to_string(number_density_perturbation) + "\n"
+    "        Temperature: " + std::to_string(temperature_perturbation) + "\n"
+    "        Bulk Velocity: [" + std::to_string(bulk_velocity_perturbation[0]) + ", " + std::to_string(bulk_velocity_perturbation[1]) + ", " +
+      std::to_string(bulk_velocity_perturbation[2]) + "]\n"
+  );
+
+  const YAML::Node model_node = YAML::Load(model_string);
+  const YAML::Node initial_conditions_node = model_node["Initial Conditions"];
+
+  std::vector<std::unique_ptr<SourceParameters>> list_of_parameters = buildListOfSourceParametersFromYAML(
+    initial_conditions_node, species_map);
+
+  EXPECT_EQ(1, std::ssize(list_of_parameters));
+
+  auto parameters = dynamic_cast<const PeriodicPerturbationSourceParameters&>(*list_of_parameters[0]);
+
+  EXPECT_EQ(proton_species, parameters.species);
+  EXPECT_EQ(num_particles_per_species, parameters.num_particles);
+  EXPECT_EQ(3, parameters.wavevector.Size());
+  for (int i = 0; i < wavevector.Size(); ++i) {
+    EXPECT_EQ(wavevector[i], parameters.wavevector[i]);
+  }
+
+  EXPECT_EQ(number_density_base, parameters.base_values.number_density);
+  for (int i = 0; i < bulk_velocity_base.Size(); ++i) {
+    EXPECT_EQ(bulk_velocity_base[i], parameters.base_values.bulk_velocity[i]);
+  }
+  EXPECT_EQ(temperature_base, parameters.base_values.temperature);
+
+  EXPECT_EQ(number_density_perturbation, parameters.perturbations.number_density);
+  for (int i = 0; i < bulk_velocity_perturbation.Size(); ++i) {
+    EXPECT_EQ(bulk_velocity_perturbation[i], parameters.perturbations.bulk_velocity[i]);
+  }
+  EXPECT_EQ(temperature_perturbation, parameters.perturbations.temperature);
 }
 
 }
