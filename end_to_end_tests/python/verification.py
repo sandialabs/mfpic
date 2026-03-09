@@ -1,3 +1,4 @@
+import matplotlib.pyplot as plt
 import numpy as np
 import scipy.integrate
 
@@ -89,3 +90,21 @@ def compute_convergence_rates(errors, h_array):
     errors_np = np.array(errors)
     h_np = np.array(h_array)
     return np.log(errors_np[:-1] / errors_np[1:]) / np.log(h_np[:-1] / h_np[1:])
+
+
+def plot_errors_and_expected_convergence_rate(refinement_quantities, errors, expected_rate, figname="./error_convergence.png"):
+    h_log_mean = np.exp(np.mean(np.log(refinement_quantities)))
+    error_log_mean = np.exp(np.mean(np.log(errors)))
+    c = error_log_mean / np.power(h_log_mean, expected_rate) # error = c*h^(expected_rate)
+    h_begin = refinement_quantities[0]
+    h_end = refinement_quantities[-1]
+    error_begin = c * np.power(h_begin, expected_rate)
+    error_end = c * np.power(h_end, expected_rate)
+    fig, ax = plt.subplots()
+    ax.loglog([h_begin, h_end], [error_begin, error_end], label=f"Expected Rate of {expected_rate}", color='tab:orange', linewidth=2)
+    ax.loglog(refinement_quantities, errors, label='Observed Rate', color='tab:blue')
+    ax.legend()
+    ax.set_xlabel("Refinement Quantity (h)")
+    ax.set_ylabel("Error")
+    fig.savefig(figname, bbox_inches='tight')
+    plt.close(fig)
