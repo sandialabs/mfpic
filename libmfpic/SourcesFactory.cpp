@@ -125,6 +125,47 @@ std::unique_ptr<mfem::VectorCoefficient> GaussianSourceParameters::getEulerVecto
   return euler_coefficient;
 }
 
+PeriodicPerturbationSourceParameters::PeriodicPerturbationSourceParameters(
+  const Species& species,
+  const mfem::Vector& wavevector,
+  const SourceStateParameters& base_values,
+  const SourceStateParameters& perturbations,
+  const int num_particles)
+  : SourceParameters(species, num_particles)
+  , wavevector(wavevector)
+  , base_values(base_values)
+  , perturbations(perturbations)
+{}
+
+std::unique_ptr<mfem::VectorCoefficient> PeriodicPerturbationSourceParameters::getEulerVectorCoefficient() const {
+
+  auto function = [
+    &wavevector = wavevector,
+    &species = species,
+    &base = base_values,
+    &perturbations = perturbations](const mfem::Vector& x, mfem::Vector& y)
+  {
+    double k_dot_x = 0.;
+    for (int i_dim = 0; i_dim < x.Size(); ++i_dim) {
+      k_dot_x += wavevector[i_dim] * x[i_dim];
+    }
+    const double cos_kx = cos(k_dot_x);
+
+    const double number_density = base.number_density * (1. + perturbations.number_density * cos_kx);
+    mfem::Vector velocity(base.bulk_velocity.Size());
+    for (int i_dim = 0; i_dim < velocity.Size(); ++ i_dim) {
+      velocity[i_dim] = base.bulk_velocity[i_dim] * (1. + perturbations.bulk_velocity[i_dim] * cos_kx);
+    }
+    const double temperature = base.temperature * (1. + perturbations.temperature * cos_kx);
+
+    mfem::Vector primitive_state = euler::constructPrimitiveState(number_density, velocity, temperature);
+    y = euler::convertFromPrimitiveToConservative(primitive_state, species);
+  };
+
+  auto euler_coefficient = std::make_unique<mfem::VectorFunctionCoefficient>(euler::ConservativeVariables::NUM_VARS, function);
+  return euler_coefficient;
+}
+
 SourceStateParameters buildSourceStateParametersFromYAML(const YAML::Node& state_node) {
   const double number_density = state_node["Number Density"].as<double>();
   if (number_density <= 0.0) {
@@ -256,8 +297,28 @@ std::vector<std::unique_ptr<SourceParameters>> buildListOfSourceParametersFromYA
             pressure_height,
             num_particles_per_species));
         }
+      } else if (source["Periodic Perturbation"]) {
+        const YAML::Node& perturbation_node = source["Periodic Perturbation"];
+
+        const SourceStateParameters base = buildSourceStateParametersFromYAML(perturbation_node["Base Values"]);
+        const SourceStateParameters perturbations = buildSourceStateParametersFromYAML(perturbation_node["Perturbations"]);
+
+        const YAML::Node& wavevector_node = perturbation_node["Wavevector"];
+        mfem::Vector wavevector(wavevector_node.size());
+        for (int i = 0; i < std::ssize(wavevector_node); ++i){
+          wavevector[i] = wavevector_node[i].as<double>();
+        }
+
+        for (const std::string& species_name : species_names) {
+          list_of_parameters.push_back(std::make_unique<PeriodicPerturbationSourceParameters>(
+            species_map.at(species_name),
+            wavevector,
+            base,
+            perturbations,
+            num_particles_per_species));
+        }
       } else {
-        errorWithUserMessage(formatParseMessage(source, "It is required to either specify \"Constant\", \"Sod\", or \"Gaussian\"."));
+        errorWithUserMessage(formatParseMessage(source, "It is required to either specify \"Constant\", \"Sod\", \"Gaussian\", or \"Periodic Perturbation\"."));
       }
     }
   } else {
