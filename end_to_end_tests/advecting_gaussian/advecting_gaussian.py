@@ -59,8 +59,6 @@ def get_input_deck(refinement_level):
     dx = domain_length / num_elements
     dt, num_time_steps = utils.compute_timestepping_that_satisfies_cfl(max_cfl, dx, max_wavespeed, final_time)
 
-    # num_time_steps = 1
-
     mesh_folder_name = format_mesh_folder_name(refinement_level)
 
     input_deck_contents = f"""
