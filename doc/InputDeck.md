@@ -349,11 +349,12 @@ Euler Fluids:
 ### Euler Fluids Initial Conditions
 The fluids present in the simulation and their initial conditions are specied under ``Initial Conditions``.
 Each initial condition is an item in a list under ``Initial Conditions`` and can have more than one species.
-Only constant-in-space, Sod shock tube, or Gaussian initial conditions are supported.
+Only constant-in-space, Sod shock tube, Gaussian, or periodic perturbation initial conditions are supported.
 If a constant in space is desired, then the ``Constant`` keyword and subparameters should be specified.
 If a Sod shock tube problem is desired, then the ``Sod`` keyword and subparameters should be specified.
 If a Gaussian initial condition is desired, then the ``Gaussian`` keyword and subparameters should be specified.
-Only one of ``Constant``, ``Sod``, and ``Gaussian`` can be used.
+If a periodic perturbation initial condition is desired, then the ``Periodic Perturbation`` keyword and subparameters should be specified.
+Only one of ``Constant``, ``Sod``, ``Gaussian``, and ``Periodic Perturbation`` can be used.
 
 ```yaml
 Euler Fluids:
@@ -384,6 +385,16 @@ Euler Fluids:
                 Bulk Velocity: list of doubles, length 3 (default: [0.0, 0.0, 0.0]) #[m/s]
                 Pressure: double #[Pa]
                 Number Density: double #[-/m^3]
+          Periodic Perturbation:
+            Wavevector: list of doubles, length 3 (default: [0.0, 0.0, 0.0]) # [1/m]
+            Base Values:
+                Bulk Velocity: list of doubles, length 3 (default: [0.0, 0.0, 0.0]) #[m/s]
+                Temperature: double #[K]
+                Number Density: double #[-/m^3]
+            Perturbations:
+                Bulk Velocity: list of doubles, length 3 (default: [0.0, 0.0, 0.0]) #[-]
+                Temperature: double #[-]
+                Number Density: double #[-]
 ```
 
 **``Species``**: A list of the species that will have the given initial conditions.
@@ -404,7 +415,7 @@ This is required to be positive.
 This is required to be positive.
 
 **``Sod``**: The parameters for a Sod shock tube problem are specified under this key.
-Incompatible with ``Constant`` and ``Gaussian``.
+Incompatible with ``Constant``, ``Gaussian``, and ``Periodic Perturbation``.
 
 **``Discontinuity Location``**: The x location of the jump/discontinuity.
 
@@ -413,7 +424,7 @@ Incompatible with ``Constant`` and ``Gaussian``.
 **``Right State``**: The state of the fluid when x is greater than or equal to the discontinuity location.
 
 **``Gaussian``**: The parameters for a Gaussian initial condition are specified under this key.
-Incompatible with ``Constant`` and ``Sod``.
+Incompatible with ``Constant``, ``Sod``, and ``Periodic Pertubation``.
 The number density, velocity, and pressure will all be Gaussian functions in space, given by the following equations,
 $$
     n = h_n e^{-(x - c)^2 / \sigma^2} + o_n \\
@@ -436,6 +447,23 @@ This is denoted as $o_n$, $o_u$ and $o_P$ in the equations above.
 
 **``Heights``**: The height of the Gaussian above the offset at the peak.
 This is denoted as $h_n$, $h_u$ and $h_P$ in the equations above.
+
+**``Periodic Perturbation``**: The parameters for a periodic perturbation initial condition are specified under this key.
+Incompatible with ``Constant``, ``Sod``, and ``Gaussian``.
+The number density, velocity, and temperature are functions of space and the supplied wavevector $\mathbf{k}$ as follows:
+$$
+    n = n_0 \left(1 + {\varepsilon}_n \cos(\mathbf{k} \cdot \mathbf{x})\right) \\
+    v_i = v_{i,0} \left(1 + \varepsilon_{v_i} \cos(\mathbf{k} \cdot \mathbf{x})\right) \\
+    T = T_0 \left(1 + {\varepsilon}_T \cos(\mathbf{k} \cdot \mathbf{x})\right) \, .
+$$
+
+**``Base Values``**: These entries correspond with $n_0$, $\mathbf{v}_0$, and $T_0$.
+They carry the units of temperature, velocity, and number density.
+
+**``Perturbations``**: These entries correspond with $\varepsilon_n$, $\varepsilon_{\mathbf{v}}$, and $\varepsilon_T$.
+They are the unitless perturbation amplitudes.
+
+**``Wavevector``**: This entry is $\mathbf{k}$. To get expected behavior, it should be of the form $\left(n_x 2 \pi / L_x, n_y 2 \pi / L_y, n_z 2 \pi / L_z\right)$ where $n_i \in \mathbb{Z}$ and $\mathbf{L}$ is the spatial extents of the domain.
 
 #### Example
 

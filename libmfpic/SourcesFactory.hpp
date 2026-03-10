@@ -127,6 +127,31 @@ struct GaussianSourceParameters: public SourceParameters {
 };
 
 /**
+ * @brief parameters defining a species that is nearly constant in space but 
+ * perturbed in a periodic sense. The wavenumber \f$k\f$ and perturbation amplitude \f$\eps\f$ are supplied
+ * to give a form \f$g = C (1 + \eps cos(k x)) \f$.
+ */
+struct PeriodicPerturbationSourceParameters : public SourceParameters {
+  mfem::Vector wavevector;
+  SourceStateParameters base_values;
+  SourceStateParameters perturbations;
+
+  PeriodicPerturbationSourceParameters(
+    const Species& species,
+    const mfem::Vector& wavevector,
+    const SourceStateParameters& base_values,
+    const SourceStateParameters& perturbations,
+    const int num_particles = 0);
+
+  /**
+   * @brief Get an mfem::VectorCoefficient that represents a periodically perturbed euler fluid with parameters in this struct
+   * 
+   * @return std::unique_ptr<mfem::VectorCoefficient>
+   */
+  std::unique_ptr<mfem::VectorCoefficient> getEulerVectorCoefficient() const override;
+};
+
+/**
  * @brief build SourceStateParameters that defines a state from YAML
  * 
  * @param state_node - the YAML defining the state
