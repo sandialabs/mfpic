@@ -48,13 +48,12 @@ ParticleContainer loadUniformKappaParticles(
   const double particle_weight = number_density * mesh_volume / num_particles;
   UniformMeshDistribution position_distribution(mesh);
 
-  //TODO: Take a second look at 2 here versus reference
-  const double v_thermal_squared = 2.0 * constants::boltzmann_constant * temperature / species.mass;
+  const double v_thermal_squared = constants::boltzmann_constant * temperature / species.mass;
   for (int i = 0; i < num_particles; ++i) {
     mfem::Vector velocity = bulk_velocity;
     if (v_thermal_squared > 0.0) {
       const double nu = 2.0 * kappa + 1.0;
-      const double scale = std::sqrt(kappa * v_thermal_squared / (2.0 * kappa + 1.0));
+      const double scale = std::sqrt(kappa * 2.0 * v_thermal_squared / (2.0 * kappa + 1.0));
       std::student_t_distribution<double> velocity_distribution(nu);
       for (int dimension = 0; dimension < 3; dimension++) {
         velocity[dimension] += scale * velocity_distribution(generator); 
