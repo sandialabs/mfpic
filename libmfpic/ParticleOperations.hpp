@@ -56,7 +56,29 @@ public:
     const ParticleContainer& current_particles
   ) const;
 
+  void computeParticleMoments(
+    const ParticleContainer& current_particles
+  ) ;
+
 private: 
+
+  void sumParticleWeights_(
+    const ParticleContainer& current_particles
+  ) ;
+
+  void computeNumberDensity_(
+    const ParticleContainer& current_particles
+  ) ;
+
+  void computeBulkVelocity_(
+    const ParticleContainer& current_particles
+  ) ;
+
+  void computeTemperature_(
+    const ParticleContainer& current_particles
+  ) ;
+
+
 
   /// Discretization object containing the finite element space 
   Discretization & discretization_;
@@ -75,6 +97,18 @@ private:
 
   /// Particle boundaries.
   ElementFaceContainer<std::shared_ptr<ParticleBoundary>> particle_boundaries_;
+
+  // Particle number density
+  std::vector<double> particle_number_density_;
+
+  // Particle bulk velocity
+  std::vector<double> particle_bulk_velocity_;
+
+  // Particle temperature
+  std::vector<double> particle_temperature_;
+
+  // Particle temperature
+  std::vector<double> sum_weights_;
 
   /// Mesh dimension
   const int dim_;

@@ -1,3 +1,4 @@
+#include <libmfpic/Constants.hpp>
 #include <libmfpic/IntegratedCharge.hpp>
 #include <libmfpic/MeshUtilities.hpp>
 #include <libmfpic/ParticleContainer.hpp>
@@ -19,6 +20,10 @@ ParticleOperations::ParticleOperations(
   dim_(discretization_.getFeSpace().GetMesh()->Dimension())
 {
   mfem::Mesh& mesh = *discretization_.getFeSpace().GetMesh();
+  particle_number_density_.assign(mesh.GetNE(), 0.0);  
+  particle_bulk_velocity_.assign(3*mesh.GetNE(), 0.0);  
+  particle_temperature_.assign(mesh.GetNE(), 0.0);  
+  sum_weights_.assign(mesh.GetNE(), 0.0);  
   element_face_unit_normal_ = std::make_shared<ElementFaceContainer<mfem::Vector>>();
   for (int element = 0; element < mesh.GetNE(); element++) {
     const int num_faces = getNumFacesOnElement(mesh, element);
@@ -170,5 +175,92 @@ IntegratedCharge ParticleOperations::assembleCharge(
 
   return charge_state;
   }
+
+void ParticleOperations::sumParticleWeights_(
+  const ParticleContainer& current_particles
+) {
+    ParticleContainer particles = current_particles;
+    for (Particle& particle : particles) {
+      if (not particle.is_alive) continue;
+
+      const int elem_id = particle.element;
+      sum_weights_[elem_id] += particle.weight;
+    }
+}
+
+void ParticleOperations::computeNumberDensity_(
+  const ParticleContainer& current_particles
+) {
+    ParticleContainer particles = current_particles;
+    mfem::Array<int> vector_dofs;
+    mfem::FiniteElementSpace finite_element_space = discretization_.getFeSpace();
+    mfem::Mesh &mesh = *finite_element_space.GetMesh();
+    const double mesh_volume = getMeshVolume(mesh);
+
+    for (Particle& particle : particles) {
+      if (not particle.is_alive) continue;
+
+      const int elem_id = particle.element;
+      const mfem::Vector particle_position(particle.position.GetData(), dim_); 
+      const mfem::Vector particle_velocity(particle.velocity.GetData(), dim_); 
+
+      particle_number_density_[elem_id] += particle.weight/mesh_volume;
+    }
+  }
+
+void ParticleOperations::computeBulkVelocity_(
+  const ParticleContainer& current_particles
+) {
+    ParticleContainer particles = current_particles;
+    for (Particle& particle : particles) {
+      if (not particle.is_alive) continue;
+
+      const int elem_id = particle.element;
+      const double sum_weights = sum_weights_[elem_id];
+      if (sum_weights <= 0.0) continue;
+
+      const mfem::Vector particle_position(particle.position.GetData(), dim_); 
+      const mfem::Vector particle_velocity(particle.velocity.GetData(), dim_); 
+
+      particle_bulk_velocity_[3*elem_id+0] += particle.weight * particle_velocity[0] / sum_weights;
+      particle_bulk_velocity_[3*elem_id+1] += particle.weight * particle_velocity[1] / sum_weights;
+      particle_bulk_velocity_[3*elem_id+2] += particle.weight * particle_velocity[2] / sum_weights;
+    }
+  }
+
+void ParticleOperations::computeTemperature_(
+  const ParticleContainer& current_particles
+) {
+  ParticleContainer particles = current_particles;
+
+  for (Particle& particle : particles) {
+    if (not particle.is_alive) continue;
+
+    const int elem_id = particle.element;
+    const double sum_weights = sum_weights_[elem_id];
+    if (sum_weights <= 0.0) continue;
+
+    const mfem::Vector particle_velocity(particle.velocity.GetData(), dim_);
+    const double mux = particle_bulk_velocity_[3*elem_id + 0];
+    const double muy = particle_bulk_velocity_[3*elem_id + 1];
+    const double muz = particle_bulk_velocity_[3*elem_id + 2];
+    const double dvx = particle_velocity[0] - mux;
+    const double dvy = particle_velocity[1] - muy;
+    const double dvz = particle_velocity[2] - muz;
+    const double w_over_sw = particle.weight / sum_weights;
+
+    const double vfluc2 = dvx*dvx + dvy*dvy + dvz*dvz;
+    particle_temperature_[elem_id] +=  vfluc2 * w_over_sw * particle.species.mass / (3 * constants::boltzmann_constant);
+  }
+}
+
+void ParticleOperations::computeParticleMoments(
+  const ParticleContainer& current_particles
+) {
+  sumParticleWeights_(current_particles);
+  computeNumberDensity_(current_particles);
+  computeBulkVelocity_(current_particles);
+  computeTemperature_(current_particles);
+}
 
 } // namespace mfpic
