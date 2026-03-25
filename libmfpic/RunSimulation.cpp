@@ -1,4 +1,3 @@
-#include "libmfpic/ElectrostaticFieldState.hpp"
 #include <libmfpic/BuildElectrostaticFieldOperationsFromYaml.hpp>
 #include <libmfpic/BuildOutputParametersFromYaml.hpp>
 #include <libmfpic/BuildParticleBoundariesFromYaml.hpp>
@@ -13,6 +12,7 @@
 #include <libmfpic/Discretization.hpp>
 #include <libmfpic/DumpParticles.hpp>
 #include <libmfpic/ElectrostaticFieldOperations.hpp>
+#include <libmfpic/ElectrostaticFieldState.hpp>
 #include <libmfpic/Euler.hpp>
 #include <libmfpic/LowFidelityOperations.hpp>
 #include <libmfpic/LowFidelityState.hpp>
@@ -183,8 +183,8 @@ void runSimulation(int argc, char* argv[]) {
 
     if (i_timestep % output_parameters.output_stride == 0) {
       dumpParticles(particle_container, end_time, output_parameters.particle_dump_filename);
-      mesh_data_writer.output(electrostatic_field_state, low_fidelity_states, i_timestep, end_time);
-      csv_file << i_timestep << " " << end_time << " " << electrostatic_field_operations->fieldEnergy(electrostatic_field_state) << std::endl;
+      mesh_data_writer.output(particle_electrostatic_field_state, low_fidelity_states, i_timestep, end_time);
+      csv_file << i_timestep << " " << end_time << " " << electrostatic_field_operations->fieldEnergy(particle_electrostatic_field_state) << std::endl;
     }
   }
 

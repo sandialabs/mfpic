@@ -1,3 +1,4 @@
+#include "libmfpic/IntegratedCharge.hpp"
 #include <libmfpic/ElectrostaticFieldOperations.hpp>
 #include <libmfpic/ElectromagneticFieldsEvaluator.hpp>
 #include <libmfpic/ElectrostaticFieldState.hpp>
@@ -10,37 +11,43 @@ namespace mfpic {
 
 void VerletTimeIntegrator::advanceTimestep(
   std::vector<LowFidelityState>& low_fidelity_states,
+  std::vector<ElectrostaticFieldState>& low_fidelity_field_states,
   const std::vector<std::unique_ptr<LowFidelityOperations>>& low_fidelity_operations,
   ParticleContainer& particle_container,
   const ParticleOperations& particle_operations,
-  ElectrostaticFieldState& field_state,
+  ElectrostaticFieldState& particle_field_state,
   ElectrostaticFieldOperations& field_operations,
   double dt
 ) {
-  IntegratedCharge total_charge(discretization_);
+  IntegratedCharge particle_charge(discretization_);
 
   for (int i = 0; i < std::ssize(low_fidelity_operations); i++) {
+    // TODO BWR pass along the flag to the constructor...
+    ElectrostaticFieldState& field_state = false ? low_fidelity_field_states[i] : particle_field_state;
+    IntegratedCharge low_fidelity_charge(discretization_);
     const LowFidelityOperations& operations = *low_fidelity_operations[i];
     LowFidelityState& low_fidelity_state = low_fidelity_states[i];
     low_fidelity_state = operations.accelerate(dt/2, low_fidelity_state, field_state);
     low_fidelity_state = operations.move(dt, low_fidelity_state);
-    total_charge.addCharge(operations.assembleCharge(low_fidelity_state));
+    low_fidelity_charge.addCharge(operations.assembleCharge(low_fidelity_state));
+    field_operations.fieldSolve(low_fidelity_field_states[i], low_fidelity_charge);
   }
 
-  particle_container = particle_operations.accelerate(dt/2, particle_container, field_state);
+  particle_container = particle_operations.accelerate(dt/2, particle_container, particle_field_state);
   particle_container = particle_operations.move(dt, particle_container);
   particle_container.cleanOutDeadParticles();
-  total_charge.addCharge(particle_operations.assembleCharge(particle_container));
+  particle_charge.addCharge(particle_operations.assembleCharge(particle_container));
 
-  field_operations.fieldSolve(field_state, total_charge);
+  field_operations.fieldSolve(particle_field_state, particle_charge);
 
   for (int i = 0; i < std::ssize(low_fidelity_operations); i++) {
+    ElectrostaticFieldState& field_state = false ? low_fidelity_field_states[i] : particle_field_state;
     const LowFidelityOperations& operations = *low_fidelity_operations[i];
     LowFidelityState& low_fidelity_state = low_fidelity_states[i];
     low_fidelity_state = operations.accelerate(dt/2, low_fidelity_state, field_state);
   }
 
-  particle_container = particle_operations.accelerate(dt/2, particle_container, field_state);
+  particle_container = particle_operations.accelerate(dt/2, particle_container, particle_field_state);
 }
 
 } // namespace mfpic
