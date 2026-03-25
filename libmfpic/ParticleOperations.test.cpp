@@ -4,6 +4,7 @@
 #include <libmfpic/DGEulerInitialConditionsFactory.hpp>
 #include <libmfpic/Discretization.hpp>
 #include <libmfpic/ElectromagneticFieldsEvaluator.hpp>
+#include <libmfpic/LoadUniformKappaParticles.hpp>
 #include <libmfpic/LoadUniformMaxwellianParticles.hpp>
 #include <libmfpic/LowFidelityState.hpp>
 #include <libmfpic/ParticleContainer.hpp>
@@ -974,7 +975,7 @@ ParticleContainer takePrefix(const ParticleContainer& all, int num_particles) {
   return out;
 }
 
-TEST(ParticleOperations, ErrorBetweenLowFidelityChargeAndPICChargeReducesWithParticleCountForMaxwellian) {
+TEST(ParticleOperations, VarianceReducedChargeAndPICChargeConvergeForKappa) {
 
   Species species{.charge = -constants::elementary_charge, .mass = constants::electron_mass};
   constexpr double number_density = 1e22;
@@ -1016,86 +1017,11 @@ TEST(ParticleOperations, ErrorBetweenLowFidelityChargeAndPICChargeReducesWithPar
   double prev_max_rel_error = std::numeric_limits<double>::infinity();
 
   std::mt19937 gen_for_n(12345);
-  ParticleContainer particles_all = loadUniformMaxwellianParticles(
+  ParticleContainer particles_all = loadUniformKappaParticles(
       species,
       bulk_velocity,
       temperature,
-      number_density,
-      num_particles_list[4],
-      gen_for_n,
-      mesh);
-
-  for (int num_particles : num_particles_list) {
-    ParticleContainer particles = takePrefix(particles_all, num_particles);
-    IntegratedCharge charge_state = particle_operations.assembleCharge(particles);
-
-    double max_rel_error = 0.0;
-    for (int dof = 0; dof < charge_discretization.getFeSpace().GetNDofs(); dof++) {
-      const double vr = integrated_charge_vector(dof);
-      const double st = charge_state.getIntegratedChargeValue(dof);
-
-      const double denom = std::max(std::abs(st), 1e-300);
-      const double rel_error = std::abs(vr - st) / denom;
-
-      max_rel_error = std::max(max_rel_error, rel_error);
-    }
-
-    EXPECT_LE(max_rel_error, prev_max_rel_error)
-        << "Expected max relative error to decrease with num_particles. "
-        << "prev=" << prev_max_rel_error << ", current=" << max_rel_error
-        << ", num_particles=" << num_particles;
-
-    prev_max_rel_error = max_rel_error;
-  }
-}
-
-
-TEST(ParticleOperations, ErrorBetweenVarianceReducedChargeAndPICChargeReducesWithParticleCountForMaxwellian) {
-
-  Species species{.charge = -constants::elementary_charge, .mass = constants::electron_mass};
-  constexpr double number_density = 1e22;
-  constexpr double temperature = 300;
-  mfem::Vector bulk_velocity({1.0, 0.0, 0.0});
-
-  const std::vector<int> num_particles_list = {10,100,1000,10000,100000};
-
-  const int num_elems = 5;
-  constexpr int dg_order = 0;
-  constexpr int num_equations = 5;
-  std::shared_ptr<mfem::Mesh> mesh =
-      std::make_shared<mfem::Mesh>(mfem::Mesh::MakeCartesian1D(num_elems));
-  Discretization dg_discretization(mesh.get(), dg_order, FETypes::DG, num_equations);
-
-  constexpr int charge_order = 1;
-  Discretization charge_discretization(mesh.get(), charge_order, FETypes::HGRAD);
-
-  mfem::FiniteElementSpace finite_element_space = dg_discretization.getFeSpace();
-  std::shared_ptr<DGEulerAssembly> operator_ptr =
-      std::make_shared<DGEulerAssembly>(finite_element_space, species);
-  std::vector<std::shared_ptr<DGEulerAssembly>> dg_operators({operator_ptr});
-  DGEulerOperations dg_euler_operations(charge_discretization, dg_operators);
-
-  std::vector<std::unique_ptr<SourceParameters>> list_of_parameters;
-  list_of_parameters.push_back(std::make_unique<ConstantSourceParameters>(
-      species, number_density, temperature, bulk_velocity));
-
-  LowFidelityState low_fidelity_state = buildEulerState(dg_discretization, list_of_parameters);
-  IntegratedCharge low_fidelity_charge_state =
-      dg_euler_operations.assembleCharge(low_fidelity_state);
-  mfem::Vector integrated_charge_vector = low_fidelity_charge_state.getIntegratedCharge();
-
-  ParticleOperations particle_operations(
-      charge_discretization,
-      empty_particle_boundary_factory_list,
-      default_reflecting_particle_boundary_factory);
-
-  double prev_max_rel_error = std::numeric_limits<double>::infinity();
-
-  std::mt19937 gen_for_n(12345);
-  ParticleContainer particles_all = loadUniformMaxwellianParticles(
-      species,
-      bulk_velocity,
-      temperature,
+      2.0,
       number_density,
       num_particles_list[4],
       gen_for_n,
