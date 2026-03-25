@@ -22,7 +22,7 @@ Boundary conditions for the electrostatic solve are given under the ``Boundary C
 Only constant dirichlet boundary conditions are available to be specified.
 Each boundary condition should be specified as a item in a list, and give the side on which the boundary is to be applied and
 the constant value of the boundary.
-For inline meshes the sides can be specified as "left" $x = 0$, "right" $x = L_x$, "bottom" $y = 0$, "top" $y = L_y$,
+For inline meshes the sides can be s/ecified as "left" $x = 0$, "right" $x = L_x$, "bottom" $y = 0$, "top" $y = L_y$,
 "back" $z = 0$, or "front" $z = L_z$.
 For meshes loaded from files the side is an integer specifying mesh attribute or sideset index.
 
@@ -337,13 +337,16 @@ Particles:
 ## Euler Fluids
 
 Fluids that obey the Euler equations can be added under the ``Euler Fluids`` key.
-The only option at the top level is ``Basis Order`` which specifies the discontinuous Galerkin finite element basis order that
-will be used for all Euler fluids.
+The options at the top level are 
+- **``Basis Order``**: Specifies the discontinuous Galerkin finite element basis order that will be used for all Euler fluids.
+- **``Use Particle Fields``**: Push the fluid with the particle fields (rather than those from it's own charge distribution).
+
 This block is optional and can be omitted if no Euler fluids are desired.
 
 ```yaml
 Euler Fluids:
     Basis Order: int (default = 0)
+    Use Particle Fields: bool (default = False)
 ```
 
 ### Euler Fluids Initial Conditions
