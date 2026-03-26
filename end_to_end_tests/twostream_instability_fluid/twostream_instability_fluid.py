@@ -86,7 +86,7 @@ Output:
   result.check_returncode()
 
 def analyze():
-  output = np.genfromtxt("output.csv", names=True)
+  output = np.genfromtxt("output_lf_0.csv", names=True)
 
   simulation_times = output["Time"]
   log_energy = np.log10(output["Field_Energy"])
