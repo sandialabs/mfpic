@@ -17,8 +17,8 @@ class Discretization;
 class VerletTimeIntegrator {
 public:
 
-  VerletTimeIntegrator(Discretization &discretization)
-  : discretization_(discretization)
+  VerletTimeIntegrator(Discretization &discretization, const bool &push_low_fidelity_with_particle_fields = false)
+  : discretization_(discretization), push_lf_with_particle_fields_(push_low_fidelity_with_particle_fields)
   {}
 
   /**
@@ -47,6 +47,7 @@ public:
   );
 private:
   Discretization & discretization_;
+  const bool & push_lf_with_particle_fields_;
 };
 
 } // namespace mfpic

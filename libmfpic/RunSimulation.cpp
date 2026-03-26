@@ -145,7 +145,7 @@ void runSimulation(int argc, char* argv[]) {
   csv_file << 0 << " " << 0.0 << " " << electrostatic_field_operations->fieldEnergy(particle_electrostatic_field_state) << std::endl;
 
   TimeSteppingParameters time_stepping_parameters = buildTimeSteppingParametersFromYAML(main["Time Stepping"]);
-  VerletTimeIntegrator verlet_time_integrator(electrostatic_discretization);
+  VerletTimeIntegrator verlet_time_integrator(electrostatic_discretization, push_low_fidelity_with_particle_fields);
   const double smallest_cell_lengthscale = getSmallestCellLengthscale(*mesh);
   for (int i_timestep = 1; i_timestep <= time_stepping_parameters.number_of_timesteps; ++i_timestep) {
     const double timestep_size = time_stepping_parameters.timestep_size;
@@ -156,6 +156,7 @@ void runSimulation(int argc, char* argv[]) {
 
     verlet_time_integrator.advanceTimestep(
       low_fidelity_states,
+      low_fidelity_field_states,
       low_fidelity_operations,
       particle_container,
       particle_operations,

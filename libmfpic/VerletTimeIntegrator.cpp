@@ -1,4 +1,3 @@
-#include "libmfpic/IntegratedCharge.hpp"
 #include <libmfpic/ElectrostaticFieldOperations.hpp>
 #include <libmfpic/ElectromagneticFieldsEvaluator.hpp>
 #include <libmfpic/ElectrostaticFieldState.hpp>
@@ -22,8 +21,7 @@ void VerletTimeIntegrator::advanceTimestep(
   IntegratedCharge particle_charge(discretization_);
 
   for (int i = 0; i < std::ssize(low_fidelity_operations); i++) {
-    // TODO BWR pass along the flag to the constructor...
-    ElectrostaticFieldState& field_state = false ? low_fidelity_field_states[i] : particle_field_state;
+    ElectrostaticFieldState& field_state = push_lf_with_particle_fields_ ? particle_field_state : low_fidelity_field_states[i];
     IntegratedCharge low_fidelity_charge(discretization_);
     const LowFidelityOperations& operations = *low_fidelity_operations[i];
     LowFidelityState& low_fidelity_state = low_fidelity_states[i];
@@ -41,7 +39,7 @@ void VerletTimeIntegrator::advanceTimestep(
   field_operations.fieldSolve(particle_field_state, particle_charge);
 
   for (int i = 0; i < std::ssize(low_fidelity_operations); i++) {
-    ElectrostaticFieldState& field_state = false ? low_fidelity_field_states[i] : particle_field_state;
+    ElectrostaticFieldState& field_state = push_lf_with_particle_fields_ ? particle_field_state : low_fidelity_field_states[i];
     const LowFidelityOperations& operations = *low_fidelity_operations[i];
     LowFidelityState& low_fidelity_state = low_fidelity_states[i];
     low_fidelity_state = operations.accelerate(dt/2, low_fidelity_state, field_state);
