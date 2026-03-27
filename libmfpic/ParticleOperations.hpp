@@ -60,6 +60,23 @@ public:
     const ParticleContainer& current_particles
   ) ;
 
+  double getNumberDensity(
+    const int elem_id 
+  ) const { return particle_number_density_[elem_id];}
+
+  double getTemperature(
+    const int elem_id 
+  ) const { return particle_temperature_[elem_id];}
+
+  std::vector<double> getBulkVelocity(const int elem_id) const
+  {
+    return {
+    particle_bulk_velocity_[3*elem_id + 0],
+    particle_bulk_velocity_[3*elem_id + 1],
+    particle_bulk_velocity_[3*elem_id + 2]
+    };
+  }
+
 private: 
 
   void sumParticleWeights_(
@@ -77,7 +94,6 @@ private:
   void computeTemperature_(
     const ParticleContainer& current_particles
   ) ;
-
 
 
   /// Discretization object containing the finite element space 
@@ -107,7 +123,7 @@ private:
   // Particle temperature
   std::vector<double> particle_temperature_;
 
-  // Particle temperature
+  // Particle sum of weights
   std::vector<double> sum_weights_;
 
   /// Mesh dimension

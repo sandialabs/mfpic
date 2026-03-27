@@ -1,5 +1,6 @@
 #include <libmfpic/Discretization.hpp>
 #include <libmfpic/ElectromagneticFieldsEvaluator.hpp>
+#include <libmfpic/LoadUniformMaxwellianParticles.hpp>
 #include <libmfpic/ParticleContainer.hpp>
 #include <libmfpic/ParticleOperations.hpp>
 #include <libmfpic/ReflectingParticleBoundary.hpp>
@@ -905,5 +906,49 @@ TEST(ParticleOperations, ParticleMovesAcrossPeriodicBoundariesIn3D) {
     EXPECT_EQ(moved_particle.element, 0);
   }
 }
+
+TEST(ParticleOperations, ParticleMomentsCorrectForMaxwellian) {
+  const int num_elems = 1;
+  std::shared_ptr<mfem::Mesh> mesh = std::make_shared<mfem::Mesh>(mfem::Mesh::MakeCartesian1D(num_elems));
+  constexpr int order = 1;
+  Discretization discretization(mesh.get(),order);
+
+  //const mfem::Vector nominal_bulk_velocity({300.0, 600.0, 1000.0});
+  const mfem::Vector nominal_bulk_velocity({300.0,0.0,0.0});
+  constexpr double temperature = 11600.0;
+  constexpr double number_density = 1.0e18;
+  constexpr int num_particles = 200000;
+  std::mt19937 generator;
+
+  ParticleContainer particles = loadUniformMaxwellianParticles(
+    default_species,
+    nominal_bulk_velocity,
+    temperature,
+    number_density,
+    num_particles,
+    generator,
+    mesh
+  );
+
+  ParticleOperations particle_operations(
+    discretization,
+    empty_particle_boundary_factory_list,
+    default_reflecting_particle_boundary_factory
+  );
+
+  particle_operations.computeParticleMoments(particles);
+  std::vector<double> computed_bulk_velocity = particle_operations.getBulkVelocity(0);
+  double computed_number_density = particle_operations.getNumberDensity(0);
+  double computed_temperature = particle_operations.getTemperature(0);
+
+  EXPECT_NEAR(computed_number_density, number_density, 1e-10);
+
+  for (int i = 0; i < 3; i++) {
+    EXPECT_NEAR(computed_bulk_velocity[i], nominal_bulk_velocity[i], 1e-10);
+  }
+
+  EXPECT_NEAR(computed_temperature, temperature, 1e-3*temperature);
+}
+
 
 } // namespace

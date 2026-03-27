@@ -201,9 +201,6 @@ void ParticleOperations::computeNumberDensity_(
       if (not particle.is_alive) continue;
 
       const int elem_id = particle.element;
-      const mfem::Vector particle_position(particle.position.GetData(), dim_); 
-      const mfem::Vector particle_velocity(particle.velocity.GetData(), dim_); 
-
       particle_number_density_[elem_id] += particle.weight/mesh_volume;
     }
   }
