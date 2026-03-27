@@ -136,8 +136,7 @@ void runSimulation(int argc, char* argv[]) {
 
     electrostatic_field_operations->fieldSolve(low_fidelity_field_states[i], integrated_charge);
   }
-  // TODO BWR CHANGE ME TO TAKE LF FIELD STATE
-  mesh_data_writer.output(particle_electrostatic_field_state, low_fidelity_states, 0, 0.);
+  mesh_data_writer.output(particle_electrostatic_field_state, low_fidelity_field_states, low_fidelity_states, 0, 0.);
 
   std::ofstream csv_file("output.csv");
   csv_file << std::setprecision(std::numeric_limits<double>::digits);
@@ -193,7 +192,7 @@ void runSimulation(int argc, char* argv[]) {
 
     if (i_timestep % output_parameters.output_stride == 0) {
       dumpParticles(particle_container, end_time, output_parameters.particle_dump_filename);
-      mesh_data_writer.output(particle_electrostatic_field_state, low_fidelity_states, i_timestep, end_time);
+      mesh_data_writer.output(particle_electrostatic_field_state, low_fidelity_field_states, low_fidelity_states, i_timestep, end_time);
       csv_file << i_timestep << " " << end_time << " " << electrostatic_field_operations->fieldEnergy(particle_electrostatic_field_state) << std::endl;
       for (int i = 0; i < std::ssize(low_fidelity_field_states); ++i)
         lf_csv_files[i] << i_timestep << " " << end_time << " " << electrostatic_field_operations->fieldEnergy(low_fidelity_field_states[i]) << std::endl;
