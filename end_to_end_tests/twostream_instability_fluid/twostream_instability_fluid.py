@@ -21,7 +21,7 @@ dt *= cfl
 num_time_steps = int(450 / cfl)
 domain_length = num_elements * dx
 mesh_folder_name = "Output"
-temperature = 10. ## need a non-zero fluid temperature 
+temperature = 1e-6 ## need a non-zero fluid temperature 
 
 def run(mfpic_executable):
   import subprocess
@@ -129,7 +129,7 @@ def plot():
 
   best_linear_regime_timestep_start, best_linear_regime_timestep_window, best_linear_regime_fit, expected_growth_rate = analyze()
 
-  output = np.genfromtxt("output.csv", names=True)
+  output = np.genfromtxt("output_lf_0.csv", names=True)
 
   simulation_times = output["Time"]
   energy = output["Field_Energy"]

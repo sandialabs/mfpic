@@ -126,14 +126,11 @@ void runSimulation(int argc, char* argv[]) {
 
   {
     IntegratedCharge integrated_charge = particle_operations.assembleCharge(particle_container);
-
     electrostatic_field_operations->fieldSolve(particle_electrostatic_field_state, integrated_charge);
   }
   
   for (int i = 0; i < std::ssize(low_fidelity_field_states); ++i) {
-
     IntegratedCharge integrated_charge = low_fidelity_operations[i]->assembleCharge(low_fidelity_states[i]);
-
     electrostatic_field_operations->fieldSolve(low_fidelity_field_states[i], integrated_charge);
   }
   mesh_data_writer.output(particle_electrostatic_field_state, low_fidelity_field_states, low_fidelity_states, 0, 0.);
