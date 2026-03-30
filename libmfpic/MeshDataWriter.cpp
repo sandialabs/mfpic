@@ -16,7 +16,7 @@ void MeshDataWriter::output(
   paraview_data_collection_.SetCycle(i_time_step);
   paraview_data_collection_.SetTime(time);
 
-  const int num_lf_models = std::min(1, std::ssize(low_fidelity_states));
+  const unsigned int num_lf_models = std::ssize(low_fidelity_states);
 
   std::vector<mfem::GridFunction> potential_grid_functions;
   potential_grid_functions.reserve(num_lf_models + 1);
@@ -51,15 +51,18 @@ void MeshDataWriter::output(
   register_potential_and_e_field_for_model("", particle_field_state);
 
   if (low_fidelity_states.size() > 0) {
-    LowFidelityState& low_fidelity_state = low_fidelity_states[0];
-    for (int i_species = 0; i_species < low_fidelity_state.numSpecies(); ++i_species) {
-      LowFidelitySpeciesState& species_state = low_fidelity_state.getSpeciesState(i_species);
-      mfem::GridFunction& grid_function = species_state.getGridFunction();
+    for (int i_lf_model = 0; i_lf_model < num_lf_models; ++i_lf_model) {
+      LowFidelityState& low_fidelity_state = low_fidelity_states[i_lf_model];
+      const std::string suffix = "_lf_" + std::to_string(i_lf_model);
+      for (int i_species = 0; i_species < low_fidelity_state.numSpecies(); ++i_species) {
+        LowFidelitySpeciesState& species_state = low_fidelity_state.getSpeciesState(i_species);
+        mfem::GridFunction& grid_function = species_state.getGridFunction();
 
-      const std::string field_name = "species_" + std::to_string(i_species);
-      paraview_data_collection_.RegisterField(field_name, &grid_function);
+        const std::string field_name = "species_" + std::to_string(i_species) + suffix;
+        paraview_data_collection_.RegisterField(field_name, &grid_function);
+      }
+      register_potential_and_e_field_for_model(suffix, low_fidelity_field_states[i_lf_model]);
     }
-    register_potential_and_e_field_for_model("_lf_0", low_fidelity_field_states[0]);
   }
 
   paraview_data_collection_.Save();
