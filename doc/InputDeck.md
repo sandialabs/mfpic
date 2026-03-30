@@ -22,7 +22,7 @@ Boundary conditions for the electrostatic solve are given under the ``Boundary C
 Only constant dirichlet boundary conditions are available to be specified.
 Each boundary condition should be specified as a item in a list, and give the side on which the boundary is to be applied and
 the constant value of the boundary.
-For inline meshes the sides can be s/ecified as "left" $x = 0$, "right" $x = L_x$, "bottom" $y = 0$, "top" $y = L_y$,
+For inline meshes the sides can be specified as "left" $x = 0$, "right" $x = L_x$, "bottom" $y = 0$, "top" $y = L_y$,
 "back" $z = 0$, or "front" $z = L_z$.
 For meshes loaded from files the side is an integer specifying mesh attribute or sideset index.
 

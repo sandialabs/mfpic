@@ -16,7 +16,7 @@ void MeshDataWriter::output(
   paraview_data_collection_.SetCycle(i_time_step);
   paraview_data_collection_.SetTime(time);
 
-  const int num_lf_models = std::ssize(low_fidelity_states);
+  const int num_lf_models = std::min(1, std::ssize(low_fidelity_states));
 
   std::vector<mfem::GridFunction> potential_grid_functions;
   potential_grid_functions.reserve(num_lf_models + 1);
