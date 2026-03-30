@@ -51,7 +51,7 @@ void MeshDataWriter::output(
   register_potential_and_e_field_for_model("", particle_field_state);
 
   if (low_fidelity_states.size() > 0) {
-    for (int i_lf_model = 0; i_lf_model < num_lf_models; ++i_lf_model) {
+    for (unsigned int i_lf_model = 0; i_lf_model < num_lf_models; ++i_lf_model) {
       LowFidelityState& low_fidelity_state = low_fidelity_states[i_lf_model];
       const std::string suffix = "_lf_" + std::to_string(i_lf_model);
       for (int i_species = 0; i_species < low_fidelity_state.numSpecies(); ++i_species) {
