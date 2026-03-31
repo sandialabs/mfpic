@@ -195,13 +195,12 @@ void ParticleOperations::computeNumberDensity_(
     mfem::Array<int> vector_dofs;
     mfem::FiniteElementSpace finite_element_space = discretization_.getFeSpace();
     mfem::Mesh &mesh = *finite_element_space.GetMesh();
-    const double mesh_volume = getMeshVolume(mesh);
 
     for (Particle& particle : particles) {
       if (not particle.is_alive) continue;
 
       const int elem_id = particle.element;
-      particle_number_density_[elem_id] += particle.weight/mesh_volume;
+      particle_number_density_[elem_id] += particle.weight / mesh.GetElementVolume(elem_id);
     }
   }
 
