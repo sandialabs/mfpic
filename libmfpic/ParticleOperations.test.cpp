@@ -919,7 +919,6 @@ TEST(ParticleOperations, ParticleMomentsCorrectForMaxwellian) {
   constexpr int order = 1;
   Discretization discretization(mesh.get(),order);
 
-  //const mfem::Vector nominal_bulk_velocity({300.0, 600.0, 1000.0});
   const mfem::Vector nominal_bulk_velocity({300.0,0.0,0.0});
   constexpr double temperature = 11600.0;
   constexpr double number_density = 1.0e18;

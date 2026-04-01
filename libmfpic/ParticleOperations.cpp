@@ -215,12 +215,9 @@ void ParticleOperations::computeBulkVelocity_(
       const double sum_weights = sum_weights_[elem_id];
       if (sum_weights <= 0.0) continue;
 
-      const mfem::Vector particle_position(particle.position.GetData(), dim_); 
-      const mfem::Vector particle_velocity(particle.velocity.GetData(), dim_); 
+      for (int i_dim = 0; i_dim < 3; ++i_dim)
+        particle_bulk_velocity_[3*elem_id+i_dim] += particle.weight * particle.velocity[i_dim] / sum_weights;
 
-      particle_bulk_velocity_[3*elem_id+0] += particle.weight * particle_velocity[0] / sum_weights;
-      particle_bulk_velocity_[3*elem_id+1] += particle.weight * particle_velocity[1] / sum_weights;
-      particle_bulk_velocity_[3*elem_id+2] += particle.weight * particle_velocity[2] / sum_weights;
     }
   }
 
@@ -236,17 +233,13 @@ void ParticleOperations::computeTemperature_(
     const double sum_weights = sum_weights_[elem_id];
     if (sum_weights <= 0.0) continue;
 
-    const mfem::Vector particle_velocity(particle.velocity.GetData(), dim_);
-    const double mux = particle_bulk_velocity_[3*elem_id + 0];
-    const double muy = particle_bulk_velocity_[3*elem_id + 1];
-    const double muz = particle_bulk_velocity_[3*elem_id + 2];
-    const double dvx = particle_velocity[0] - mux;
-    const double dvy = particle_velocity[1] - muy;
-    const double dvz = particle_velocity[2] - muz;
-    const double w_over_sw = particle.weight / sum_weights;
+    const mfem::Vector bulk_velocity(&particle_bulk_velocity_[3*elem_id], 3);
+    mfem::Vector fluctuation_velocity = bulk_velocity;
+    fluctuation_velocity -= particle.velocity;
 
-    const double vfluc2 = dvx*dvx + dvy*dvy + dvz*dvz;
-    particle_temperature_[elem_id] +=  vfluc2 * w_over_sw * particle.species.mass / (3 * constants::boltzmann_constant);
+    const double norm_squared = fluctuation_velocity * fluctuation_velocity;
+
+    particle_temperature_[elem_id] += norm_squared * particle.weight * particle.species.mass / (3 * constants::boltzmann_constant * sum_weights);
   }
 }
 
