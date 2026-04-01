@@ -133,7 +133,7 @@ def analyze():
         print(f"dx = {dx}")
         h_list.append(dx)
 
-        fluid_data = np.transpose(mesh_data[-1]["species_0"])
+        fluid_data = np.transpose(mesh_data[-1]["species_0_lf_0"])
         print("compute error")
         error = compute_error(fluid_data[0], x_points, exact_mass_density)
         print(f"error = {error}")
@@ -162,7 +162,7 @@ def plot():
         figures_directory = f"Figures{refinement_level:02}"
         os.makedirs(figures_directory, exist_ok=True)
         for i, time in enumerate(timesteps):
-            fluid_data = np.transpose(mesh_data[i]["species_0"])
+            fluid_data = np.transpose(mesh_data[i]["species_0_lf_0"])
             mass_density_data = fluid_data[0]
 
             fig, axes = plt.subplots()

@@ -139,7 +139,7 @@ def analyze():
         dx = x_points[1] - x_points[0]
         h_list.append(dx)
 
-        fluid_data = np.transpose(mesh_data[-1]["species_0"])
+        fluid_data = np.transpose(mesh_data[-1]["species_0_lf_0"])
         mass_density_error = compute_error(fluid_data[0], x_points, exact_mass_density)
 
         bulk_velocity_data = euler.get_bulk_velocity_from_conservative_state(fluid_data)
@@ -202,7 +202,7 @@ def plot():
         figures_directory = f"Figures{refinement_level:02}"
         os.makedirs(figures_directory, exist_ok=True)
         for i in range(len(timesteps)):
-            fluid_data = np.transpose(mesh_data[i]["species_0"])
+            fluid_data = np.transpose(mesh_data[i]["species_0_lf_0"])
             time = timesteps[i]
 
             mass_density_data = fluid_data[0]
