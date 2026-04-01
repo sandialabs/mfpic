@@ -1,3 +1,4 @@
+#include "libmfpic/BuildParticleBoundariesFromYaml.hpp"
 #include <libmfpic/Constants.hpp>
 #include <libmfpic/IntegratedCharge.hpp>
 #include <libmfpic/MeshUtilities.hpp>
@@ -5,6 +6,7 @@
 #include <libmfpic/ParticleOperations.hpp>
 #include <libmfpic/PeriodicParticleBoundary.hpp>
 
+#include <mfem/linalg/densemat.hpp>
 #include <mfem/mfem.hpp>
 
 #include <limits>
@@ -20,10 +22,10 @@ ParticleOperations::ParticleOperations(
   dim_(discretization_.getFeSpace().GetMesh()->Dimension())
 {
   mfem::Mesh& mesh = *discretization_.getFeSpace().GetMesh();
-  particle_number_density_.assign(mesh.GetNE(), 0.0);  
-  particle_bulk_velocity_.assign(3*mesh.GetNE(), 0.0);  
-  particle_temperature_.assign(mesh.GetNE(), 0.0);  
-  sum_weights_.assign(mesh.GetNE(), 0.0);  
+  particle_number_density_.SetSize(mesh.GetNE());  
+  particle_bulk_velocity_.SetSize(3, mesh.GetNE());  
+  particle_temperature_.SetSize(mesh.GetNE());  
+  sum_of_weights_.SetSize(mesh.GetNE());  
   element_face_unit_normal_ = std::make_shared<ElementFaceContainer<mfem::Vector>>();
   for (int element = 0; element < mesh.GetNE(); element++) {
     const int num_faces = getNumFacesOnElement(mesh, element);
@@ -174,82 +176,87 @@ IntegratedCharge ParticleOperations::assembleCharge(
   }
 
   return charge_state;
-  }
-
-void ParticleOperations::sumParticleWeights_(
-  const ParticleContainer& current_particles
-) {
-    ParticleContainer particles = current_particles;
-    for (Particle& particle : particles) {
-      if (not particle.is_alive) continue;
-
-      const int elem_id = particle.element;
-      sum_weights_[elem_id] += particle.weight;
-    }
 }
 
-void ParticleOperations::computeNumberDensity_(
-  const ParticleContainer& current_particles
+mfem::Vector& ParticleOperations::getNumberDensity(const ParticleContainer& particles, const bool sum_weights
 ) {
-    ParticleContainer particles = current_particles;
-    mfem::Array<int> vector_dofs;
-    mfem::FiniteElementSpace finite_element_space = discretization_.getFeSpace();
-    mfem::Mesh &mesh = *finite_element_space.GetMesh();
 
-    for (Particle& particle : particles) {
-      if (not particle.is_alive) continue;
+  particle_number_density_ = 0.0;
 
-      const int elem_id = particle.element;
-      particle_number_density_[elem_id] += particle.weight / mesh.GetElementVolume(elem_id);
-    }
-  }
+  if (sum_weights) this->sumParticleWeights_(particles);
 
-void ParticleOperations::computeBulkVelocity_(
-  const ParticleContainer& current_particles
-) {
-    ParticleContainer particles = current_particles;
-    for (Particle& particle : particles) {
-      if (not particle.is_alive) continue;
+  mfem::Array<int> vector_dofs;
+  mfem::FiniteElementSpace finite_element_space = discretization_.getFeSpace();
+  mfem::Mesh &mesh = *finite_element_space.GetMesh();
 
-      const int elem_id = particle.element;
-      const double sum_weights = sum_weights_[elem_id];
-      if (sum_weights <= 0.0) continue;
-
-      for (int i_dim = 0; i_dim < 3; ++i_dim)
-        particle_bulk_velocity_[3*elem_id+i_dim] += particle.weight * particle.velocity[i_dim] / sum_weights;
-
-    }
-  }
-
-void ParticleOperations::computeTemperature_(
-  const ParticleContainer& current_particles
-) {
-  ParticleContainer particles = current_particles;
-
-  for (Particle& particle : particles) {
+  for (const Particle& particle : particles) {
     if (not particle.is_alive) continue;
 
     const int elem_id = particle.element;
-    const double sum_weights = sum_weights_[elem_id];
+    particle_number_density_(elem_id) += particle.weight / mesh.GetElementVolume(elem_id);
+  }
+
+  return this->particle_number_density_;
+}
+
+mfem::DenseMatrix& ParticleOperations::getBulkVelocity(const ParticleContainer& particles, const bool sum_weights
+) {
+
+  particle_bulk_velocity_ = 0.0;
+
+  if (sum_weights) this->sumParticleWeights_(particles);
+
+  for (const Particle& particle : particles) {
+    if (not particle.is_alive) continue;
+
+    const int elem_id = particle.element;
+    const double sum_weights = sum_of_weights_(elem_id);
     if (sum_weights <= 0.0) continue;
 
-    const mfem::Vector bulk_velocity(&particle_bulk_velocity_[3*elem_id], 3);
-    mfem::Vector fluctuation_velocity = bulk_velocity;
-    fluctuation_velocity -= particle.velocity;
+    mfem::Vector velocity_in_element(particle_bulk_velocity_.GetColumn(elem_id), 3);
+    velocity_in_element.Add(particle.weight / sum_weights, particle.velocity);
+  }
+
+  return this->particle_bulk_velocity_;
+}
+
+mfem::Vector& ParticleOperations::getTemperature(const ParticleContainer& particles, const bool sum_weights, const bool compute_bulk_velocity
+) {
+
+  particle_temperature_ = 0.0;
+
+  if (sum_weights) this->sumParticleWeights_(particles);
+  if (compute_bulk_velocity) this->getBulkVelocity(particles, false);
+
+  for (const Particle& particle : particles) {
+    if (not particle.is_alive) continue;
+
+    const int elem_id = particle.element;
+    const double sum_weights = sum_of_weights_(elem_id);
+    if (sum_weights <= 0.0) continue;
+
+    const mfem::Vector bulk_velocity_in_element(particle_bulk_velocity_.GetColumn(elem_id), 3);
+    mfem::Vector fluctuation_velocity = particle.velocity;
+    fluctuation_velocity -= bulk_velocity_in_element;
 
     const double norm_squared = fluctuation_velocity * fluctuation_velocity;
 
-    particle_temperature_[elem_id] += norm_squared * particle.weight * particle.species.mass / (3 * constants::boltzmann_constant * sum_weights);
+    particle_temperature_(elem_id) += norm_squared * particle.weight * particle.species.mass / (3 * constants::boltzmann_constant * sum_weights);
   }
+
+  return this->particle_temperature_;
 }
 
-void ParticleOperations::computeParticleMoments(
-  const ParticleContainer& current_particles
+void ParticleOperations::sumParticleWeights_(
+  const ParticleContainer& particles
 ) {
-  sumParticleWeights_(current_particles);
-  computeNumberDensity_(current_particles);
-  computeBulkVelocity_(current_particles);
-  computeTemperature_(current_particles);
+    sum_of_weights_ = 0.;
+    for (const Particle& particle : particles) {
+      if (not particle.is_alive) continue;
+
+      const int elem_id = particle.element;
+      sum_of_weights_(elem_id) += particle.weight;
+    }
 }
 
 } // namespace mfpic

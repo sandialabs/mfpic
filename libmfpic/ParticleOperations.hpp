@@ -7,6 +7,7 @@
 #include <libmfpic/ParticleBoundary.hpp>
 #include <libmfpic/ParticleContainer.hpp>
 
+#include <mfem/linalg/densemat.hpp>
 #include <mfem/mfem.hpp>
 
 namespace mfpic {
@@ -56,45 +57,16 @@ public:
     const ParticleContainer& current_particles
   ) const;
 
-  void computeParticleMoments(
-    const ParticleContainer& current_particles
-  ) ;
-
-  double getNumberDensity(
-    const int elem_id 
-  ) const { return particle_number_density_[elem_id];}
-
-  double getTemperature(
-    const int elem_id 
-  ) const { return particle_temperature_[elem_id];}
-
-  std::vector<double> getBulkVelocity(const int elem_id) const
-  {
-    return {
-    particle_bulk_velocity_[3*elem_id + 0],
-    particle_bulk_velocity_[3*elem_id + 1],
-    particle_bulk_velocity_[3*elem_id + 2]
-    };
-  }
+  // TODO BWR ADD DOCCO 
+  mfem::Vector& getNumberDensity(const ParticleContainer& particles, const bool sum_weights = true);
+  mfem::Vector& getTemperature(const ParticleContainer& particles, const bool sum_weights = true, const bool compute_bulk_velocity = true);
+  mfem::DenseMatrix& getBulkVelocity(const ParticleContainer& particles, const bool sum_weights = true);
 
 private: 
 
   void sumParticleWeights_(
-    const ParticleContainer& current_particles
+    const ParticleContainer& particles
   ) ;
-
-  void computeNumberDensity_(
-    const ParticleContainer& current_particles
-  ) ;
-
-  void computeBulkVelocity_(
-    const ParticleContainer& current_particles
-  ) ;
-
-  void computeTemperature_(
-    const ParticleContainer& current_particles
-  ) ;
-
 
   /// Discretization object containing the finite element space 
   Discretization & discretization_;
@@ -115,16 +87,16 @@ private:
   ElementFaceContainer<std::shared_ptr<ParticleBoundary>> particle_boundaries_;
 
   // Particle number density
-  std::vector<double> particle_number_density_;
+  mfem::Vector particle_number_density_;
 
   // Particle bulk velocity
-  std::vector<double> particle_bulk_velocity_;
+  mfem::DenseMatrix particle_bulk_velocity_;
 
   // Particle temperature
-  std::vector<double> particle_temperature_;
+  mfem::Vector particle_temperature_;
 
   // Particle sum of weights
-  std::vector<double> sum_weights_;
+  mfem::Vector sum_of_weights_;
 
   /// Mesh dimension
   const int dim_;

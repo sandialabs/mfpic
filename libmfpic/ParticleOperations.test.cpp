@@ -30,7 +30,7 @@ const std::shared_ptr<ParticleBoundaryFactory> default_reflecting_particle_bound
 
 struct MomentsInCell {
   double number_density;
-  std::vector<double> bulk_velocity;
+  mfem::Vector bulk_velocity;
   double temperature;
 };
 
@@ -941,10 +941,10 @@ TEST(ParticleOperations, ParticleMomentsCorrectForMaxwellian) {
     default_reflecting_particle_boundary_factory
   );
 
-  particle_operations.computeParticleMoments(particles);
-  std::vector<double> computed_bulk_velocity = particle_operations.getBulkVelocity(0);
-  double computed_number_density = particle_operations.getNumberDensity(0);
-  double computed_temperature = particle_operations.getTemperature(0);
+  mfem::Vector computed_bulk_velocity;
+  particle_operations.getBulkVelocity(particles).GetColumn(0, computed_bulk_velocity);
+  double computed_number_density = particle_operations.getNumberDensity(particles)(0);
+  double computed_temperature = particle_operations.getTemperature(particles)(0);
 
   EXPECT_NEAR(computed_number_density, number_density, 1e-10);
 
@@ -1164,13 +1164,11 @@ TEST(ParticleOperations, ParticleMomentsCorrectForKnownParticles) {
     default_reflecting_particle_boundary_factory
   );
 
-  particle_operations.computeParticleMoments(particles);
-
   auto check_moments = [&] (MomentsInCell exact, int cell_id) {
 
-    MomentsInCell computed {.number_density = particle_operations.getNumberDensity(cell_id),
-                            .bulk_velocity = particle_operations.getBulkVelocity(cell_id),
-                            .temperature = particle_operations.getTemperature(cell_id) };
+    MomentsInCell computed {.number_density = particle_operations.getNumberDensity(particles)(cell_id),
+                            .bulk_velocity = mfem::Vector(particle_operations.getBulkVelocity(particles).GetColumn(cell_id),3),
+                            .temperature = particle_operations.getTemperature(particles)(cell_id) };
 
     EXPECT_NEAR(exact.number_density, computed.number_density, 1e-12);
 
@@ -1182,35 +1180,35 @@ TEST(ParticleOperations, ParticleMomentsCorrectForKnownParticles) {
   };
 
   MomentsInCell m0 {.number_density = 6.999232842421073,
-                  .bulk_velocity = {1.0301904862978897,0.08654186050955474,0.4610747178478363},
+                  .bulk_velocity = mfem::Vector({1.0301904862978897,0.08654186050955474,0.4610747178478363}),
                   .temperature = 5.2474391444070144e-08};
 
   MomentsInCell m1 {.number_density = 6.586933717986145,
-                    .bulk_velocity = {-0.2147368229633683,-0.018033070767927425,-0.19274761437963095},
+                    .bulk_velocity = mfem::Vector({-0.2147368229633683,-0.018033070767927425,-0.19274761437963095}),
                     .temperature = 2.011379915422906e-08};
 
   MomentsInCell m2 {.number_density = 5.21248496162043,
-                    .bulk_velocity = {-0.09426683972107544,0.3233899658465975,0.4641680775506456},
+                    .bulk_velocity = mfem::Vector({-0.09426683972107544,0.3233899658465975,0.4641680775506456}),
                     .temperature = 3.012395980852108e-08};
 
   MomentsInCell m3 {.number_density = 5.1847480382922155,
-                    .bulk_velocity = {0.9034952905212801,0.5825513231401855,-0.2533516889623397},
+                    .bulk_velocity = mfem::Vector({0.9034952905212801,0.5825513231401855,-0.2533516889623397}),
                     .temperature = 3.5162259049005926e-08};
 
   MomentsInCell m4 {.number_density = 5.841318524840383,
-                    .bulk_velocity = {1.075645812495728,-0.257395886909774,0.4574665763224785},
+                    .bulk_velocity = mfem::Vector({1.075645812495728,-0.257395886909774,0.4574665763224785}),
                     .temperature = 3.5884831747027144e-08};
 
   MomentsInCell m5 {.number_density = 4.439053529813756,
-                    .bulk_velocity = {-0.022550147753564707,-0.5738356591704337,0.17698154361898316},
+                    .bulk_velocity = mfem::Vector({-0.022550147753564707,-0.5738356591704337,0.17698154361898316}),
                     .temperature = 2.6388007584081555e-08};
 
   MomentsInCell m6 {.number_density = 8.764451545988388,
-                    .bulk_velocity = {-0.2999960502440965,-0.09900917166706724,0.660034434776269},
+                    .bulk_velocity = mfem::Vector({-0.2999960502440965,-0.09900917166706724,0.660034434776269}),
                     .temperature = 3.444938074170518e-08};
 
   MomentsInCell m7 {.number_density = 7.2255523941379005,
-                    .bulk_velocity = {0.5103292775296365,1.1467399708160815,0.5601735888875488},
+                    .bulk_velocity = mfem::Vector({0.5103292775296365,1.1467399708160815,0.5601735888875488}),
                     .temperature = 5.6206806378162676e-08};
 
   check_moments(m0, 0);
