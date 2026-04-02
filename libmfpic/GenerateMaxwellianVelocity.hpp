@@ -8,7 +8,7 @@ namespace mfpic {
 
 template <std::uniform_random_bit_generator Generator>
 mfem::Vector generateMaxwellianVelocity(
-  mfem::Vector bulk_velocity,
+  const mfem::Vector& bulk_velocity,
   double temperature,
   Generator& generator
 );
