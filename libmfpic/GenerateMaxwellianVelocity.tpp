@@ -1,3 +1,5 @@
+#include <libmfpic/Constants.hpp>
+
 namespace mfpic {
 
 template <std::uniform_random_bit_generator Generator>
