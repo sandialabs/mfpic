@@ -93,6 +93,10 @@ std::unordered_map<std::string, int> getSideNameToBoundaryAttributeForInlineMesh
  */
 double getSmallestCellLengthscale(mfem::Mesh& mesh);
 
-mfem::Vector elementwiseIntegral(mfem::Mesh& mesh, std::function<double(const mfem::Vector&)> function);
+mfem::Vector elementwiseIntegral(
+  mfem::Mesh& mesh,
+  std::function<double(const mfem::Vector&)> function,
+  int integrand_order = 0
+);
 
 } // namespace mfpic

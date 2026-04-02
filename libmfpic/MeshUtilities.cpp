@@ -169,15 +169,24 @@ double getSmallestCellLengthscale(mfem::Mesh& mesh) {
   return min_length;
 }
 
-mfem::Vector elementwiseIntegral(mfem::Mesh& mesh, std::function<double(const mfem::Vector&)> function) {
-  constexpr int order = 0;
+mfem::Vector elementwiseIntegral(
+  mfem::Mesh& mesh,
+  std::function<double(const mfem::Vector&)> function,
+  int integrand_order
+) {
+  constexpr int finite_element_order = 0;
   constexpr FETypes element_type = FETypes::DG;
-  Discretization integrals_discretization(&mesh, order, element_type);
+  Discretization integrals_discretization(&mesh, finite_element_order, element_type);
 
   mfem::FunctionCoefficient function_coefficient(function);
 
   mfem::LinearForm integrals(&integrals_discretization.getFeSpace());
-  integrals.AddDomainIntegrator(new mfem::DomainLFIntegrator(function_coefficient));
+  constexpr int element_transform_order_multiplier = 1;
+  integrals.AddDomainIntegrator(new mfem::DomainLFIntegrator(
+    function_coefficient,
+    element_transform_order_multiplier,
+    integrand_order
+  ));
 
   integrals.Assemble();
 
