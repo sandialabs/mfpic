@@ -7,7 +7,6 @@ namespace {
 using namespace mfpic;
 
 constexpr double mass = 1.0;
-const mfem::Vector zero_vector({0.0, 0.0, 0.0});
 
 TEST(GenerateMaxwellianVelocity, GeneratedVelocityEqualsBulkVelocityWhenTemperatureIsZero) {
   const mfem::Vector bulk_velocity({1.0, 2.0, 3.0});
