@@ -1,6 +1,6 @@
 #pragma once
 
-#include <libmfpic/Constants.hpp>
+#include <libmfpic/GenerateMaxwellianVelocity.hpp>
 #include <libmfpic/MeshUtilities.hpp>
 #include <libmfpic/ParticleContainer.hpp>
 #include <libmfpic/Species.hpp>
@@ -37,25 +37,14 @@ ParticleContainer loadUniformMaxwellianParticles(
   Generator& generator,
   std::shared_ptr<mfem::Mesh> mesh
 ) {
-  assert(bulk_velocity.Size() == 3);
-  assert(temperature >= 0.0);
-
   ParticleContainer particles;
 
   const double mesh_volume = getMeshVolume(*mesh);
   const double particle_weight = number_density * mesh_volume / num_particles;
   UniformMeshDistribution position_distribution(mesh);
 
-  const double v_thermal = sqrt(constants::boltzmann_constant * temperature / species.mass);
   for (int i = 0; i < num_particles; i++) {
-    mfem::Vector velocity = bulk_velocity;
-    if (v_thermal > 0.0) {
-      constexpr double velocity_distribution_mean = 0.0;
-      std::normal_distribution<> velocity_distribution(velocity_distribution_mean, v_thermal);
-      for (int dimension = 0; dimension < 3; dimension++) {
-        velocity[dimension] += velocity_distribution(generator);
-      }
-    }
+    const mfem::Vector velocity = generateMaxwellianVelocity(bulk_velocity, temperature, species.mass, generator);
 
     mfem::Vector position({0.0, 0.0, 0.0});
     const auto [random_mesh_position, element] = position_distribution.generateRandomPointAndElement(generator);
