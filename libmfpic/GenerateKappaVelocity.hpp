@@ -37,7 +37,7 @@ mfem::Vector generateKappaVelocity(
   mfem::Vector velocity = bulk_velocity;
   if (v_thermal_squared > 0.0) {
     const double nu = 2.0 * kappa + 1.0;
-    const double scale = std::sqrt(kappa * 2.0 * v_thermal_squared / (2.0 * kappa + 1.0));
+    const double scale = std::sqrt(kappa * 2.0 * v_thermal_squared / nu);
     std::student_t_distribution<double> velocity_distribution(nu);
     for (int dimension = 0; dimension < 3; dimension++) {
       velocity[dimension] += scale * velocity_distribution(generator);
