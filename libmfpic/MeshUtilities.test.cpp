@@ -1024,7 +1024,7 @@ TEST(MeshUtilities, IntegratingElementwiseWithOrderTooLowGivesWrongIntegralsInQu
   testThatIntegratingElementwiseWithOrderTooLowGivesWrongIntegralsInTensorProductMesh(mfem::Element::QUADRILATERAL);
 }
 
-TEST(MeshUtilities, IntegratingElementwiseWithOrderTooLowGivesWrongIntegralsInHEXMesh) {
+TEST(MeshUtilities, IntegratingElementwiseWithOrderTooLowGivesWrongIntegralsInHexMesh) {
   testThatIntegratingElementwiseWithOrderTooLowGivesWrongIntegralsInTensorProductMesh(mfem::Element::HEXAHEDRON);
 }
 
