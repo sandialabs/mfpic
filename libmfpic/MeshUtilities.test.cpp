@@ -983,4 +983,44 @@ TEST(MeshUtilities, IntegratingUnityElementwiseGivesElementVolumesInHexMeshes) {
   testThatIntegratingUnityElementwiseGivesElementVolumes(mfem::Element::HEXAHEDRON);
 }
 
+TEST(MeshUtilities, IntegratingElementwiseWithOrderTooLowGivesWrongIntegrals) {
+  constexpr int num_elems = 4;
+  mfem::Mesh mesh = mfem::Mesh::MakeCartesian1D(num_elems);
+  auto quadratic_polynomial = [] (const mfem::Vector& position) {
+    const double x = position[0];
+    return std::pow(x - 0.5, 2.0);
+  };
+
+  constexpr int integrand_order_too_low = 1;
+  const mfem::Vector elementwise_integral = elementwiseIntegral(mesh, quadratic_polynomial, integrand_order_too_low);
+
+  for (int element = 0; element < num_elems; element++) {
+    constexpr double dx = 1.0 / num_elems;
+    const double left_node_x = element * dx;
+    const double right_node_x = left_node_x + dx;
+    const double integral_in_element = std::pow(right_node_x - 0.5, 3.0) / 3.0 - std::pow(left_node_x - 0.5, 3.0) / 3.0;
+    EXPECT_NE(integral_in_element, elementwise_integral[element]);
+  }
+}
+
+TEST(MeshUtilities, IntegratingElementwiseWithCorrectOrderGivesCorrectIntegrals) {
+  constexpr int num_elems = 4;
+  mfem::Mesh mesh = mfem::Mesh::MakeCartesian1D(num_elems);
+  auto quadratic_polynomial = [] (const mfem::Vector& position) {
+    const double x = position[0];
+    return std::pow(x - 0.5, 2.0);
+  };
+
+  constexpr int quadratic_polynomial_order = 2;
+  const mfem::Vector elementwise_integral = elementwiseIntegral(mesh, quadratic_polynomial, quadratic_polynomial_order);
+
+  for (int element = 0; element < num_elems; element++) {
+    constexpr double dx = 1.0 / num_elems;
+    const double left_node_x = element * dx;
+    const double right_node_x = left_node_x + dx;
+    const double integral_in_element = std::pow(right_node_x - 0.5, 3.0) / 3.0 - std::pow(left_node_x - 0.5, 3.0) / 3.0;
+    EXPECT_DOUBLE_EQ(integral_in_element, elementwise_integral[element]);
+  }
+}
+
 } // namespace
