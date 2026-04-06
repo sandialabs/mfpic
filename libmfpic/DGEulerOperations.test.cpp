@@ -331,16 +331,11 @@ TEST(DGEulerOperations, evaluatePDFCorrectIn1D) {
   const mfem::Vector velocity({bulk_velocity(0),0.0,0.0});
   double pdf_value = dg_euler_operations.evaluatePDF(low_fidelity_state,position,velocity,0,default_species);
 
-  mfem::Vector prim(5);
-  prim(euler::PrimitiveVariables::NUMBER_DENSITY) = number_density;
-  prim(euler::PrimitiveVariables::X_BULK_VELOCITY) = bulk_velocity(0);
-  prim(euler::PrimitiveVariables::Y_BULK_VELOCITY) = bulk_velocity(1);
-  prim(euler::PrimitiveVariables::Z_BULK_VELOCITY) = bulk_velocity(2);
-  prim(euler::PrimitiveVariables::TEMPERATURE) = temperature;
+  mfem::Vector prim = euler::constructPrimitiveState(number_density, bulk_velocity, temperature);
   const double sigma = std::sqrt(constants::boltzmann_constant * temperature / default_species.mass);
 
   const double expected_at_mean =
-      number_density / std::pow(std::sqrt(2.0 * M_PI) * sigma, 1);
+      number_density / (std::sqrt(2.0 * M_PI) * sigma);
   EXPECT_NEAR(pdf_value, expected_at_mean, expected_at_mean * 1e-12);
 
 }
