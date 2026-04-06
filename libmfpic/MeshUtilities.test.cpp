@@ -945,20 +945,11 @@ void testThatIntegratingUnityElementwiseGivesElementVolumes(mfem::Element::Type 
     break;
   case mfem::Element::TRIANGLE:
   case mfem::Element::QUADRILATERAL:
-    mesh = mfem::Mesh::MakeCartesian2D(
-      num_elems_per_dim,
-      num_elems_per_dim,
-      element_type
-    );
+    mesh = mfem::Mesh::MakeCartesian2D(num_elems_per_dim, num_elems_per_dim, element_type);
     break;
   case mfem::Element::TETRAHEDRON:
   case mfem::Element::HEXAHEDRON:
-    mesh = mfem::Mesh::MakeCartesian3D(
-      num_elems_per_dim,
-      num_elems_per_dim,
-      num_elems_per_dim,
-      element_type
-    );
+    mesh = mfem::Mesh::MakeCartesian3D(num_elems_per_dim, num_elems_per_dim, num_elems_per_dim, element_type);
     break;
   default:
     errorWithDeveloperMessage("Element type not supported.");
