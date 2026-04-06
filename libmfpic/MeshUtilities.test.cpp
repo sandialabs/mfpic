@@ -992,13 +992,16 @@ mfem::Vector integrateQuadraticPolynomialElementwise(mfem::Mesh& mesh, int order
   return elementwiseIntegral(mesh, quadratic_polynomial, order);
 }
 
-void testThatIntegratingElementwiseWithOrderTooLowGivesWrongIntegralsInTensorProductMesh(mfem::Element::Type element_type) {
+std::pair<mfem::Vector, mfem::Vector> integrateQuadraticPolynomialElementwiseAndGiveExactIntegrals(
+  mfem::Element::Type element_type,
+  int order
+) {
   constexpr int num_elems_per_dim = 3;
   mfem::Mesh mesh = createMeshOfUnitBoxWith3ElemsPerDimension(element_type);
 
-  constexpr int integrand_order_too_low = 1;
-  const mfem::Vector elementwise_integral = integrateQuadraticPolynomialElementwise(mesh, integrand_order_too_low);
+  const mfem::Vector elementwise_integral = integrateQuadraticPolynomialElementwise(mesh, order);
 
+  mfem::Vector exact_elementwise_integral(elementwise_integral);
   for (int element = 0; element < mesh.GetNE(); element++) {
     double x_min = std::numeric_limits<double>::max();
     double x_max = std::numeric_limits<double>::lowest();
@@ -1011,8 +1014,20 @@ void testThatIntegratingElementwiseWithOrderTooLowGivesWrongIntegralsInTensorPro
     }
     constexpr double dx = 1.0 / num_elems_per_dim;
     const int dimensions = mesh.Dimension();
-    const double exact_integral_in_element = (std::pow(x_max - 0.5, 3.0) - std::pow(x_min - 0.5, 3.0)) * std::pow(dx, dimensions - 1) / 3.0;
-    EXPECT_NE(exact_integral_in_element, elementwise_integral[element]);
+    exact_elementwise_integral[element] =
+      (std::pow(x_max - 0.5, 3.0) - std::pow(x_min - 0.5, 3.0)) * std::pow(dx, dimensions - 1) / 3.0;
+  }
+
+  return std::make_pair(elementwise_integral, exact_elementwise_integral);
+}
+
+void testThatIntegratingElementwiseWithOrderTooLowGivesWrongIntegralsInTensorProductMesh(mfem::Element::Type element_type) {
+  constexpr int integrand_order_too_low = 1;
+  const auto [elementwise_integral, exact_elementwise_integral] =
+    integrateQuadraticPolynomialElementwiseAndGiveExactIntegrals(element_type, integrand_order_too_low);
+
+  for (int element = 0; element < elementwise_integral.Size(); element++) {
+    EXPECT_NE(elementwise_integral[element], exact_elementwise_integral[element]);
   }
 }
 
