@@ -175,7 +175,7 @@ namespace mfpic {
       }
     }
     std::ostringstream error_message;
-    error_message << "Particle species not found in low fidelity state.\n";
+    error_message << "Species not found in low fidelity state.\n";
     errorWithUserMessage(error_message.str());
   }
 }
