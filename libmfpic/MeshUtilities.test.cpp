@@ -1065,4 +1065,27 @@ TEST(MeshUtilities, IntegratingElementwiseWithCorrectOrderGivesCorrectIntegralsI
   testThatIntegratingElementwiseWithCorrectOrderGivesCorrectIntegralsInTensorProductMesh(mfem::Element::HEXAHEDRON);
 }
 
+TEST(MeshUtilities, IntegratingElementwiseWithCorrectOrderGivesCorrectIntegralsInTriMesh) {
+  mfem::Mesh mesh = createMeshOfUnitBoxWith2ElemsPerDimension(mfem::Element::TRIANGLE);
+  auto linear_polynomial = [] (const mfem::Vector& position) {
+    return position[0];
+  };
+
+  constexpr int linear_polynomial_order = 1;
+  const mfem::Vector elementwise_integral = elementwiseIntegral(mesh, linear_polynomial, linear_polynomial_order);
+
+  for (int element = 0; element < mesh.GetNE(); element++) {
+    mfem::Array<int> vertices;
+    mesh.GetElementVertices(element, vertices);
+    const double* vertex_0 = mesh.GetVertex(vertices[0]);
+    const double* vertex_1 = mesh.GetVertex(vertices[1]);
+    const double* vertex_2 = mesh.GetVertex(vertices[2]);
+    const double exact_integral =
+      (vertex_0[0]
+      + (vertex_1[0] - vertex_0[0]) / 3.0
+      + (vertex_2[0] - vertex_0[0]) / 3.0) * mesh.GetElementVolume(element);
+    EXPECT_DOUBLE_EQ(exact_integral, elementwise_integral[element]);
+  }
+}
+
 } // namespace
