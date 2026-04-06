@@ -93,6 +93,15 @@ std::unordered_map<std::string, int> getSideNameToBoundaryAttributeForInlineMesh
  */
 double getSmallestCellLengthscale(mfem::Mesh& mesh);
 
+/**
+ * @brief Integrate a function in each element individually using quadrature.
+ *
+ * @param[in] mesh            Mesh.
+ * @param[in] function        Space-dependent function to integrate.
+ * @param[in] integrand_order Order of the integrand, which is used to select a suitable quadrature rule.
+ *
+ * @returns An mfem Vector containing the integrals of @a function in each element.
+ */
 mfem::Vector elementwiseIntegral(
   mfem::Mesh& mesh,
   std::function<double(const mfem::Vector&)> function,
