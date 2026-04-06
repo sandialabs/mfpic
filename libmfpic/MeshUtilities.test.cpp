@@ -1,3 +1,4 @@
+#include <libmfpic/Errors.hpp>
 #include <libmfpic/MeshUtilities.hpp>
 
 #include <gtest/gtest.h>
@@ -935,27 +936,60 @@ TEST(MeshUtilities, SideStringsToAttributes3DTetrahedron) {
   checkSideNameToBoundaryAttributeMap(mesh, {"left", "right", "bottom", "top", "front", "back"}, length);
 }
 
-TEST(MeshUtilities, IntegratingUnityElementwiseGivesElementVolumes) {
+void testThatIntegratingUnityElementwiseGivesElementVolumes(mfem::Element::Type element_type) {
   constexpr int num_elems_per_dim = 3;
-  constexpr mfem::Element::Type element_type = mfem::Element::TETRAHEDRON;
-  mfem::Mesh mesh = mfem::Mesh::MakeCartesian3D(
-    num_elems_per_dim,
-    num_elems_per_dim,
-    num_elems_per_dim,
-    element_type,
-    3.0,
-    5.0,
-    13.0
-  );
-  auto unit_function = [] (const mfem::Vector&) {
-    return 1.0;
-  };
+  mfem::Mesh mesh;
+  switch (element_type) {
+  case mfem::Element::SEGMENT:
+    mesh = mfem::Mesh::MakeCartesian1D(num_elems_per_dim);
+    break;
+  case mfem::Element::TRIANGLE:
+  case mfem::Element::QUADRILATERAL:
+    mesh = mfem::Mesh::MakeCartesian2D(
+      num_elems_per_dim,
+      num_elems_per_dim,
+      element_type
+    );
+    break;
+  case mfem::Element::TETRAHEDRON:
+  case mfem::Element::HEXAHEDRON:
+    mesh = mfem::Mesh::MakeCartesian3D(
+      num_elems_per_dim,
+      num_elems_per_dim,
+      num_elems_per_dim,
+      element_type
+    );
+    break;
+  default:
+    errorWithDeveloperMessage("Element type not supported.");
+  }
+  auto unit_function = [] (const mfem::Vector&) { return 1.0; };
 
   mfem::Vector elementwise_integral = elementwiseIntegral(mesh, unit_function);
 
   for (int element = 0; element < mesh.GetNE(); element++) {
     EXPECT_DOUBLE_EQ(mesh.GetElementVolume(element), elementwise_integral[element]);
   }
+}
+
+TEST(MeshUtilities, IntegratingUnityElementwiseGivesElementVolumesInLineMeshes) {
+  testThatIntegratingUnityElementwiseGivesElementVolumes(mfem::Element::SEGMENT);
+}
+
+TEST(MeshUtilities, IntegratingUnityElementwiseGivesElementVolumesInTriMeshes) {
+  testThatIntegratingUnityElementwiseGivesElementVolumes(mfem::Element::TRIANGLE);
+}
+
+TEST(MeshUtilities, IntegratingUnityElementwiseGivesElementVolumesInQuadMeshes) {
+  testThatIntegratingUnityElementwiseGivesElementVolumes(mfem::Element::QUADRILATERAL);
+}
+
+TEST(MeshUtilities, IntegratingUnityElementwiseGivesElementVolumesInTetMeshes) {
+  testThatIntegratingUnityElementwiseGivesElementVolumes(mfem::Element::TETRAHEDRON);
+}
+
+TEST(MeshUtilities, IntegratingUnityElementwiseGivesElementVolumesInHexMeshes) {
+  testThatIntegratingUnityElementwiseGivesElementVolumes(mfem::Element::HEXAHEDRON);
 }
 
 } // namespace
