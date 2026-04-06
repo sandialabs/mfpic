@@ -2,6 +2,7 @@
 #include <libmfpic/MeshUtilities.hpp>
 
 #include <gtest/gtest.h>
+
 #include <limits>
 
 namespace {
