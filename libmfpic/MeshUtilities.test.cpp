@@ -2,6 +2,7 @@
 #include <libmfpic/MeshUtilities.hpp>
 
 #include <gtest/gtest.h>
+#include <limits>
 
 namespace {
 
@@ -983,24 +984,40 @@ TEST(MeshUtilities, IntegratingUnityElementwiseGivesElementVolumesInHexMeshes) {
   testThatIntegratingUnityElementwiseGivesElementVolumes(mfem::Element::HEXAHEDRON);
 }
 
-TEST(MeshUtilities, IntegratingElementwiseWithOrderTooLowGivesWrongIntegrals) {
-  constexpr int num_elems = 4;
-  mfem::Mesh mesh = mfem::Mesh::MakeCartesian1D(num_elems);
+mfem::Vector integrateQuadraticPolynomialElementwise(mfem::Mesh& mesh, int order) {
   auto quadratic_polynomial = [] (const mfem::Vector& position) {
     const double x = position[0];
     return std::pow(x - 0.5, 2.0);
   };
+  return elementwiseIntegral(mesh, quadratic_polynomial, order);
+}
+
+void testThatIntegratingElementwiseWithOrderTooLowGivesWrongIntegralsInTensorProductMesh(mfem::Element::Type element_type) {
+  constexpr int num_elems_per_dim = 3;
+  mfem::Mesh mesh = createMeshOfUnitBoxWith3ElemsPerDimension(element_type);
 
   constexpr int integrand_order_too_low = 1;
-  const mfem::Vector elementwise_integral = elementwiseIntegral(mesh, quadratic_polynomial, integrand_order_too_low);
+  const mfem::Vector elementwise_integral = integrateQuadraticPolynomialElementwise(mesh, integrand_order_too_low);
 
-  for (int element = 0; element < num_elems; element++) {
-    constexpr double dx = 1.0 / num_elems;
-    const double left_node_x = element * dx;
-    const double right_node_x = left_node_x + dx;
-    const double integral_in_element = std::pow(right_node_x - 0.5, 3.0) / 3.0 - std::pow(left_node_x - 0.5, 3.0) / 3.0;
-    EXPECT_NE(integral_in_element, elementwise_integral[element]);
+  for (int element = 0; element < mesh.GetNE(); element++) {
+    double x_min = std::numeric_limits<double>::max();
+    double x_max = std::numeric_limits<double>::lowest();
+    mfem::Array<int> vertices;
+    mesh.GetElementVertices(element, vertices);
+    for (int vertex : vertices) {
+      const double x = mesh.GetVertex(vertex)[0];
+      x_min = std::min(x_min, x);
+      x_max = std::max(x_max, x);
+    }
+    constexpr double dx = 1.0 / num_elems_per_dim;
+    const int dimensions = mesh.Dimension();
+    const double exact_integral_in_element = (std::pow(x_max - 0.5, 3.0) - std::pow(x_min - 0.5, 3.0)) * std::pow(dx, dimensions - 1) / 3.0;
+    EXPECT_NE(exact_integral_in_element, elementwise_integral[element]);
   }
+}
+
+TEST(MeshUtilities, IntegratingElementwiseWithOrderTooLowGivesWrongIntegralsInLineMesh) {
+  testThatIntegratingElementwiseWithOrderTooLowGivesWrongIntegralsInTensorProductMesh(mfem::Element::SEGMENT);
 }
 
 TEST(MeshUtilities, IntegratingElementwiseWithCorrectOrderGivesCorrectIntegrals) {
