@@ -1,5 +1,5 @@
 
-#include "libmfpic/Species.hpp"
+#include <libmfpic/Species.hpp>
 #include <libmfpic/Constants.hpp>
 #include <libmfpic/DGAssembly.hpp>
 #include <libmfpic/DGEulerAssembly.hpp>
