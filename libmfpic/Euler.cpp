@@ -172,8 +172,24 @@ double evaluateMaxwellian(const mfem::Vector& primitive_state,
     const mfem::Vector bulk_velocity = getBulkVelocityFromPrimitiveState(primitive_state);
     mfem::Vector difference = velocity;
     difference -= bulk_velocity;
-    const double exponent = inv_sq_sigma * (difference * difference);
-
+    double exponent = 0.0;
+    switch (dim) {
+      case 1: {
+        exponent = inv_sq_sigma * (difference[0] * difference[0]);
+        break;
+      }
+      case 2: {
+        exponent = inv_sq_sigma * (difference[0]*difference[0] +
+                                  difference[1]*difference[1]);
+        break;
+      }
+      case 3: {
+        exponent = inv_sq_sigma * (difference[0]*difference[0] +
+                                  difference[1]*difference[1] +
+                                  difference[2]*difference[2]);
+        break;
+      }
+    }
     const double norm = 1.0 / std::pow(std::sqrt(2.0 * M_PI) * sigma, dim);
     const double pdf  = norm * std::exp(-0.5 * exponent);
 

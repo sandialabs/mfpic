@@ -159,11 +159,11 @@ namespace mfpic {
       if (current_species == species)
       {
         const mfem::GridFunction& current_species_grid_function = current_species_state.getGridFunction();
-        mfem::ElementTransformation *element_transformation= mesh->GetElementTransformation(element);
+        mfem::ElementTransformation *element_transformation = mesh->GetElementTransformation(element);
 
         mfem::InverseElementTransformation inverse_element_transformation(element_transformation);
         mfem::IntegrationPoint ip_ref;
-        int info = inverse_element_transformation.Transform(position, ip_ref);  // ip_ref is in reference coords
+        int info = inverse_element_transformation.Transform(position, ip_ref);  
         MFEM_VERIFY(info == mfem::InverseElementTransformation::Inside,
             "Point is not inside the element.");
         mfem::Vector fluid_state_at_position;

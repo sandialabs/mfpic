@@ -958,7 +958,6 @@ TEST(ParticleOperations, VarianceReducedChargeIsExactForMaxwellianInCell1D) {
     default_reflecting_particle_boundary_factory
   );
   IntegratedCharge variance_reduced_charge_state = particle_operations.assembleVarianceReducedCharge(particles,low_fidelity_state,dg_euler_operations);
-  IntegratedCharge charge_state = particle_operations.assembleCharge(particles);
 
   for (int dof = 0; dof < charge_discretization.getFeSpace().GetNDofs(); dof++) {
     EXPECT_DOUBLE_EQ(variance_reduced_charge_state.getIntegratedChargeValue(dof),integrated_charge_vector(dof));
