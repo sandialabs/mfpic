@@ -30,8 +30,8 @@ mfem::Mesh createTetMeshOfSquarePyramid() {
   return mesh;
 }
 
-mfem::Mesh createMeshOfUnitBoxWith3ElemsPerDimension(mfem::Element::Type element_type) {
-  constexpr int num_elems_per_dim = 3;
+mfem::Mesh createMeshOfUnitBoxWith2ElemsPerDimension(mfem::Element::Type element_type) {
+  constexpr int num_elems_per_dim = 2;
   switch (element_type) {
   case mfem::Element::SEGMENT:
     return mfem::Mesh::MakeCartesian1D(num_elems_per_dim);
@@ -954,7 +954,7 @@ TEST(MeshUtilities, SideStringsToAttributes3DTetrahedron) {
 }
 
 void testThatIntegratingUnityElementwiseGivesElementVolumes(mfem::Element::Type element_type) {
-  mfem::Mesh mesh = createMeshOfUnitBoxWith3ElemsPerDimension(element_type);
+  mfem::Mesh mesh = createMeshOfUnitBoxWith2ElemsPerDimension(element_type);
   auto unit_function = [] (const mfem::Vector&) { return 1.0; };
 
   mfem::Vector elementwise_integral = elementwiseIntegral(mesh, unit_function);
@@ -996,8 +996,8 @@ std::pair<mfem::Vector, mfem::Vector> integrateQuadraticPolynomialElementwiseAnd
   mfem::Element::Type element_type,
   int order
 ) {
-  constexpr int num_elems_per_dim = 3;
-  mfem::Mesh mesh = createMeshOfUnitBoxWith3ElemsPerDimension(element_type);
+  constexpr int num_elems_per_dim = 2;
+  mfem::Mesh mesh = createMeshOfUnitBoxWith2ElemsPerDimension(element_type);
 
   const mfem::Vector elementwise_integral = integrateQuadraticPolynomialElementwise(mesh, order);
 
