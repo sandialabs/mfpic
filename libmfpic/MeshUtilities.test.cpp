@@ -1057,4 +1057,12 @@ TEST(MeshUtilities, IntegratingElementwiseWithCorrectOrderGivesCorrectIntegralsI
   testThatIntegratingElementwiseWithCorrectOrderGivesCorrectIntegralsInTensorProductMesh(mfem::Element::SEGMENT);
 }
 
+TEST(MeshUtilities, IntegratingElementwiseWithCorrectOrderGivesCorrectIntegralsInQuadMesh) {
+  testThatIntegratingElementwiseWithCorrectOrderGivesCorrectIntegralsInTensorProductMesh(mfem::Element::QUADRILATERAL);
+}
+
+TEST(MeshUtilities, IntegratingElementwiseWithCorrectOrderGivesCorrectIntegralsInHexMesh) {
+  testThatIntegratingElementwiseWithCorrectOrderGivesCorrectIntegralsInTensorProductMesh(mfem::Element::HEXAHEDRON);
+}
+
 } // namespace
