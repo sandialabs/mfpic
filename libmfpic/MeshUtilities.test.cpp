@@ -1020,6 +1020,14 @@ TEST(MeshUtilities, IntegratingElementwiseWithOrderTooLowGivesWrongIntegralsInLi
   testThatIntegratingElementwiseWithOrderTooLowGivesWrongIntegralsInTensorProductMesh(mfem::Element::SEGMENT);
 }
 
+TEST(MeshUtilities, IntegratingElementwiseWithOrderTooLowGivesWrongIntegralsInQuadMesh) {
+  testThatIntegratingElementwiseWithOrderTooLowGivesWrongIntegralsInTensorProductMesh(mfem::Element::QUADRILATERAL);
+}
+
+TEST(MeshUtilities, IntegratingElementwiseWithOrderTooLowGivesWrongIntegralsInHEXMesh) {
+  testThatIntegratingElementwiseWithOrderTooLowGivesWrongIntegralsInTensorProductMesh(mfem::Element::HEXAHEDRON);
+}
+
 TEST(MeshUtilities, IntegratingElementwiseWithCorrectOrderGivesCorrectIntegrals) {
   constexpr int num_elems = 4;
   mfem::Mesh mesh = mfem::Mesh::MakeCartesian1D(num_elems);
