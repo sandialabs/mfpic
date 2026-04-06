@@ -7,6 +7,7 @@
 #include <libmfpic/ParticleBoundary.hpp>
 #include <libmfpic/ParticleContainer.hpp>
 
+#include <mfem/linalg/densemat.hpp>
 #include <mfem/mfem.hpp>
 
 namespace mfpic {
@@ -62,11 +63,10 @@ public:
    * @brief Compute the number density in each element
    *
    * @param[in] particles   \ref ParticleContainer
-   * @param[in] sum_weights Optional flag to opt out of summing weights in the elements. Default is true.
    *
-   * @return std::vector<mfem::Vector> of number density for each particle species
+   * @return mfem::DenseMatrix of number density for each particle species, (element, species)
    */
-  std::vector<mfem::Vector>& getNumberDensity(const ParticleContainer& particles, const bool sum_weights = true);
+  mfem::DenseMatrix& getNumberDensity(const ParticleContainer& particles);
 
   /**
    * @brief Compute the bulk velocity in each element
@@ -74,9 +74,9 @@ public:
    * @param[in] particles   \ref ParticleContainer
    * @param[in] sum_weights Optional flag that resums the weights. Default is true.
    *
-   * @return std::vector<mfem::DenseMatrix> of bulk velocity for each particle species
+   * @return mfem::DenseTensor of bulk velocity for each particle species, (dimension, element, species)
    */
-  std::vector<mfem::DenseMatrix>& getBulkVelocity(const ParticleContainer& particles, const bool sum_weights = true);
+  mfem::DenseTensor& getBulkVelocity(const ParticleContainer& particles, const bool sum_weights = true);
 
   /**
    * @brief Compute the temperature in each element
@@ -85,9 +85,9 @@ public:
    * @param[in] sum_weights           Optional flag that resums the weights. Default is true.
    * @param[in] compute_bulk_velocity Optional flag that recomputes the bulk velocity. Default is true.
    *
-   * @return std::vector<mfem::Vector> of temperature for each particle species
+   * @return mfem::DenseMatrix of temperature for each particle species, (element, species)
    */
-  std::vector<mfem::Vector>& getTemperature(const ParticleContainer& particles, const bool sum_weights = true, const bool compute_bulk_velocity = true);
+  mfem::DenseMatrix& getTemperature(const ParticleContainer& particles, const bool sum_weights = true, const bool compute_bulk_velocity = true);
 
 private: 
 
@@ -114,16 +114,16 @@ private:
   ElementFaceContainer<std::shared_ptr<ParticleBoundary>> particle_boundaries_;
 
   // Particle number density
-  std::vector<mfem::Vector> particle_number_density_;
+  mfem::DenseMatrix particle_number_density_;
 
   // Particle bulk velocity
-  std::vector<mfem::DenseMatrix> particle_bulk_velocity_;
+  mfem::DenseTensor particle_bulk_velocity_;
 
   // Particle temperature
-  std::vector<mfem::Vector> particle_temperature_;
+  mfem::DenseMatrix particle_temperature_;
 
   // Particle sum of weights
-  std::vector<mfem::Vector> sum_of_weights_;
+  mfem::DenseMatrix sum_of_weights_;
 
   /// Mesh dimension
   const int dim_;

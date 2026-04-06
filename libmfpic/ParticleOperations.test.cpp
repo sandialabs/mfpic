@@ -967,9 +967,9 @@ TEST(ParticleOperations, ParticleMomentsCorrectForMaxwellian) {
   );
 
   mfem::Vector computed_bulk_velocity;
-  particle_operations.getBulkVelocity(particles)[0].GetColumn(0, computed_bulk_velocity);
-  double computed_number_density = particle_operations.getNumberDensity(particles)[0](0);
-  double computed_temperature = particle_operations.getTemperature(particles)[0](0);
+  particle_operations.getBulkVelocity(particles)(0).GetColumn(0, computed_bulk_velocity);
+  double computed_number_density = particle_operations.getNumberDensity(particles)(0,0);
+  double computed_temperature = particle_operations.getTemperature(particles)(0,0);
 
   EXPECT_NEAR(computed_number_density, number_density, 1e-10);
 
@@ -1192,9 +1192,9 @@ TEST(ParticleOperations, ParticleMomentsCorrectForKnownParticles) {
 
   auto check_moments = [&] (MomentsInCell exact, int cell_id) {
 
-    MomentsInCell computed {.number_density = particle_operations.getNumberDensity(particles)[0](cell_id),
-                            .bulk_velocity = mfem::Vector(particle_operations.getBulkVelocity(particles)[0].GetColumn(cell_id),3),
-                            .temperature = particle_operations.getTemperature(particles)[0](cell_id) };
+    MomentsInCell computed {.number_density = particle_operations.getNumberDensity(particles)(cell_id, 0),
+                            .bulk_velocity = mfem::Vector(particle_operations.getBulkVelocity(particles)(0).GetColumn(cell_id),3),
+                            .temperature = particle_operations.getTemperature(particles)(cell_id, 0) };
 
     EXPECT_NEAR(exact.number_density, computed.number_density, 1e-12);
 

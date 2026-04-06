@@ -23,14 +23,10 @@ ParticleOperations::ParticleOperations(
   num_species_(num_species)
 {
   mfem::Mesh& mesh = *discretization_.getFeSpace().GetMesh();
-  // TODO BWR is this the best way to store this? accessing is a bit odd looking, so is setup
-  // TODO BWR relies on species_id's to run from (0,num_species-1)
-  for (int i_species = 0; i_species < num_species_; ++i_species) {
-    particle_number_density_.emplace_back(mfem::Vector(mesh.GetNE()));
-    particle_bulk_velocity_.emplace_back(mfem::DenseMatrix(3, mesh.GetNE()));
-    particle_temperature_.emplace_back(mfem::Vector(mesh.GetNE()));
-    sum_of_weights_.emplace_back(mfem::Vector(mesh.GetNE()));
-  }
+  particle_number_density_.SetSize(mesh.GetNE(), num_species_);
+  particle_bulk_velocity_.SetSize(3, mesh.GetNE(), num_species_);
+  particle_temperature_.SetSize(mesh.GetNE(), num_species_);
+  sum_of_weights_.SetSize(mesh.GetNE(), num_species_);
   element_face_unit_normal_ = std::make_shared<ElementFaceContainer<mfem::Vector>>();
   for (int element = 0; element < mesh.GetNE(); element++) {
     const int num_faces = getNumFacesOnElement(mesh, element);
@@ -183,13 +179,10 @@ IntegratedCharge ParticleOperations::assembleCharge(
   return charge_state;
 }
 
-std::vector<mfem::Vector>& ParticleOperations::getNumberDensity(const ParticleContainer& particles, const bool sum_weights
+mfem::DenseMatrix& ParticleOperations::getNumberDensity(const ParticleContainer& particles
 ) {
 
-  for (auto & species_number_density : particle_number_density_)
-    species_number_density = 0.0;
-
-  if (sum_weights) this->sumParticleWeights_(particles);
+  particle_number_density_ = 0.0;
 
   mfem::Array<int> vector_dofs;
   mfem::FiniteElementSpace finite_element_space = discretization_.getFeSpace();
@@ -200,17 +193,16 @@ std::vector<mfem::Vector>& ParticleOperations::getNumberDensity(const ParticleCo
 
     const int elem_id = particle.element;
     const int species_id = particle.species.id;
-    particle_number_density_[species_id](elem_id) += particle.weight / mesh.GetElementVolume(elem_id);
+    particle_number_density_(elem_id, species_id) += particle.weight / mesh.GetElementVolume(elem_id);
   }
 
   return this->particle_number_density_;
 }
 
-std::vector<mfem::DenseMatrix>& ParticleOperations::getBulkVelocity(const ParticleContainer& particles, const bool sum_weights
+mfem::DenseTensor& ParticleOperations::getBulkVelocity(const ParticleContainer& particles, const bool sum_weights
 ) {
 
-  for (auto & species_bulk_velocity : particle_bulk_velocity_)
-    species_bulk_velocity = 0.0;
+  particle_bulk_velocity_ = 0.0;
 
   if (sum_weights) this->sumParticleWeights_(particles);
 
@@ -219,21 +211,20 @@ std::vector<mfem::DenseMatrix>& ParticleOperations::getBulkVelocity(const Partic
 
     const int elem_id = particle.element;
     const int species_id = particle.species.id;
-    const double sum_weights = sum_of_weights_[species_id](elem_id);
+    const double sum_weights = sum_of_weights_(elem_id, species_id);
     if (sum_weights <= 0.0) continue;
 
-    mfem::Vector velocity_in_element(particle_bulk_velocity_[species_id].GetColumn(elem_id), 3);
+    mfem::Vector velocity_in_element(particle_bulk_velocity_(species_id).GetColumn(elem_id), 3);
     velocity_in_element.Add(particle.weight / sum_weights, particle.velocity);
   }
 
   return this->particle_bulk_velocity_;
 }
 
-std::vector<mfem::Vector>& ParticleOperations::getTemperature(const ParticleContainer& particles, const bool sum_weights, const bool compute_bulk_velocity
+mfem::DenseMatrix& ParticleOperations::getTemperature(const ParticleContainer& particles, const bool sum_weights, const bool compute_bulk_velocity
 ) {
 
-  for (auto & species_temperature : particle_temperature_)
-    species_temperature = 0.0;
+  particle_temperature_ = 0.0;
 
   if (sum_weights) this->sumParticleWeights_(particles);
   if (compute_bulk_velocity) this->getBulkVelocity(particles, false);
@@ -243,16 +234,16 @@ std::vector<mfem::Vector>& ParticleOperations::getTemperature(const ParticleCont
 
     const int elem_id = particle.element;
     const int species_id = particle.species.id;
-    const double sum_weights = sum_of_weights_[species_id](elem_id);
+    const double sum_weights = sum_of_weights_(elem_id, species_id);
     if (sum_weights <= 0.0) continue;
 
-    const mfem::Vector bulk_velocity_in_element(particle_bulk_velocity_[species_id].GetColumn(elem_id), 3);
+    const mfem::Vector bulk_velocity_in_element(particle_bulk_velocity_(species_id).GetColumn(elem_id), 3);
     mfem::Vector fluctuation_velocity = particle.velocity;
     fluctuation_velocity -= bulk_velocity_in_element;
 
     const double norm_squared = fluctuation_velocity * fluctuation_velocity;
 
-    particle_temperature_[species_id](elem_id) += norm_squared * particle.weight * particle.species.mass / (3 * constants::boltzmann_constant * sum_weights);
+    particle_temperature_(elem_id, species_id) += norm_squared * particle.weight * particle.species.mass / (3 * constants::boltzmann_constant * sum_weights);
   }
 
   return this->particle_temperature_;
@@ -261,14 +252,13 @@ std::vector<mfem::Vector>& ParticleOperations::getTemperature(const ParticleCont
 void ParticleOperations::sumParticleWeights_(
   const ParticleContainer& particles
 ) {
-    for (auto & species_sum_of_weights : sum_of_weights_)
-      species_sum_of_weights = 0.0;
+    sum_of_weights_ = 0.0;
     for (const Particle& particle : particles) {
       if (not particle.is_alive) continue;
 
       const int elem_id = particle.element;
       const int species_id = particle.species.id;
-      sum_of_weights_[species_id](elem_id) += particle.weight;
+      sum_of_weights_(elem_id, species_id) += particle.weight;
     }
 }
 
