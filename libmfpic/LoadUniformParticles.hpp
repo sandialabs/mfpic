@@ -2,11 +2,11 @@
 
 #include <libmfpic/GenerateKappaVelocity.hpp>
 #include <libmfpic/GenerateMaxwellianVelocity.hpp>
+#include <libmfpic/MeshDistribution.hpp>
 #include <libmfpic/MeshUtilities.hpp>
 #include <libmfpic/ParticleContainer.hpp>
 #include <libmfpic/SourcesFactory.hpp>
 #include <libmfpic/Species.hpp>
-#include <libmfpic/UniformMeshDistribution.hpp>
 
 #include <mfem/mfem.hpp>
 
@@ -39,7 +39,7 @@ ParticleContainer loadUniformParticles(
 
   const double mesh_volume = getMeshVolume(*mesh);
   const double particle_weight = source_state_parameters.number_density * mesh_volume / num_particles;
-  UniformMeshDistribution position_distribution(mesh);
+  MeshDistribution position_distribution(mesh);
 
   for (int i = 0; i < num_particles; ++i) {
     const double kappa = source_state_parameters.kappa;
