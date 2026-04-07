@@ -28,6 +28,10 @@ ConstantSourceParameters::ConstantSourceParameters(
   , constant_state{.number_density = number_density, .bulk_velocity = bulk_velocity, .temperature = temperature, .kappa = kappa}
 {}
 
+SourceStateParameters ConstantSourceParameters::sourceStateParametersAtPoint(const mfem::Vector&) const {
+  return constant_state;
+}
+
 std::unique_ptr<mfem::VectorCoefficient> ConstantSourceParameters::getEulerVectorCoefficient() const {
   const mfem::Vector primitive_state = constructPrimitiveState(constant_state);
 
@@ -47,6 +51,14 @@ SodSourceParameters::SodSourceParameters(
   , left_state(left_state_parameters)
   , right_state(right_state_parameters)
 {}
+
+SourceStateParameters SodSourceParameters::sourceStateParametersAtPoint(const mfem::Vector& x) const {
+  if (x[0] < discontinuity_location) {
+    return left_state;
+  } else {
+    return right_state;
+  }
+}
 
 std::unique_ptr<mfem::VectorCoefficient> SodSourceParameters::getEulerVectorCoefficient() const {
   const mfem::Vector primitive_state_left = constructPrimitiveState(left_state);
@@ -87,6 +99,31 @@ GaussianSourceParameters::GaussianSourceParameters(
   , pressure_offset(pressure_offset)
   , pressure_height(pressure_height)
 {}
+
+SourceStateParameters GaussianSourceParameters::sourceStateParametersAtPoint(const mfem::Vector& x) const {
+  mfem::Vector shifted_x(x.Size());
+  for (int i_dim = 0; i_dim < x.Size(); ++i_dim) {
+    shifted_x = x[i_dim] - center[i_dim];
+  }
+  const double exponential = exp(-0.5 * (shifted_x * shifted_x) / (standard_deviation * standard_deviation));
+
+  const double number_density_offset = offsets.number_density;
+  const mfem::Vector velocity_offset = offsets.bulk_velocity;
+  const double number_density_height = heights.number_density;
+  const mfem::Vector velocity_height = heights.bulk_velocity;
+
+  const double number_density = number_density_offset + exponential * number_density_height;
+  mfem::Vector velocity(velocity_offset);
+  velocity.Add(exponential, velocity_height);
+  const double pressure = pressure_offset + exponential * pressure_height;
+  const double temperature = euler::temperature(number_density, pressure);
+
+  return SourceStateParameters{
+    .number_density = number_density,
+    .bulk_velocity = velocity,
+    .temperature = temperature,
+  };
+}
 
 std::unique_ptr<mfem::VectorCoefficient> GaussianSourceParameters::getEulerVectorCoefficient() const {
   const mfem::Vector offsets_primitive = constructPrimitiveState(offsets);
@@ -137,6 +174,27 @@ PeriodicPerturbationSourceParameters::PeriodicPerturbationSourceParameters(
   , base_values(base_values)
   , perturbations(perturbations)
 {}
+
+SourceStateParameters PeriodicPerturbationSourceParameters::sourceStateParametersAtPoint(const mfem::Vector& x) const {
+  double k_dot_x = 0.;
+  for (int i_dim = 0; i_dim < x.Size(); ++i_dim) {
+    k_dot_x += wavevector[i_dim] * x[i_dim];
+  }
+  const double cos_kx = cos(k_dot_x);
+
+  const double number_density = base_values.number_density * (1. + perturbations.number_density * cos_kx);
+  mfem::Vector velocity(base_values.bulk_velocity.Size());
+  for (int i_dim = 0; i_dim < velocity.Size(); ++ i_dim) {
+    velocity[i_dim] = base_values.bulk_velocity[i_dim] * (1. + perturbations.bulk_velocity[i_dim] * cos_kx);
+  }
+  const double temperature = base_values.temperature * (1. + perturbations.temperature * cos_kx);
+
+  return SourceStateParameters{
+    .number_density = number_density,
+    .bulk_velocity = velocity,
+    .temperature = temperature,
+  };
+}
 
 std::unique_ptr<mfem::VectorCoefficient> PeriodicPerturbationSourceParameters::getEulerVectorCoefficient() const {
 

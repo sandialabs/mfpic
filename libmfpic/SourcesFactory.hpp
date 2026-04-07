@@ -34,6 +34,8 @@ struct SourceParameters {
 
   virtual ~SourceParameters() = default;
 
+  virtual SourceStateParameters sourceStateParametersAtPoint(const mfem::Vector& x) const = 0;
+
   /**
    * @brief Get an mfem::VectorCoefficient that represents an Euler fluid with the parameters in this object
    * 
@@ -60,6 +62,8 @@ struct ConstantSourceParameters : public SourceParameters {
     const mfem::Vector& bulk_velocity=mfem::Vector({0., 0., 0.}),
     const double kappa=-1);
 
+  virtual SourceStateParameters sourceStateParametersAtPoint(const mfem::Vector& x) const override;
+
   /**
    * @brief Get an mfem::VectorCoefficient that represents an constant euler fluid with parameters in this struct
    * 
@@ -83,6 +87,8 @@ struct SodSourceParameters : public SourceParameters {
     const SourceStateParameters& left_state_parameters,
     const SourceStateParameters& right_state_parameters,
     const int num_particles = 0);
+
+  virtual SourceStateParameters sourceStateParametersAtPoint(const mfem::Vector& x) const override;
 
   /**
    * @brief Get an mfem::VectorCoefficient that represents a piecewise constant euler fluid with parameters in this struct
@@ -120,6 +126,8 @@ struct GaussianSourceParameters: public SourceParameters {
     const double pressure_height,
     const int num_particles = 0);
 
+  virtual SourceStateParameters sourceStateParametersAtPoint(const mfem::Vector& x) const override;
+
   /**
    * @brief Get an mfem::VectorCoefficient that represents a gaussian in space euler fluid with parameters in this struct
    * 
@@ -144,6 +152,8 @@ struct PeriodicPerturbationSourceParameters : public SourceParameters {
     const SourceStateParameters& base_values,
     const SourceStateParameters& perturbations,
     const int num_particles = 0);
+
+  virtual SourceStateParameters sourceStateParametersAtPoint(const mfem::Vector& x) const override;
 
   /**
    * @brief Get an mfem::VectorCoefficient that represents a periodically perturbed euler fluid with parameters in this struct
