@@ -70,6 +70,19 @@ mfem::Vector evaluateVectorCoefficientAtPoint(
   return state_out;
 }
 
+void testThatEulerConservativeVectorMatchesSourceStateParameters(
+  const Species& species,
+  const mfem::Vector& euler_conservative_vector,
+  const SourceStateParameters& source_state_parameters
+) {
+  const mfem::Vector euler_primitive_vector = euler::convertFromConservativeToPrimitive(euler_conservative_vector, species);
+  EXPECT_DOUBLE_EQ(euler_primitive_vector[euler::PrimitiveVariables::NUMBER_DENSITY], source_state_parameters.number_density);
+  EXPECT_DOUBLE_EQ(euler_primitive_vector[euler::PrimitiveVariables::X_BULK_VELOCITY], source_state_parameters.bulk_velocity[0]);
+  EXPECT_DOUBLE_EQ(euler_primitive_vector[euler::PrimitiveVariables::Y_BULK_VELOCITY], source_state_parameters.bulk_velocity[1]);
+  EXPECT_DOUBLE_EQ(euler_primitive_vector[euler::PrimitiveVariables::Z_BULK_VELOCITY], source_state_parameters.bulk_velocity[2]);
+  EXPECT_DOUBLE_EQ(euler_primitive_vector[euler::PrimitiveVariables::TEMPERATURE], source_state_parameters.temperature);
+}
+
 TEST(SourcesFactory, SodSourceParametersEulerVectorCoefficient) {
   constexpr double discontinuity_location = 0.5;
 
@@ -91,6 +104,11 @@ TEST(SourcesFactory, SodSourceParametersEulerVectorCoefficient) {
     left_state.number_density, left_state.bulk_velocity, left_state.temperature);
   const mfem::Vector left_state_expected = euler::convertFromPrimitiveToConservative(left_state_primitive, parameters.species);
 
+  testThatEulerConservativeVectorMatchesSourceStateParameters(
+    parameters.species,
+    left_state_expected,
+    parameters.sourceStateParametersAtPoint(mfem::Vector({x_left}))
+  );
   for (int i = 0; i < left_state_out.Size(); ++i) {
     EXPECT_DOUBLE_EQ(left_state_expected[i], left_state_out[i]);
   }
@@ -102,6 +120,11 @@ TEST(SourcesFactory, SodSourceParametersEulerVectorCoefficient) {
     right_state.number_density, right_state.bulk_velocity, right_state.temperature);
   const mfem::Vector right_state_expected = euler::convertFromPrimitiveToConservative(right_state_primitive, parameters.species);
 
+  testThatEulerConservativeVectorMatchesSourceStateParameters(
+    parameters.species,
+    right_state_expected,
+    parameters.sourceStateParametersAtPoint(mfem::Vector({x_right}))
+  );
   for (int i = 0; i < right_state_out.Size(); ++i) {
     EXPECT_DOUBLE_EQ(right_state_expected[i], right_state_out[i]);
   }
@@ -162,6 +185,11 @@ TEST(SourcesFactory, GaussianSourceParametersEulerVectorCoefficient) {
     const mfem::Vector state_out = evaluateVectorCoefficientAtPoint(euler_coefficient, x, dx, mesh);
     const mfem::Vector expected_state = evaluateGaussianAtPoint(
       x, center, standard_deviation, offsets, heights, pressure_offset, pressure_height, electron_species);
+    testThatEulerConservativeVectorMatchesSourceStateParameters(
+      electron_species,
+      expected_state,
+      parameters.sourceStateParametersAtPoint(mfem::Vector({x}))
+    );
     for (int i = 0; i < expected_state.Size(); ++i) {
       EXPECT_DOUBLE_EQ(expected_state[i], state_out[i]);
     }
@@ -217,6 +245,11 @@ TEST(SourcesFactory, PeriodicPerturbationSourceParametersEulerVectorCoefficient)
     const mfem::Vector state_out = evaluateVectorCoefficientAtPoint(euler_coefficient, x, mesh);
     const mfem::Vector expected_state = evaluatePeriodicPerturbationAtPoint(
       x, wavevector, base, perturbations, electron_species);
+    testThatEulerConservativeVectorMatchesSourceStateParameters(
+      electron_species,
+      expected_state,
+      parameters.sourceStateParametersAtPoint(mfem::Vector({x}))
+    );
     for (int i = 0; i < expected_state.Size(); ++i) {
       EXPECT_DOUBLE_EQ(expected_state[i], state_out[i]) << " i : " << i;
     }
