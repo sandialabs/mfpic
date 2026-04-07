@@ -1,8 +1,6 @@
-#include "libmfpic/SourcesFactory.hpp"
 #include <libmfpic/LoadUniformParticles.hpp>
 
 #include <gtest/gtest.h>
-#include <random>
 
 namespace {
 
