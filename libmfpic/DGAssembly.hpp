@@ -123,10 +123,20 @@ public:
     nonlinear_form_->UseExternalIntegrators();
     ghost_bcs_.push_back(std::move(boundary_condition));
     const auto & current_bc = ghost_bcs_.back();
-    ghost_bc_integrators_.push_back(
-      std::make_unique<DGGhostBoundaryIntegrator>(*numerical_flux_function_, *current_bc));
-    nonlinear_form_->AddBdrFaceIntegrator(
-      (ghost_bc_integrators_.back()).get(), current_bc->boundary_attribute_has_boundary_condition);
+    const auto integrator = std::make_shared<DGGhostBoundaryIntegrator>(*numerical_flux_function_, *current_bc);
+    addBoundaryCondition(integrator, current_bc->boundary_attribute_has_boundary_condition);
+  }
+
+  /**
+   * @brief Add a boundary face integrator to the nonlinear form and store reference so it stays in scope for mfem
+   *
+   * @param integrator mfem::HyperbolicFormIntegrator
+   * @param boundary_attribute_has_boundary_condition mfem::Array of flags
+   */
+
+  void addBoundaryCondition(std::shared_ptr<mfem::HyperbolicFormIntegrator> && integrator, mfem::Array<int> & boundary_attribute_has_boundary_condition) {
+    bc_integrators_.push_back(integrator);
+    nonlinear_form_->AddBdrFaceIntegrator((bc_integrators_.back()).get(), boundary_attribute_has_boundary_condition);
   }
 
   /// get global maximum characteristic speed to be used in CFL condition
@@ -159,8 +169,8 @@ private:
   int num_equations_;
   /// ghost boundary condition setters
   std::vector<std::shared_ptr<DGGhostBC>> ghost_bcs_;
-  /// ghost boundary condition integrators
-  std::vector<std::shared_ptr<mfem::NonlinearFormIntegrator>> ghost_bc_integrators_;
+  /// boundary condition integrators
+  std::vector<std::shared_ptr<mfem::NonlinearFormIntegrator>> bc_integrators_;
 
   /// Compute element-wise inverse mass matrix
   void computeInvMass_();
