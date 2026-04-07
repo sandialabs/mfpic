@@ -12,6 +12,7 @@
 #include <libmfpic/Discretization.hpp>
 #include <libmfpic/DumpParticles.hpp>
 #include <libmfpic/ElectrostaticFieldOperations.hpp>
+#include <libmfpic/ElectrostaticFieldState.hpp>
 #include <libmfpic/Euler.hpp>
 #include <libmfpic/LowFidelityOperations.hpp>
 #include <libmfpic/LowFidelityState.hpp>
@@ -60,7 +61,7 @@ void runSimulation(int argc, char* argv[]) {
     electrostatic_discretization,
     std::move(dirichlet_bcs)
   );
-  ElectrostaticFieldState electrostatic_field_state(electrostatic_discretization);
+  ElectrostaticFieldState particle_electrostatic_field_state(electrostatic_discretization);
 
   std::unordered_map<std::string, Species> species_map = buildSpeciesMapFromYaml(main["Species"]);
   const int num_species = species_map.size();
@@ -87,11 +88,16 @@ void runSimulation(int argc, char* argv[]) {
 
   std::vector<LowFidelityState> low_fidelity_states;
   std::vector<std::unique_ptr<LowFidelityOperations>> low_fidelity_operations;
+  std::vector<ElectrostaticFieldState> low_fidelity_field_states;
 
   YAML::Node euler_fluids = main["Euler Fluids"];
   int dg_euler_order = 0;
+  bool push_low_fidelity_with_particle_fields = false;
   if (euler_fluids["Basis Order"]) {
     dg_euler_order = euler_fluids["Basis Order"].as<int>();
+  }
+  if (euler_fluids["Use Particle Fields"]) {
+    push_low_fidelity_with_particle_fields = euler_fluids["Use Particle Fields"].as<bool>();
   }
   Discretization dg_euler_discretization(mesh.get(), dg_euler_order, FETypes::DG, euler::ConservativeVariables::NUM_VARS);
 
@@ -111,6 +117,7 @@ void runSimulation(int argc, char* argv[]) {
       species_list,
       dg_euler_bcs);
     low_fidelity_operations.push_back(std::move(dg_euler_operations));
+    low_fidelity_field_states.emplace_back(electrostatic_discretization);
   }
 
   OutputParameters output_parameters;
@@ -119,18 +126,33 @@ void runSimulation(int argc, char* argv[]) {
 
   MeshDataWriter mesh_data_writer(output_parameters.mesh_output_folder_name, *mesh);
 
-  IntegratedCharge integrated_charge = particle_operations.assembleCharge(particle_container);
-
-  electrostatic_field_operations->fieldSolve(electrostatic_field_state, integrated_charge);
-  mesh_data_writer.output(electrostatic_field_state, low_fidelity_states, 0, 0.);
+  {
+    IntegratedCharge integrated_charge = particle_operations.assembleCharge(particle_container);
+    electrostatic_field_operations->fieldSolve(particle_electrostatic_field_state, integrated_charge);
+  }
+  
+  for (int i = 0; i < std::ssize(low_fidelity_field_states); ++i) {
+    IntegratedCharge integrated_charge = low_fidelity_operations[i]->assembleCharge(low_fidelity_states[i]);
+    electrostatic_field_operations->fieldSolve(low_fidelity_field_states[i], integrated_charge);
+  }
+  mesh_data_writer.output(particle_electrostatic_field_state, low_fidelity_field_states, low_fidelity_states, 0, 0.);
 
   std::ofstream csv_file("output.csv");
   csv_file << std::setprecision(std::numeric_limits<double>::digits);
   csv_file << "# Time_Step Time Field_Energy" << std::endl;
-  csv_file << 0 << " " << 0.0 << " " << electrostatic_field_operations->fieldEnergy(electrostatic_field_state) << std::endl;
+  csv_file << 0 << " " << 0.0 << " " << electrostatic_field_operations->fieldEnergy(particle_electrostatic_field_state) << std::endl;
+
+  std::vector<std::ofstream> lf_csv_files;
+
+  for (int i = 0; i < std::ssize(low_fidelity_field_states); ++i) {
+    lf_csv_files.emplace_back("output_lf_"+std::to_string(i)+".csv");
+    lf_csv_files.back() << std::setprecision(std::numeric_limits<double>::digits);
+    lf_csv_files.back() << "# Time_Step Time Field_Energy" << std::endl;
+    lf_csv_files.back() << 0 << " " << 0.0 << " " << electrostatic_field_operations->fieldEnergy(low_fidelity_field_states[i]) << std::endl;
+  }
 
   TimeSteppingParameters time_stepping_parameters = buildTimeSteppingParametersFromYAML(main["Time Stepping"]);
-  VerletTimeIntegrator verlet_time_integrator(electrostatic_discretization);
+  VerletTimeIntegrator verlet_time_integrator(electrostatic_discretization, push_low_fidelity_with_particle_fields);
   const double smallest_cell_lengthscale = getSmallestCellLengthscale(*mesh);
   for (int i_timestep = 1; i_timestep <= time_stepping_parameters.number_of_timesteps; ++i_timestep) {
     const double timestep_size = time_stepping_parameters.timestep_size;
@@ -141,10 +163,11 @@ void runSimulation(int argc, char* argv[]) {
 
     verlet_time_integrator.advanceTimestep(
       low_fidelity_states,
+      low_fidelity_field_states,
       low_fidelity_operations,
       particle_container,
       particle_operations,
-      electrostatic_field_state,
+      particle_electrostatic_field_state,
       *electrostatic_field_operations,
       timestep_size
     );
@@ -168,8 +191,10 @@ void runSimulation(int argc, char* argv[]) {
 
     if (i_timestep % output_parameters.output_stride == 0) {
       dumpParticles(particle_container, end_time, output_parameters.particle_dump_filename);
-      mesh_data_writer.output(electrostatic_field_state, low_fidelity_states, i_timestep, end_time);
-      csv_file << i_timestep << " " << end_time << " " << electrostatic_field_operations->fieldEnergy(electrostatic_field_state) << std::endl;
+      mesh_data_writer.output(particle_electrostatic_field_state, low_fidelity_field_states, low_fidelity_states, i_timestep, end_time);
+      csv_file << i_timestep << " " << end_time << " " << electrostatic_field_operations->fieldEnergy(particle_electrostatic_field_state) << std::endl;
+      for (int i = 0; i < std::ssize(low_fidelity_field_states); ++i)
+        lf_csv_files[i] << i_timestep << " " << end_time << " " << electrostatic_field_operations->fieldEnergy(low_fidelity_field_states[i]) << std::endl;
     }
   }
 

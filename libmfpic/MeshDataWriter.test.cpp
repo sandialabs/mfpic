@@ -50,9 +50,10 @@ TEST(MeshDataWriter, test) {
   list_of_parameters.push_back(std::make_unique<ConstantSourceParameters>(electron_species, 1e25, 300));
   list_of_parameters.push_back(std::make_unique<ConstantSourceParameters>(proton_species, 2e22, 320));
   std::vector<LowFidelityState> low_fidelity_states = {buildEulerState(dg_discretization, list_of_parameters)};
+  std::vector<ElectrostaticFieldState> low_fidelity_field_states = {electrostatic_field_state};
 
-  mesh_data_writer.output(electrostatic_field_state, low_fidelity_states, 0, 0);
-  mesh_data_writer.output(electrostatic_field_state, low_fidelity_states, 1, 1.);
+  mesh_data_writer.output(electrostatic_field_state, low_fidelity_field_states, low_fidelity_states, 0, 0);
+  mesh_data_writer.output(electrostatic_field_state, low_fidelity_field_states, low_fidelity_states, 1, 1.);
 
   EXPECT_TRUE(std::filesystem::exists(folder_name));
 
