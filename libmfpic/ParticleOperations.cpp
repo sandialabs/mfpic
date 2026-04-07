@@ -243,7 +243,7 @@ mfem::DenseMatrix& ParticleOperations::getTemperature(const ParticleContainer& p
 
     const double norm_squared = fluctuation_velocity * fluctuation_velocity;
 
-    particle_temperature_(elem_id, species_id) += norm_squared * particle.weight * particle.species.mass / (3 * constants::boltzmann_constant * sum_weights);
+    particle_temperature_(elem_id, species_id) += norm_squared * particle.weight * particle.species.mass / (3.0 * constants::boltzmann_constant * sum_weights);
   }
 
   return this->particle_temperature_;
