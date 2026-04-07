@@ -34,6 +34,13 @@ struct SourceParameters {
 
   virtual ~SourceParameters() = default;
 
+  /**
+   * @brief Evaluate the basic state parameters at a point in space.
+   *
+   * @param[in] x Point in space at which to evaluate.
+   *
+   * @returns Basic state parameters at @a x.
+   */
   virtual SourceStateParameters sourceStateParametersAtPoint(const mfem::Vector& x) const = 0;
 
   /**
@@ -62,7 +69,12 @@ struct ConstantSourceParameters : public SourceParameters {
     const mfem::Vector& bulk_velocity=mfem::Vector({0., 0., 0.}),
     const double kappa=-1);
 
-  virtual SourceStateParameters sourceStateParametersAtPoint(const mfem::Vector& x) const override;
+  /**
+   * @brief Give the basic state parameters that represent a uniform distribution in space.
+   *
+   * @returns The constant state parameters.
+   */
+  virtual SourceStateParameters sourceStateParametersAtPoint(const mfem::Vector&) const override;
 };
 
 /**
@@ -81,6 +93,13 @@ struct SodSourceParameters : public SourceParameters {
     const SourceStateParameters& right_state_parameters,
     const int num_particles = 0);
 
+  /**
+   * @brief Evaluate the basic state parameters that represent a piecewise uniform distribution.
+   *
+   * @param[in] x Point in space at which to evaluate.
+   *
+   * @returns Basic state parameters at @a x.
+   */
   virtual SourceStateParameters sourceStateParametersAtPoint(const mfem::Vector& x) const override;
 };
 
@@ -112,6 +131,13 @@ struct GaussianSourceParameters: public SourceParameters {
     const double pressure_height,
     const int num_particles = 0);
 
+  /**
+   * @brief Evaluate the basic state parameters that represent a distribution that is Gaussian in space.
+   *
+   * @param[in] x Point in space at which to evaluate.
+   *
+   * @returns Basic state parameters at @a x.
+   */
   virtual SourceStateParameters sourceStateParametersAtPoint(const mfem::Vector& x) const override;
 };
 
@@ -132,6 +158,13 @@ struct PeriodicPerturbationSourceParameters : public SourceParameters {
     const SourceStateParameters& perturbations,
     const int num_particles = 0);
 
+  /**
+   * @brief Evaluate the basic state parameters that represent a distribution that is periodically perturbed in space.
+   *
+   * @param[in] x Point in space at which to evaluate.
+   *
+   * @returns Basic state parameters at @a x.
+   */
   virtual SourceStateParameters sourceStateParametersAtPoint(const mfem::Vector& x) const override;
 };
 
