@@ -41,7 +41,7 @@ struct SourceParameters {
    * 
    * @return std::unique_ptr<mfem::VectorCoefficient>
    */
-  virtual std::unique_ptr<mfem::VectorCoefficient> getEulerVectorCoefficient() const = 0;
+  std::unique_ptr<mfem::VectorFunctionCoefficient> getEulerVectorCoefficient() const;
 };
 
 /**
@@ -63,13 +63,6 @@ struct ConstantSourceParameters : public SourceParameters {
     const double kappa=-1);
 
   virtual SourceStateParameters sourceStateParametersAtPoint(const mfem::Vector& x) const override;
-
-  /**
-   * @brief Get an mfem::VectorCoefficient that represents an constant euler fluid with parameters in this struct
-   * 
-   * @return std::unique_ptr<mfem::VectorCoefficient>
-   */
-  std::unique_ptr<mfem::VectorCoefficient> getEulerVectorCoefficient() const override;
 };
 
 /**
@@ -89,13 +82,6 @@ struct SodSourceParameters : public SourceParameters {
     const int num_particles = 0);
 
   virtual SourceStateParameters sourceStateParametersAtPoint(const mfem::Vector& x) const override;
-
-  /**
-   * @brief Get an mfem::VectorCoefficient that represents a piecewise constant euler fluid with parameters in this struct
-   * 
-   * @return std::unique_ptr<mfem::VectorCoefficient>
-   */
-  std::unique_ptr<mfem::VectorCoefficient> getEulerVectorCoefficient() const override;
 };
 
 /**
@@ -127,13 +113,6 @@ struct GaussianSourceParameters: public SourceParameters {
     const int num_particles = 0);
 
   virtual SourceStateParameters sourceStateParametersAtPoint(const mfem::Vector& x) const override;
-
-  /**
-   * @brief Get an mfem::VectorCoefficient that represents a gaussian in space euler fluid with parameters in this struct
-   * 
-   * @return std::unique_ptr<mfem::VectorCoefficient>
-   */
-  std::unique_ptr<mfem::VectorCoefficient> getEulerVectorCoefficient() const override;
 };
 
 /**
@@ -154,13 +133,6 @@ struct PeriodicPerturbationSourceParameters : public SourceParameters {
     const int num_particles = 0);
 
   virtual SourceStateParameters sourceStateParametersAtPoint(const mfem::Vector& x) const override;
-
-  /**
-   * @brief Get an mfem::VectorCoefficient that represents a periodically perturbed euler fluid with parameters in this struct
-   * 
-   * @return std::unique_ptr<mfem::VectorCoefficient>
-   */
-  std::unique_ptr<mfem::VectorCoefficient> getEulerVectorCoefficient() const override;
 };
 
 /**
