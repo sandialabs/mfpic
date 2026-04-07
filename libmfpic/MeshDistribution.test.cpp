@@ -1,8 +1,8 @@
+#include <libmfpic/Errors.hpp>
 #include <libmfpic/MeshDistribution.hpp>
 #include <libmfpic/MeshUtilities.hpp>
 
 #include <gtest/gtest.h>
-#include <random>
 
 namespace {
 
@@ -157,6 +157,77 @@ TEST(MeshDistribution, TestThatStepDistributedPointsAllLieToTheRightOfTheMidpoin
 
 TEST(MeshDistribution, TestThatStepDistributedPointsAllLieToTheRightOfTheMidpointInTetMeshes) {
   testThatStepDistributedPointsAllLieToTheRightOfTheMidpoint(mfem::Element::TETRAHEDRON);
+}
+
+constexpr double linear_distribution_slope = 2.0;
+
+double linearDistribution(const mfem::Vector& x) {
+  return linear_distribution_slope * x[0];
+}
+
+void testThatLinearlyDistributedPointsAreActuallyDistributedLinearly(
+  mfem::Element::Type element_type,
+  int num_elems_per_dim = 6,
+  int num_points_to_generate = 20000,
+  double relative_tolerance = 0.1
+) {
+  const int num_bins = num_elems_per_dim;
+  std::vector<int> bins(num_bins, 0);
+
+  auto mesh = std::make_shared<mfem::Mesh>();
+  switch (element_type) {
+  case mfem::Element::SEGMENT:
+    *mesh = mfem::Mesh::MakeCartesian1D(num_elems_per_dim);
+    break;
+  case mfem::Element::TRIANGLE:
+  case mfem::Element::QUADRILATERAL:
+    *mesh = mfem::Mesh::MakeCartesian2D(num_elems_per_dim, num_elems_per_dim, element_type);
+    break;
+  case mfem::Element::TETRAHEDRON:
+  case mfem::Element::HEXAHEDRON:
+    *mesh = mfem::Mesh::MakeCartesian3D(num_elems_per_dim, num_elems_per_dim, num_elems_per_dim, element_type);
+    break;
+  default:
+    errorWithDeveloperMessage("Element type not supported.");
+  }
+
+  std::default_random_engine generator;
+  MeshDistribution distribution(mesh, linearDistribution);
+  for (int i = 0; i < num_points_to_generate; i++) {
+    mfem::Vector point;
+    std::tie(point, std::ignore) = distribution.generateRandomPointAndElement(generator);
+    bins[point[0] * num_bins] += 1;
+  }
+
+  for (int ibin = 0; ibin < num_bins; ibin++) {
+    const int num_points_generated = bins[ibin];
+    const double bin_left_endpoint = 1.0 * ibin / num_bins;
+    const double bin_right_endpoint = (ibin + 1.0) / num_bins;
+    const double expected_points_generated =
+      num_points_to_generate * 0.5 * linear_distribution_slope * (std::pow(bin_right_endpoint, 2.0) - std::pow(bin_left_endpoint, 2.0));
+    const double absolute_tolerance = relative_tolerance * expected_points_generated;
+    EXPECT_NEAR(num_points_generated, expected_points_generated, absolute_tolerance);
+  }
+}
+
+TEST(MeshDistribution, TestThatLinearlyDistributedPointsAreActuallyDistributedLinearlyInLineMesh) {
+  testThatLinearlyDistributedPointsAreActuallyDistributedLinearly(mfem::Element::SEGMENT);
+}
+
+TEST(MeshDistribution, TestThatLinearlyDistributedPointsAreActuallyDistributedLinearlyInQuadMesh) {
+  testThatLinearlyDistributedPointsAreActuallyDistributedLinearly(mfem::Element::QUADRILATERAL);
+}
+
+TEST(MeshDistribution, TestThatLinearlyDistributedPointsAreActuallyDistributedLinearlyInTriMesh) {
+  testThatLinearlyDistributedPointsAreActuallyDistributedLinearly(mfem::Element::TRIANGLE);
+}
+
+TEST(MeshDistribution, TestThatLinearlyDistributedPointsAreActuallyDistributedLinearlyInHexMesh) {
+  testThatLinearlyDistributedPointsAreActuallyDistributedLinearly(mfem::Element::HEXAHEDRON);
+}
+
+TEST(MeshDistribution, TestThatLinearlyDistributedPointsAreActuallyDistributedLinearlyInTetMesh) {
+  testThatLinearlyDistributedPointsAreActuallyDistributedLinearly(mfem::Element::TETRAHEDRON);
 }
 
 } // namespace
