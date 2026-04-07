@@ -1,7 +1,7 @@
 #include <libmfpic/Constants.hpp>
 #include <libmfpic/Discretization.hpp>
 #include <libmfpic/ElectromagneticFieldsEvaluator.hpp>
-#include <libmfpic/LoadUniformMaxwellianParticles.hpp>
+#include <libmfpic/LoadUniformParticles.hpp>
 #include <libmfpic/ParticleContainer.hpp>
 #include <libmfpic/ParticleOperations.hpp>
 #include <libmfpic/ReflectingParticleBoundary.hpp>
@@ -947,14 +947,17 @@ TEST(ParticleOperations, ParticleMomentsCorrectForMaxwellian) {
   const mfem::Vector nominal_bulk_velocity({300.0,0.0,0.0});
   constexpr double temperature = 11600.0;
   constexpr double number_density = 1.0e18;
+  const SourceStateParameters source_state_parameters{
+    .number_density = number_density,
+    .bulk_velocity = nominal_bulk_velocity,
+    .temperature = temperature,
+  };
   constexpr int num_particles = 200000;
   std::mt19937 generator;
 
-  ParticleContainer particles = loadUniformMaxwellianParticles(
+  ParticleContainer particles = loadUniformParticles(
     default_species,
-    nominal_bulk_velocity,
-    temperature,
-    number_density,
+    source_state_parameters,
     num_particles,
     generator,
     mesh
