@@ -6,15 +6,16 @@
 
 namespace mfpic {
 
-/// Generate points in a mesh according to a given number density function.
+/// Generate points in a mesh according to a given probability density function.
 class MeshDistribution {
 public:
   /**
    * @brief Ctor.
    *
-   * @param[in] mesh Mesh in which to generate points.
+   * @param[in] mesh         Mesh in which to generate points.
+   * @param[in] distribution Probability density function of points in the mesh (no need to normalize).
    */
-  MeshDistribution(std::shared_ptr<mfem::Mesh> mesh);
+  MeshDistribution(std::shared_ptr<mfem::Mesh> mesh, std::function<double(const mfem::Vector&)> distribution);
 
   /**
    * @brief Generate a random point in the mesh and the index of the element containing it.

@@ -6,6 +6,10 @@ namespace {
 
 using namespace mfpic;
 
+double uniformDistribution(const mfem::Vector&) {
+  return 1.0;
+}
+
 void testThatUniformlyRandomlyGeneratedElementsAreActuallyDistributedUniformly(
   std::shared_ptr<mfem::Mesh> mesh,
   int num_points_to_generate = 20000,
@@ -15,7 +19,7 @@ void testThatUniformlyRandomlyGeneratedElementsAreActuallyDistributedUniformly(
   std::vector<int> num_points_generated_in_element(num_elements, 0);
 
   std::mt19937 generator;
-  MeshDistribution distribution(mesh);
+  MeshDistribution distribution(mesh, uniformDistribution);
   for (int i = 0; i < num_points_to_generate; i++) {
     int element;
     std::tie(std::ignore, element) = distribution.generateRandomPointAndElement(generator);
@@ -40,7 +44,7 @@ void testThatUniformlyRandomlyGeneratedPointsAreActuallyDistributedUniformlyInAS
   std::vector<int> bins(num_bins, 0);
 
   std::mt19937 generator;
-  MeshDistribution distribution(mesh);
+  MeshDistribution distribution(mesh, uniformDistribution);
   for (int i = 0; i < num_points_to_generate; i++) {
     mfem::Vector point;
     std::tie(point, std::ignore) = distribution.generateRandomPointAndElement(generator);

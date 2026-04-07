@@ -39,7 +39,11 @@ ParticleContainer loadUniformParticles(
 
   const double mesh_volume = getMeshVolume(*mesh);
   const double particle_weight = source_state_parameters.number_density * mesh_volume / num_particles;
-  MeshDistribution position_distribution(mesh);
+
+  auto uniform_number_density_function = [&] (const mfem::Vector&) -> double {
+    return source_state_parameters.number_density;
+  };
+  MeshDistribution position_distribution(mesh, uniform_number_density_function);
 
   for (int i = 0; i < num_particles; ++i) {
     const double kappa = source_state_parameters.kappa;
