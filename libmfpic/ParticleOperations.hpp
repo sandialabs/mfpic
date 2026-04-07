@@ -113,16 +113,16 @@ private:
   /// Particle boundaries.
   ElementFaceContainer<std::shared_ptr<ParticleBoundary>> particle_boundaries_;
 
-  // Particle number density
+  /// Particle number density
   mfem::DenseMatrix particle_number_density_;
 
-  // Particle bulk velocity
+  /// Particle bulk velocity
   mfem::DenseTensor particle_bulk_velocity_;
 
-  // Particle temperature
+  /// Particle temperature
   mfem::DenseMatrix particle_temperature_;
 
-  // Particle sum of weights
+  /// Particle sum of weights
   mfem::DenseMatrix sum_of_weights_;
 
   /// Mesh dimension

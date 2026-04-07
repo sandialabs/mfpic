@@ -5,7 +5,6 @@
 #include <libmfpic/ParticleOperations.hpp>
 #include <libmfpic/PeriodicParticleBoundary.hpp>
 
-#include <mfem/linalg/densemat.hpp>
 #include <mfem/mfem.hpp>
 
 #include <limits>

@@ -1,4 +1,4 @@
-#include "libmfpic/Constants.hpp"
+#include <libmfpic/Constants.hpp>
 #include <libmfpic/Discretization.hpp>
 #include <libmfpic/ElectromagneticFieldsEvaluator.hpp>
 #include <libmfpic/LoadUniformMaxwellianParticles.hpp>
