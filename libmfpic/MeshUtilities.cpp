@@ -1,3 +1,4 @@
+#include <libmfpic/Discretization.hpp>
 #include <libmfpic/Errors.hpp>
 #include <libmfpic/MeshUtilities.hpp>
 #include <limits>
@@ -166,6 +167,30 @@ double getSmallestCellLengthscale(mfem::Mesh& mesh) {
     min_length = fmin(min_length, mesh.GetElementSize(i, 1));
 
   return min_length;
+}
+
+mfem::Vector elementwiseIntegral(
+  mfem::Mesh& mesh,
+  std::function<double(const mfem::Vector&)> function,
+  int integrand_order
+) {
+  constexpr int finite_element_order = 0;
+  constexpr FETypes element_type = FETypes::DG;
+  Discretization integrals_discretization(&mesh, finite_element_order, element_type);
+
+  mfem::FunctionCoefficient function_coefficient(function);
+
+  mfem::LinearForm integrals(&integrals_discretization.getFeSpace());
+  constexpr int element_transform_order_multiplier = 1;
+  integrals.AddDomainIntegrator(new mfem::DomainLFIntegrator(
+    function_coefficient,
+    element_transform_order_multiplier,
+    integrand_order
+  ));
+
+  integrals.Assemble();
+
+  return integrals;
 }
 
 } // namespace mfpic
