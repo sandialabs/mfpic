@@ -1,4 +1,4 @@
-#include <libmfpic/LoadUniformKappaParticles.hpp>
+#include <libmfpic/LoadUniformParticles.hpp>
 
 #include <gtest/gtest.h>
 
@@ -11,19 +11,18 @@ const mfem::Vector zero_vector({0.0, 0.0, 0.0});
 const int num_elems = 10;
 std::shared_ptr<mfem::Mesh> simple_mesh = std::make_shared<mfem::Mesh>(mfem::Mesh::MakeCartesian1D(num_elems));
 
-TEST(LoadUniformKappaParticles, NoParticlesAddedWhenNoParticlesRequested) {
-  constexpr double temperature = 121325.0;
-  constexpr double number_density = 1.0e18;
+TEST(LoadUniformParticles, NoParticlesAddedWhenNoParticlesRequested) {
+  const SourceStateParameters source_state_parameters{
+    .number_density = 1.0e18,
+    .bulk_velocity = zero_vector,
+    .temperature = 121325.0,
+  };
   constexpr int num_particles = 0;
-  constexpr double kappa = 2; 
-  std::mt19937 generator;
+  std::default_random_engine generator;
 
-  ParticleContainer particles = loadUniformKappaParticles(
+  ParticleContainer particles = loadUniformParticles(
     default_species,
-    zero_vector,
-    temperature,
-    kappa,
-    number_density,
+    source_state_parameters,
     num_particles,
     generator,
     simple_mesh
@@ -32,19 +31,18 @@ TEST(LoadUniformKappaParticles, NoParticlesAddedWhenNoParticlesRequested) {
   ASSERT_EQ(particles.numParticles(), 0);
 }
 
-TEST(LoadUniformKappaParticles, NumLoadedParticlesIsAsRequested) {
-  constexpr double temperature = 12415.0;
-  constexpr double number_density = 1.0e18;
+TEST(LoadUniformParticles, NumLoadedParticlesIsAsRequested) {
+  const SourceStateParameters source_state_parameters{
+    .number_density = 1.0e18,
+    .bulk_velocity = zero_vector,
+    .temperature = 12415.0,
+  };
   constexpr int num_particles = 40;
-  constexpr double kappa = 2; 
-  std::mt19937 generator;
+  std::default_random_engine generator;
 
-  ParticleContainer particles = loadUniformKappaParticles(
+  ParticleContainer particles = loadUniformParticles(
     default_species,
-    zero_vector,
-    temperature,
-    kappa,
-    number_density,
+    source_state_parameters,
     num_particles,
     generator,
     simple_mesh
@@ -53,20 +51,20 @@ TEST(LoadUniformKappaParticles, NumLoadedParticlesIsAsRequested) {
   ASSERT_EQ(particles.numParticles(), num_particles);
 }
 
-TEST(LoadUniformKappaParticles, LoadedParticlesAllUseBulkVelocityWithZeroTemperature) {
+TEST(LoadUniformParticles, LoadedParticlesAllUseBulkVelocityWithZeroTemperature) {
   const mfem::Vector bulk_velocity({1.0, 2.0, 3.0});
-  constexpr double temperature = 0.0;
-  constexpr double number_density = 1.0e18;
+  const SourceStateParameters source_state_parameters{
+    .number_density = 1.0e18,
+    .bulk_velocity = bulk_velocity,
+    .temperature = 0.0,
+    .kappa = 2.0,
+  };
   constexpr int num_particles = 5;
-  constexpr double kappa = 2; 
-  std::mt19937 generator;
+  std::default_random_engine generator;
 
-  ParticleContainer particles = loadUniformKappaParticles(
+  ParticleContainer particles = loadUniformParticles(
     default_species,
-    bulk_velocity,
-    temperature,
-    kappa,
-    number_density,
+    source_state_parameters,
     num_particles,
     generator,
     simple_mesh
@@ -80,19 +78,19 @@ TEST(LoadUniformKappaParticles, LoadedParticlesAllUseBulkVelocityWithZeroTempera
   }
 }
 
-TEST(LoadUniformKappaParticles, ParticleWeightSetCorrectly) {
-  constexpr double temperature = 0.0;
+TEST(LoadUniformParticles, ParticleWeightSetCorrectly) {
   constexpr double number_density = 1.0e18;
+  const SourceStateParameters source_state_parameters{
+    .number_density = number_density,
+    .bulk_velocity = zero_vector,
+    .temperature = 0.0,
+  };
   constexpr int num_particles = 20;
-  constexpr int kappa = 2;
-  std::mt19937 generator;
+  std::default_random_engine generator;
 
-  ParticleContainer particles = loadUniformKappaParticles(
+  ParticleContainer particles = loadUniformParticles(
     default_species,
-    zero_vector,
-    temperature,
-    kappa,
-    number_density,
+    source_state_parameters,
     num_particles,
     generator,
     simple_mesh
@@ -105,19 +103,18 @@ TEST(LoadUniformKappaParticles, ParticleWeightSetCorrectly) {
   }
 }
 
-TEST(LoadUniformKappaParticles, ParticlesAreUniformlyDistributedInSpace) {
-  constexpr double temperature = 0.0;
-  constexpr double number_density = 1.0e18;
+TEST(LoadUniformParticles, ParticlesAreUniformlyDistributedInSpace) {
+  const SourceStateParameters source_state_parameters{
+    .number_density = 1.0e18,
+    .bulk_velocity = zero_vector,
+    .temperature = 0.0,
+  };
   constexpr int num_particles = 20000;
-  constexpr double kappa = 2;
-  std::mt19937 generator;
+  std::default_random_engine generator;
 
-  ParticleContainer particles = loadUniformKappaParticles(
+  ParticleContainer particles = loadUniformParticles(
     default_species,
-    zero_vector,
-    temperature,
-    kappa,
-    number_density,
+    source_state_parameters,
     num_particles,
     generator,
     simple_mesh
@@ -142,20 +139,20 @@ TEST(LoadUniformKappaParticles, ParticlesAreUniformlyDistributedInSpace) {
   }
 }
 
-TEST(LoadUniformKappaParticles, ParticleVelocitiesAreMaxwellianWithLargeKappa) {
+TEST(LoadUniformParticles, ParticleVelocitiesAreMaxwellianWhenMaxwellianParticlesAreRequested) {
   const mfem::Vector nominal_bulk_velocity({300.0, 600.0, 1000.0});
   constexpr double temperature = 11600.0;
-  constexpr double number_density = 1.0e18;
+  const SourceStateParameters source_state_parameters{
+    .number_density = 1.0e18,
+    .bulk_velocity = nominal_bulk_velocity,
+    .temperature = temperature,
+  };
   constexpr int num_particles = 20000;
-  constexpr double kappa = 1e16;
-  std::mt19937 generator;
+  std::default_random_engine generator;
 
-  ParticleContainer particles = loadUniformKappaParticles(
+  ParticleContainer particles = loadUniformParticles(
     default_species,
-    nominal_bulk_velocity,
-    temperature,
-    kappa,
-    number_density,
+    source_state_parameters,
     num_particles,
     generator,
     simple_mesh
@@ -182,21 +179,63 @@ TEST(LoadUniformKappaParticles, ParticleVelocitiesAreMaxwellianWithLargeKappa) {
   EXPECT_NEAR(sample_variance, expected_sample_variance, relative_tolerance * expected_sample_variance);
 }
 
-TEST(LoadUniformKappaParticles, ParticleVelocitiesMeanAndStdAreCorrect) {
-
+TEST(LoadUniformParticles, ParticleVelocitiesAreMaxwellianWithLargeKappa) {
   const mfem::Vector nominal_bulk_velocity({300.0, 600.0, 1000.0});
   constexpr double temperature = 11600.0;
-  constexpr double number_density = 1.0e18;
+  const SourceStateParameters source_state_parameters{
+    .number_density = 1.0e18,
+    .bulk_velocity = nominal_bulk_velocity,
+    .temperature = temperature,
+    .kappa = 1e16,
+  };
+  constexpr int num_particles = 20000;
+  std::default_random_engine generator;
+
+  ParticleContainer particles = loadUniformParticles(
+    default_species,
+    source_state_parameters,
+    num_particles,
+    generator,
+    simple_mesh
+  );
+
+  mfem::Vector actual_bulk_velocity({0.0, 0.0, 0.0});
+  for (const Particle& particle : particles) {
+    actual_bulk_velocity += particle.velocity;
+  }
+  actual_bulk_velocity /= num_particles;
+  constexpr double relative_tolerance = 0.1;
+  for (int i = 0; i < 3; i++) {
+    EXPECT_NEAR(actual_bulk_velocity[i], nominal_bulk_velocity[i], relative_tolerance * nominal_bulk_velocity[i]);
+  }
+
+  double sample_variance = 0.0;
+  for (const Particle& particle : particles) {
+    mfem::Vector relative_velocity = particle.velocity;
+    relative_velocity -= actual_bulk_velocity;
+    sample_variance += relative_velocity * relative_velocity;
+  }
+  sample_variance /= num_particles - 1;
+  constexpr double expected_sample_variance = 3.0 * constants::boltzmann_constant * temperature / default_species.mass;
+  EXPECT_NEAR(sample_variance, expected_sample_variance, relative_tolerance * expected_sample_variance);
+}
+
+TEST(LoadUniformParticles, ParticleVelocitiesMeanAndStdAreCorrectWhenKappaDistributionIsRequested) {
+  const mfem::Vector nominal_bulk_velocity({300.0, 600.0, 1000.0});
+  constexpr double temperature = 11600.0;
   constexpr int num_particles = 20000;
   constexpr double kappa = 2.0;
-  std::mt19937 generator;
+  const SourceStateParameters source_state_parameters{
+    .number_density = 1.0e18,
+    .bulk_velocity = nominal_bulk_velocity,
+    .temperature = temperature,
+    .kappa = kappa,
+  };
+  std::default_random_engine generator;
 
-  ParticleContainer particles = loadUniformKappaParticles(
+  ParticleContainer particles = loadUniformParticles(
     default_species,
-    nominal_bulk_velocity,
-    temperature,
-    kappa,
-    number_density,
+    source_state_parameters,
     num_particles,
     generator,
     simple_mesh

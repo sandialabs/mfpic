@@ -1,8 +1,10 @@
 #pragma once
 
 #include <libmfpic/GenerateKappaVelocity.hpp>
+#include <libmfpic/GenerateMaxwellianVelocity.hpp>
 #include <libmfpic/MeshUtilities.hpp>
 #include <libmfpic/ParticleContainer.hpp>
+#include <libmfpic/SourcesFactory.hpp>
 #include <libmfpic/Species.hpp>
 #include <libmfpic/UniformMeshDistribution.hpp>
 
@@ -13,28 +15,22 @@
 namespace mfpic {
 
 /**
- * @brief Load a requested number of particles distributed uniformly in space and Kappa distribution in velocity space.
+ * @brief Load a requested number of particles distributed uniformly in space and a parametrized velocity distribuion.
  *
  * @tparam Generator A UniformRandomBitGenerator type.
  *
- * @param[in]     species_list               List of species for which to create particles.
- * @param[in]     bulk_velocity              Bulk velocity of particle distribution.
- * @param[in]     temperature                Species-wise temperature of particle distribution.
- * @param[in]     kappa                      Kappa parameter in the kappa-distribution
- * @param[in]     number_density_per_species Number density of each species.
- * @param[in]     num_particles_per_species  Number of particles to create for each species.
+ * @param[in]     species                    Species for which to create particles.
+ * @param[in]     source_state_parameters    Parameters for the state of the particle distribution.
+ * @param[in]     num_particles              Number of particles to create.
  * @param[in,out] generator                  A UniformRandomBitGenerator used to generate some random numbers.
  * @param[in]     mesh                       Mesh in which to create particles.
  *
  * @returns Container of created particles.
  */
 template <std::uniform_random_bit_generator Generator>
-ParticleContainer loadUniformKappaParticles(
+ParticleContainer loadUniformParticles(
   Species species,
-  mfem::Vector bulk_velocity,
-  double temperature,
-  double kappa,
-  double number_density,
+  const SourceStateParameters& source_state_parameters,
   int num_particles,
   Generator& generator,
   std::shared_ptr<mfem::Mesh> mesh
@@ -42,11 +38,29 @@ ParticleContainer loadUniformKappaParticles(
   ParticleContainer particles;
 
   const double mesh_volume = getMeshVolume(*mesh);
-  const double particle_weight = number_density * mesh_volume / num_particles;
+  const double particle_weight = source_state_parameters.number_density * mesh_volume / num_particles;
   UniformMeshDistribution position_distribution(mesh);
 
   for (int i = 0; i < num_particles; ++i) {
-    const mfem::Vector velocity = generateKappaVelocity(bulk_velocity, temperature, kappa, species.mass, generator);
+    const double kappa = source_state_parameters.kappa;
+    mfem::Vector velocity;
+    if (kappa > 0.0) {
+      velocity = generateKappaVelocity(
+        source_state_parameters.bulk_velocity,
+        source_state_parameters.temperature,
+        kappa,
+        species.mass,
+        generator
+      );
+    }
+    else {
+      velocity = generateMaxwellianVelocity(
+        source_state_parameters.bulk_velocity,
+        source_state_parameters.temperature,
+        species.mass,
+        generator
+      );
+    }
 
     mfem::Vector position({0.0, 0.0, 0.0});
     const auto [random_mesh_position, element] = position_distribution.generateRandomPointAndElement(generator);
