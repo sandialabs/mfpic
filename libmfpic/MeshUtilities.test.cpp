@@ -31,22 +31,6 @@ mfem::Mesh createTetMeshOfSquarePyramid() {
   return mesh;
 }
 
-mfem::Mesh createMeshOfUnitBoxWith2ElemsPerDimension(mfem::Element::Type element_type) {
-  constexpr int num_elems_per_dim = 2;
-  switch (element_type) {
-  case mfem::Element::SEGMENT:
-    return mfem::Mesh::MakeCartesian1D(num_elems_per_dim);
-  case mfem::Element::TRIANGLE:
-  case mfem::Element::QUADRILATERAL:
-    return mfem::Mesh::MakeCartesian2D(num_elems_per_dim, num_elems_per_dim, element_type);
-  case mfem::Element::TETRAHEDRON:
-  case mfem::Element::HEXAHEDRON:
-    return mfem::Mesh::MakeCartesian3D(num_elems_per_dim, num_elems_per_dim, num_elems_per_dim, element_type);
-  default:
-    errorWithDeveloperMessage("Element type not supported.");
-  }
-}
-
 TEST(MeshUtilities, GetElementFaceCentroidWorksIn1D) {
   constexpr int num_elems = 4;
   mfem::Mesh non_periodic_mesh = mfem::Mesh::MakeCartesian1D(num_elems);

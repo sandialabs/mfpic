@@ -108,4 +108,13 @@ mfem::Vector elementwiseIntegral(
   int integrand_order = 0
 );
 
+/**
+ * @brief Create a mesh of a unit box with 2 elements per dimension composed of elements of the given type.
+ *
+ * @param[in] element_type Type of element out of which to construct the mesh.
+ *
+ * @returns Mesh as described.
+ */
+mfem::Mesh createMeshOfUnitBoxWith2ElemsPerDimension(mfem::Element::Type element_type);
+
 } // namespace mfpic
