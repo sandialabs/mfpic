@@ -6,7 +6,7 @@ namespace {
 
 using namespace mfpic;
 
-void testThatRandomlyGeneratedElementsAreDistributedUniformly(
+void testThatUniformlyRandomlyGeneratedElementsAreActuallyDistributedUniformly(
   std::shared_ptr<mfem::Mesh> mesh,
   int num_points_to_generate = 20000,
   double relative_tolerance = 0.1
@@ -29,7 +29,7 @@ void testThatRandomlyGeneratedElementsAreDistributedUniformly(
   }
 }
 
-void testThatRandomlyGeneratedPointsAreDistributedUniformlyInASingleDimension(
+void testThatUniformlyRandomlyGeneratedPointsAreActuallyDistributedUniformlyInASingleDimension(
   std::shared_ptr<mfem::Mesh> mesh,
   int dimension,
   int num_points_to_generate = 20000,
@@ -54,14 +54,14 @@ void testThatRandomlyGeneratedPointsAreDistributedUniformlyInASingleDimension(
   }
 }
 
-void testThatRandomlyGeneratedPointsAreDistributedUniformly(
+void testThatUniformlyRandomlyGeneratedPointsAreActuallyDistributedUniformly(
   std::shared_ptr<mfem::Mesh> mesh,
   int num_points_to_generate = 20000,
   int num_bins = 5,
   double relative_tolerance = 0.1
 ) {
   for (int dimension = 0; dimension < mesh->Dimension(); dimension++) {
-    testThatRandomlyGeneratedPointsAreDistributedUniformlyInASingleDimension(
+    testThatUniformlyRandomlyGeneratedPointsAreActuallyDistributedUniformlyInASingleDimension(
       mesh,
       dimension,
       num_points_to_generate,
@@ -71,48 +71,48 @@ void testThatRandomlyGeneratedPointsAreDistributedUniformly(
   }
 }
 
-TEST(MeshDistribution, TestThatRandomlyGeneratedPointsAreDistributedUniformlyFor1DMeshes) {
+TEST(MeshDistribution, TestThatUniformlyRandomlyGeneratedPointsAreActuallyDistributedUniformlyFor1DMeshes) {
   constexpr int num_elements = 10;
   auto mesh = std::make_shared<mfem::Mesh>(mfem::Mesh::MakeCartesian1D(num_elements));
 
-  testThatRandomlyGeneratedElementsAreDistributedUniformly(mesh);
-  testThatRandomlyGeneratedPointsAreDistributedUniformly(mesh);
+  testThatUniformlyRandomlyGeneratedElementsAreActuallyDistributedUniformly(mesh);
+  testThatUniformlyRandomlyGeneratedPointsAreActuallyDistributedUniformly(mesh);
 }
 
-TEST(MeshDistribution, TestThatRandomlyGeneratedPointsAreDistributedUniformlyForQuadMeshes) {
+TEST(MeshDistribution, TestThatUniformlyRandomlyGeneratedPointsAreActuallyDistributedUniformlyForQuadMeshes) {
   constexpr int num_elements_per_dim = 2;
   constexpr mfem::Element::Type type = mfem::Element::QUADRILATERAL;
   auto mesh = std::make_shared<mfem::Mesh>(mfem::Mesh::MakeCartesian2D(num_elements_per_dim, num_elements_per_dim, type));
 
-  testThatRandomlyGeneratedElementsAreDistributedUniformly(mesh);
-  testThatRandomlyGeneratedPointsAreDistributedUniformly(mesh);
+  testThatUniformlyRandomlyGeneratedElementsAreActuallyDistributedUniformly(mesh);
+  testThatUniformlyRandomlyGeneratedPointsAreActuallyDistributedUniformly(mesh);
 }
 
-TEST(MeshDistribution, TestThatRandomlyGeneratedPointsAreDistributedUniformlyForTriMeshes) {
+TEST(MeshDistribution, TestThatUniformlyRandomlyGeneratedPointsAreActuallyDistributedUniformlyForTriMeshes) {
   constexpr int num_elements_per_dim = 2;
   constexpr mfem::Element::Type type = mfem::Element::TRIANGLE;
   auto mesh = std::make_shared<mfem::Mesh>(mfem::Mesh::MakeCartesian2D(num_elements_per_dim, num_elements_per_dim, type));
 
-  testThatRandomlyGeneratedElementsAreDistributedUniformly(mesh);
-  testThatRandomlyGeneratedPointsAreDistributedUniformly(mesh);
+  testThatUniformlyRandomlyGeneratedElementsAreActuallyDistributedUniformly(mesh);
+  testThatUniformlyRandomlyGeneratedPointsAreActuallyDistributedUniformly(mesh);
 }
 
-TEST(MeshDistribution, TestThatRandomlyGeneratedPointsAreDistributedUniformlyForHexMeshes) {
+TEST(MeshDistribution, TestThatUniformlyRandomlyGeneratedPointsAreActuallyDistributedUniformlyForHexMeshes) {
   constexpr int num_elements_per_dim = 2;
   constexpr mfem::Element::Type type = mfem::Element::HEXAHEDRON;
   auto mesh = std::make_shared<mfem::Mesh>(mfem::Mesh::MakeCartesian3D(num_elements_per_dim, num_elements_per_dim, num_elements_per_dim, type));
 
-  testThatRandomlyGeneratedElementsAreDistributedUniformly(mesh);
-  testThatRandomlyGeneratedPointsAreDistributedUniformly(mesh);
+  testThatUniformlyRandomlyGeneratedElementsAreActuallyDistributedUniformly(mesh);
+  testThatUniformlyRandomlyGeneratedPointsAreActuallyDistributedUniformly(mesh);
 }
 
-TEST(MeshDistribution, TestThatRandomlyGeneratedPointsAreDistributedUniformlyForTetMeshes) {
+TEST(MeshDistribution, TestThatUniformlyRandomlyGeneratedPointsAreActuallyDistributedUniformlyForTetMeshes) {
   constexpr int num_elements_per_dim = 2;
   constexpr mfem::Element::Type type = mfem::Element::TETRAHEDRON;
   auto mesh = std::make_shared<mfem::Mesh>(mfem::Mesh::MakeCartesian3D(num_elements_per_dim, num_elements_per_dim, num_elements_per_dim, type));
 
-  testThatRandomlyGeneratedElementsAreDistributedUniformly(mesh);
-  testThatRandomlyGeneratedPointsAreDistributedUniformly(mesh);
+  testThatUniformlyRandomlyGeneratedElementsAreActuallyDistributedUniformly(mesh);
+  testThatUniformlyRandomlyGeneratedPointsAreActuallyDistributedUniformly(mesh);
 }
 
 } // namespace
