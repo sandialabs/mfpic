@@ -2,6 +2,7 @@
 #include <libmfpic/MeshUtilities.hpp>
 
 #include <gtest/gtest.h>
+#include <random>
 
 namespace {
 
@@ -110,6 +111,52 @@ TEST(MeshDistribution, TestThatUniformlyRandomlyGeneratedPointsAreActuallyDistri
 
   testThatUniformlyRandomlyGeneratedElementsAreActuallyDistributedUniformly(mesh);
   testThatUniformlyRandomlyGeneratedPointsAreActuallyDistributedUniformly(mesh);
+}
+
+constexpr double step_distribution_midpoint = 0.5;
+
+double stepDistribution(const mfem::Vector& x) {
+  if (x[0] > step_distribution_midpoint) {
+    return 1.0;
+  }
+  else {
+    return 0.0;
+  }
+}
+
+void testThatStepDistributedPointsAllLieToTheRightOfTheMidpoint(
+  mfem::Element::Type element_type,
+  int num_points_to_generate = 100
+) {
+  auto mesh = std::make_shared<mfem::Mesh>(createMeshOfUnitBoxWith2ElemsPerDimension(element_type));
+
+  std::default_random_engine generator;
+  MeshDistribution distribution(mesh, stepDistribution);
+  for (int i = 0; i < num_points_to_generate; i++) {
+    mfem::Vector point;
+    std::tie(point, std::ignore) = distribution.generateRandomPointAndElement(generator);
+    EXPECT_GE(point[0], step_distribution_midpoint);
+  }
+}
+
+TEST(MeshDistribution, TestThatStepDistributedPointsAllLieToTheRightOfTheMidpointInLineMeshes) {
+  testThatStepDistributedPointsAllLieToTheRightOfTheMidpoint(mfem::Element::SEGMENT);
+}
+
+TEST(MeshDistribution, TestThatStepDistributedPointsAllLieToTheRightOfTheMidpointInQuadMeshes) {
+  testThatStepDistributedPointsAllLieToTheRightOfTheMidpoint(mfem::Element::QUADRILATERAL);
+}
+
+TEST(MeshDistribution, TestThatStepDistributedPointsAllLieToTheRightOfTheMidpointInTriMeshes) {
+  testThatStepDistributedPointsAllLieToTheRightOfTheMidpoint(mfem::Element::TRIANGLE);
+}
+
+TEST(MeshDistribution, TestThatStepDistributedPointsAllLieToTheRightOfTheMidpointInHexMeshes) {
+  testThatStepDistributedPointsAllLieToTheRightOfTheMidpoint(mfem::Element::HEXAHEDRON);
+}
+
+TEST(MeshDistribution, TestThatStepDistributedPointsAllLieToTheRightOfTheMidpointInTetMeshes) {
+  testThatStepDistributedPointsAllLieToTheRightOfTheMidpoint(mfem::Element::TETRAHEDRON);
 }
 
 } // namespace
