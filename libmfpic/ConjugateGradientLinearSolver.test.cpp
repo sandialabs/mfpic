@@ -172,10 +172,12 @@ TEST(ConjugateGradientLinearSolver, InvertElectrostaticMatrix) {
   mfem::GridFunction potential = field_state.getPotential();
 
   auto default_particle_boundary_factory = std::make_shared<ReflectingParticleBoundaryFactory>();
+  const int num_species = 2;
   ParticleOperations particle_operations(
     electrostatic_discretization,
     {},
-    default_particle_boundary_factory);
+    default_particle_boundary_factory,
+    num_species);
 
   Species electron_species{.charge = qe, .mass = me};
   Species proton_species{.charge = constants::elementary_charge, .mass = constants::proton_mass};

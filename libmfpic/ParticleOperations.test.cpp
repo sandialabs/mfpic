@@ -1,5 +1,7 @@
+#include <libmfpic/Constants.hpp>
 #include <libmfpic/Discretization.hpp>
 #include <libmfpic/ElectromagneticFieldsEvaluator.hpp>
+#include <libmfpic/LoadUniformMaxwellianParticles.hpp>
 #include <libmfpic/ParticleContainer.hpp>
 #include <libmfpic/ParticleOperations.hpp>
 #include <libmfpic/ReflectingParticleBoundary.hpp>
@@ -22,10 +24,17 @@ public:
   }
 };
 
-constexpr Species default_species{.charge = 1.0, .mass = 1.0};
+constexpr Species default_species{.charge = 1.0, .mass = 1.0, .id = 0};
 const std::vector<std::shared_ptr<ParticleBoundaryFactory>> empty_particle_boundary_factory_list;
 const std::shared_ptr<ParticleBoundaryFactory> default_reflecting_particle_boundary_factory
   = std::make_shared<ReflectingParticleBoundaryFactory>();
+constexpr int one_species = 1, two_species = 2;
+
+struct MomentsInCell {
+  double number_density;
+  mfem::Vector bulk_velocity;
+  double temperature;
+};
 
 TEST(ParticleOperations, AccelerateDoesNothingWithZeroFields) {
   ParticleContainer static_particles;
@@ -42,7 +51,8 @@ TEST(ParticleOperations, AccelerateDoesNothingWithZeroFields) {
   ParticleOperations particle_operations(
     disc,
     empty_particle_boundary_factory_list,
-    default_reflecting_particle_boundary_factory
+    default_reflecting_particle_boundary_factory,
+    one_species
   );
   ParticleContainer accelerated_particles = particle_operations.accelerate(1.0, static_particles, ZeroElectromagneticFieldsEvaluator());
 
@@ -67,7 +77,8 @@ TEST(ParticleOperations, AccelerateDoesNothingWithDeadParticles) {
   ParticleOperations particle_operations(
     disc,
     empty_particle_boundary_factory_list,
-    default_reflecting_particle_boundary_factory
+    default_reflecting_particle_boundary_factory,
+    one_species
   );
   ParticleContainer accelerated_particles = particle_operations.accelerate(1.0, static_particles, ZeroElectromagneticFieldsEvaluator());
 
@@ -97,7 +108,8 @@ TEST(ParticleOperations, AssembleChargeIgnoresDeadParticles) {
   ParticleOperations particle_operations(
     discretization,
     empty_particle_boundary_factory_list,
-    default_reflecting_particle_boundary_factory
+    default_reflecting_particle_boundary_factory,
+    one_species
   );
   IntegratedCharge charge_state = particle_operations.assembleCharge(particles);
 
@@ -135,7 +147,8 @@ TEST(ParticleOperations, AssembleChargeWorksin1D) {
   ParticleOperations particle_operations(
     discretization,
     empty_particle_boundary_factory_list,
-    default_reflecting_particle_boundary_factory
+    default_reflecting_particle_boundary_factory,
+    one_species
   );
   IntegratedCharge charge_state = particle_operations.assembleCharge(static_particles);
 
@@ -215,7 +228,8 @@ TEST(ParticleOperations, AssembleChargeWorksin2D) {
   ParticleOperations particle_operations(
     discretization,
     empty_particle_boundary_factory_list,
-    default_reflecting_particle_boundary_factory
+    default_reflecting_particle_boundary_factory,
+    one_species
   );
   IntegratedCharge charge_state = particle_operations.assembleCharge(static_particles);
 
@@ -246,7 +260,8 @@ TEST(ParticleOperations, DeadParticlesDoNotMove) {
   ParticleOperations particle_operations(
     discretization,
     empty_particle_boundary_factory_list,
-    default_reflecting_particle_boundary_factory
+    default_reflecting_particle_boundary_factory,
+    one_species
   );
 
   constexpr double dt = 1.0;
@@ -273,7 +288,8 @@ TEST(ParticleOperations, ParticleCanMoveWithinAnElementIn1D) {
   ParticleOperations particle_operations(
     discretization,
     empty_particle_boundary_factory_list,
-    default_reflecting_particle_boundary_factory
+    default_reflecting_particle_boundary_factory,
+    one_species
   );
 
   constexpr double dt = 1.0;
@@ -300,7 +316,8 @@ TEST(ParticleOperations, ParticleCanMoveAcrossOneElementInterfaceIn1D) {
   ParticleOperations particle_operations(
     discretization,
     empty_particle_boundary_factory_list,
-    default_reflecting_particle_boundary_factory
+    default_reflecting_particle_boundary_factory,
+    one_species
   );
 
   constexpr double dt = 1.0;
@@ -328,7 +345,8 @@ TEST(ParticleOperations, ParticleCanMoveAcrossMultipleElementInterfacesIn1D) {
   ParticleOperations particle_operations(
     discretization,
     empty_particle_boundary_factory_list,
-    default_reflecting_particle_boundary_factory
+    default_reflecting_particle_boundary_factory,
+    one_species
   );
 
   constexpr double dt = 1.0;
@@ -348,7 +366,8 @@ TEST(ParticleOperations, InitialElementIsArbitraryWhenParticleStartsOnElementInt
   ParticleOperations particle_operations(
     discretization,
     empty_particle_boundary_factory_list,
-    default_reflecting_particle_boundary_factory
+    default_reflecting_particle_boundary_factory,
+    one_species
   );
 
   for (int starting_element = 0; starting_element < num_elems; starting_element++) {
@@ -380,7 +399,8 @@ TEST(ParticleOperations, ParticleMovesAcrossPeriodicBoundariesIn1D) {
   ParticleOperations particle_operations(
     discretization,
     empty_particle_boundary_factory_list,
-    default_reflecting_particle_boundary_factory
+    default_reflecting_particle_boundary_factory,
+    one_species
   );
 
   ParticleContainer particles;
@@ -424,7 +444,8 @@ TEST(ParticleOperations, ParticleCanMoveWithinAnElementIn2D) {
   ParticleOperations particle_operations(
     discretization,
     empty_particle_boundary_factory_list,
-    default_reflecting_particle_boundary_factory
+    default_reflecting_particle_boundary_factory,
+    one_species
   );
   ParticleContainer particles;
   particles.addParticle(Particle{
@@ -471,7 +492,8 @@ TEST(ParticleOperations, ParticleCanMoveAcrossOneElementInterfaceIn2D) {
   ParticleOperations particle_operations(
     discretization,
     empty_particle_boundary_factory_list,
-    default_reflecting_particle_boundary_factory
+    default_reflecting_particle_boundary_factory,
+    one_species
   );
 
   constexpr double dt = 1.0;
@@ -513,7 +535,8 @@ TEST(ParticleOperations, ParticleCanMoveAcrossMultipleElementInterfacesIn2D) {
   ParticleOperations particle_operations(
     discretization,
     empty_particle_boundary_factory_list,
-    default_reflecting_particle_boundary_factory
+    default_reflecting_particle_boundary_factory,
+    one_species
   );
 
   constexpr double dt = 1.0;
@@ -553,7 +576,8 @@ TEST(ParticleOperations, ParticleCanMoveAcrossCornerInterfaceIn2D) {
   ParticleOperations particle_operations(
     discretization,
     empty_particle_boundary_factory_list,
-    default_reflecting_particle_boundary_factory
+    default_reflecting_particle_boundary_factory,
+    one_species
   );
 
   constexpr double dt = 1.0;
@@ -586,7 +610,8 @@ TEST(ParticleOperations, InitialElementIsArbitraryWhenParticleStartsOnElementCor
   ParticleOperations particle_operations(
     discretization,
     empty_particle_boundary_factory_list,
-    default_reflecting_particle_boundary_factory
+    default_reflecting_particle_boundary_factory,
+    one_species
   );
 
   constexpr double dx = domain_side_length / num_elems_per_dim;
@@ -635,7 +660,8 @@ TEST(ParticleOperations, ParticleMovesAcrossPeriodicBoundariesIn2D) {
     ParticleOperations particle_operations(
       discretization,
       empty_particle_boundary_factory_list,
-      default_reflecting_particle_boundary_factory
+      default_reflecting_particle_boundary_factory,
+      one_species
     );
 
     ParticleContainer particles;
@@ -675,7 +701,8 @@ TEST(ParticleOperations, ParticleCanMoveWithinAnElementIn3D) {
   ParticleOperations particle_operations(
     discretization,
     empty_particle_boundary_factory_list,
-    default_reflecting_particle_boundary_factory
+    default_reflecting_particle_boundary_factory,
+    one_species
   );
   ParticleContainer particles;
   particles.addParticle(Particle{
@@ -718,7 +745,8 @@ TEST(ParticleOperations, ParticleCanMoveAcrossOneElementInterfaceIn3D) {
   ParticleOperations particle_operations(
     discretization,
     empty_particle_boundary_factory_list,
-    default_reflecting_particle_boundary_factory
+    default_reflecting_particle_boundary_factory,
+    one_species
   );
 
   constexpr double dt = 1.0;
@@ -755,7 +783,8 @@ TEST(ParticleOperations, ParticleCanMoveAcrossMultipleElementInterfacesIn3D) {
   ParticleOperations particle_operations(
     discretization,
     empty_particle_boundary_factory_list,
-    default_reflecting_particle_boundary_factory
+    default_reflecting_particle_boundary_factory,
+    one_species
   );
 
   constexpr double dt = 1.0;
@@ -795,7 +824,8 @@ TEST(ParticleOperations, ParticleCanMoveAcrossCornerInterfaceIn3D) {
   ParticleOperations particle_operations(
     discretization,
     empty_particle_boundary_factory_list,
-    default_reflecting_particle_boundary_factory
+    default_reflecting_particle_boundary_factory,
+    one_species
   );
 
   constexpr double dt = 1.0;
@@ -829,7 +859,8 @@ TEST(ParticleOperations, InitialElementIsArbitraryWhenParticleStartsOnElementCor
   ParticleOperations particle_operations(
     discretization,
     empty_particle_boundary_factory_list,
-    default_reflecting_particle_boundary_factory
+    default_reflecting_particle_boundary_factory,
+    one_species
   );
 
   constexpr double dx = domain_side_length / num_elems_per_dim;
@@ -880,7 +911,8 @@ TEST(ParticleOperations, ParticleMovesAcrossPeriodicBoundariesIn3D) {
   ParticleOperations particle_operations(
     discretization,
     empty_particle_boundary_factory_list,
-    default_reflecting_particle_boundary_factory
+    default_reflecting_particle_boundary_factory,
+    one_species
   );
 
   ParticleContainer particles;
@@ -905,5 +937,142 @@ TEST(ParticleOperations, ParticleMovesAcrossPeriodicBoundariesIn3D) {
     EXPECT_EQ(moved_particle.element, 0);
   }
 }
+
+TEST(ParticleOperations, ParticleMomentsCorrectForMaxwellian) {
+  const int num_elems = 1;
+  std::shared_ptr<mfem::Mesh> mesh = std::make_shared<mfem::Mesh>(mfem::Mesh::MakeCartesian1D(num_elems, .234));
+  constexpr int order = 1;
+  Discretization discretization(mesh.get(),order);
+
+  const mfem::Vector nominal_bulk_velocity({300.0,0.0,0.0});
+  constexpr double temperature = 11600.0;
+  constexpr double number_density = 1.0e18;
+  constexpr int num_particles = 200000;
+  std::mt19937 generator;
+
+  ParticleContainer particles = loadUniformMaxwellianParticles(
+    default_species,
+    nominal_bulk_velocity,
+    temperature,
+    number_density,
+    num_particles,
+    generator,
+    mesh
+  );
+
+  ParticleOperations particle_operations(
+    discretization,
+    empty_particle_boundary_factory_list,
+    default_reflecting_particle_boundary_factory,
+    one_species
+  );
+
+  mfem::Vector computed_bulk_velocity;
+  particle_operations.getBulkVelocity(particles)(0).GetColumn(0, computed_bulk_velocity);
+  double computed_number_density = particle_operations.getNumberDensity(particles)(0,0);
+  double computed_temperature = particle_operations.getTemperature(particles)(0,0);
+
+  EXPECT_NEAR(computed_number_density, number_density, 1e-10);
+
+  for (int i = 0; i < 3; i++) {
+    EXPECT_NEAR(computed_bulk_velocity[i], nominal_bulk_velocity[i], 1e-10);
+  }
+
+  EXPECT_NEAR(computed_temperature, temperature, 1e-3*temperature);
+}
+
+TEST(ParticleOperations, ParticleMomentsCorrectForKnownParticles) {
+
+  const int num_elems_in_one_direction = 2;
+  const int num_elems = num_elems_in_one_direction * num_elems_in_one_direction * num_elems_in_one_direction;
+  const double lx = 1.0, ly = 2.0, lz = 3.0;
+  const double dx = lx / num_elems_in_one_direction, dy = ly / num_elems_in_one_direction, dz = lz / num_elems_in_one_direction;
+  const int num_particles_in_cell = 4;
+  std::shared_ptr<mfem::Mesh> mesh = std::make_shared<mfem::Mesh>(mfem::Mesh::MakeCartesian3D(num_elems_in_one_direction, num_elems_in_one_direction, num_elems_in_one_direction, mfem::Element::HEXAHEDRON, lx, ly, lz));
+  constexpr int order = 1;
+  Discretization discretization(mesh.get(),order);
+
+  Species electron {.mass = constants::electron_mass, .id = 0};
+  Species proton {.mass = constants::proton_mass, .id = 1};
+
+  ParticleContainer particles;
+  std::vector<MomentsInCell> exact_moments_electron;
+  std::vector<MomentsInCell> exact_moments_proton;
+  std::vector<int> elem_ids;
+  const double electron_fac = electron.mass / (3. * constants::boltzmann_constant);
+  const double proton_fac = proton.mass / (3. * constants::boltzmann_constant);
+
+  for (int i = 0; i < num_elems_in_one_direction; ++i) {
+    for (int j = 0; j < num_elems_in_one_direction; ++j) {
+      for (int k = 0; k < num_elems_in_one_direction; ++k) {
+        double sum_of_weights = 0.;
+        double sum_of_inverse = 0.;
+        const int i_elem = i + j * num_elems_in_one_direction + k * num_elems_in_one_direction * num_elems_in_one_direction;
+        const mfem::Vector center {dx * (i + 1./2.), dy * (j + 1./2.), dz * (k + 1./2.)};
+        for (int i_part = 0; i_part < num_particles_in_cell; ++i_part) {
+          const double x = dx * i + (i_part + 1) * dx / (num_particles_in_cell + 1);
+          const double y = dy * j + (i_part + 1) * dy / (num_particles_in_cell + 1);
+          const double z = dz * k + (i_part + 1) * dz / (num_particles_in_cell + 1);
+          const double weight = std::sqrt(x*x + y*y + z*z);
+          const mfem::Vector position {x, y, z};
+          mfem::Vector velocity = center;
+          mfem::Vector offset(3);
+          if (i_part == 0) {
+            offset = mfem::Vector {1., -1., 1.};
+          } else if (i_part == 1) {
+            offset = mfem::Vector {-1., 1., -1.};
+          } else if (i_part == 2) {
+            offset = mfem::Vector {1., 1., -1.};
+          } else if (i_part == 3) {
+            offset = mfem::Vector {-1., -1., 1.};
+          }
+          offset /= weight;
+
+          velocity += offset;
+
+          particles.addParticle({.position = position, .velocity = velocity, .element = i_elem, .species = electron, .weight = weight});
+          particles.addParticle({.position = position, .velocity = velocity, .element = i_elem, .species = proton, .weight = weight});
+
+          sum_of_weights += weight;
+          sum_of_inverse += 1./weight;
+
+        }
+
+        mfem::Vector bulk = center;
+        exact_moments_electron.emplace_back(MomentsInCell{.number_density = sum_of_weights / (dx * dy *dz), .bulk_velocity = bulk, .temperature = 3. * sum_of_inverse / sum_of_weights * electron_fac});
+        exact_moments_proton.emplace_back(MomentsInCell{.number_density = sum_of_weights / (dx * dy *dz), .bulk_velocity = bulk, .temperature = 3. * sum_of_inverse / sum_of_weights * proton_fac});
+        elem_ids.push_back(i_elem);
+      }
+    }
+  }
+
+  ParticleOperations particle_operations(
+    discretization,
+    empty_particle_boundary_factory_list,
+    default_reflecting_particle_boundary_factory,
+    two_species
+  );
+
+  auto check_moments = [&] (MomentsInCell exact, int species_id, int cell_id) {
+
+    MomentsInCell computed {.number_density = particle_operations.getNumberDensity(particles)(cell_id, species_id),
+                            .bulk_velocity = mfem::Vector(particle_operations.getBulkVelocity(particles)(species_id).GetColumn(cell_id),3),
+                            .temperature = particle_operations.getTemperature(particles)(cell_id, species_id) };
+
+    EXPECT_NEAR(exact.number_density, computed.number_density, 1e-12);
+
+    for (int i = 0; i < 3; i++) {
+      EXPECT_NEAR(exact.bulk_velocity[i], computed.bulk_velocity[i], 1e-12);
+    }
+
+    EXPECT_NEAR(exact.temperature, computed.temperature, 1e-12);
+  };
+
+  for (int i_elem = 0; i_elem < num_elems; ++i_elem) {
+    check_moments(exact_moments_electron[i_elem], 0, elem_ids[i_elem]);
+    check_moments(exact_moments_proton[i_elem], 1, elem_ids[i_elem]);
+  }
+
+};
 
 } // namespace
