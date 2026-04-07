@@ -77,7 +77,7 @@ TEST(SourcesFactory, SodSourceParametersEulerVectorCoefficient) {
   SourceStateParameters right_state{.number_density = 1e22, .temperature = 320};
   SodSourceParameters parameters(electron_species, discontinuity_location, left_state, right_state);
 
-  std::unique_ptr<mfem::VectorCoefficient> euler_coefficient = parameters.getEulerVectorCoefficient();
+  mfem::VectorFunctionCoefficient euler_coefficient = parameters.getEulerVectorCoefficient();
 
   constexpr int num_elems = 10;
   constexpr double length = 1.0;
@@ -85,7 +85,7 @@ TEST(SourcesFactory, SodSourceParametersEulerVectorCoefficient) {
   mfem::Mesh mesh = mfem::Mesh::MakeCartesian1D(10);
 
   const double x_left = parameters.discontinuity_location - 0.5 * dx;
-  const mfem::Vector left_state_out = evaluateVectorCoefficientAtPoint(*euler_coefficient, x_left, dx, mesh);
+  const mfem::Vector left_state_out = evaluateVectorCoefficientAtPoint(euler_coefficient, x_left, dx, mesh);
 
   const mfem::Vector left_state_primitive = euler::constructPrimitiveState(
     left_state.number_density, left_state.bulk_velocity, left_state.temperature);
@@ -96,7 +96,7 @@ TEST(SourcesFactory, SodSourceParametersEulerVectorCoefficient) {
   }
 
   const double x_right = parameters.discontinuity_location + 0.5 * dx;
-  const mfem::Vector right_state_out = evaluateVectorCoefficientAtPoint(*euler_coefficient, x_right, dx, mesh);
+  const mfem::Vector right_state_out = evaluateVectorCoefficientAtPoint(euler_coefficient, x_right, dx, mesh);
 
   const mfem::Vector right_state_primitive = euler::constructPrimitiveState(
     right_state.number_density, right_state.bulk_velocity, right_state.temperature);
@@ -151,7 +151,7 @@ TEST(SourcesFactory, GaussianSourceParametersEulerVectorCoefficient) {
 
   GaussianSourceParameters parameters(
     electron_species, center, standard_deviation, offsets, heights, pressure_offset, pressure_height);
-  std::unique_ptr<mfem::VectorCoefficient> euler_coefficient = parameters.getEulerVectorCoefficient();
+  mfem::VectorFunctionCoefficient euler_coefficient = parameters.getEulerVectorCoefficient();
 
   constexpr int num_elems = 11;
   constexpr double length = 1.0;
@@ -159,7 +159,7 @@ TEST(SourcesFactory, GaussianSourceParametersEulerVectorCoefficient) {
   mfem::Mesh mesh = mfem::Mesh::MakeCartesian1D(10);
 
   for (const double& x : {0.01, 0.45, 0.5}){
-    const mfem::Vector state_out = evaluateVectorCoefficientAtPoint(*euler_coefficient, x, dx, mesh);
+    const mfem::Vector state_out = evaluateVectorCoefficientAtPoint(euler_coefficient, x, dx, mesh);
     const mfem::Vector expected_state = evaluateGaussianAtPoint(
       x, center, standard_deviation, offsets, heights, pressure_offset, pressure_height, electron_species);
     for (int i = 0; i < expected_state.Size(); ++i) {
@@ -206,7 +206,7 @@ TEST(SourcesFactory, PeriodicPerturbationSourceParametersEulerVectorCoefficient)
 
   PeriodicPerturbationSourceParameters parameters(
     electron_species, wavevector, base, perturbations);
-  std::unique_ptr<mfem::VectorCoefficient> euler_coefficient = parameters.getEulerVectorCoefficient();
+  mfem::VectorFunctionCoefficient euler_coefficient = parameters.getEulerVectorCoefficient();
 
   mfem::Mesh mesh = mfem::Mesh::MakeCartesian3D(10, 10, 10, mfem::Element::HEXAHEDRON, length, length, length);
 
@@ -214,7 +214,7 @@ TEST(SourcesFactory, PeriodicPerturbationSourceParametersEulerVectorCoefficient)
   const mfem::Vector x2 {0.34 * M_PI, 0.01 * M_PI, 0.89 * M_PI};
   const mfem::Vector x3 {0.72 * M_PI, 0.99 * M_PI, 0.14 * M_PI};
   for (const mfem::Vector& x : {x1,x2,x3}){
-    const mfem::Vector state_out = evaluateVectorCoefficientAtPoint(*euler_coefficient, x, mesh);
+    const mfem::Vector state_out = evaluateVectorCoefficientAtPoint(euler_coefficient, x, mesh);
     const mfem::Vector expected_state = evaluatePeriodicPerturbationAtPoint(
       x, wavevector, base, perturbations, electron_species);
     for (int i = 0; i < expected_state.Size(); ++i) {

@@ -10,14 +10,14 @@ mfem::Vector constructPrimitiveState(const SourceStateParameters state) {
 }
 }
 
-std::unique_ptr<mfem::VectorFunctionCoefficient> SourceParameters::getEulerVectorCoefficient() const {
+mfem::VectorFunctionCoefficient SourceParameters::getEulerVectorCoefficient() const {
   auto euler_vector_function = [this] (const mfem::Vector& x, mfem::Vector& conservative_state) {
     const SourceStateParameters source_state_parameters = sourceStateParametersAtPoint(x);
     const mfem::Vector primitive_state = constructPrimitiveState(source_state_parameters);
     conservative_state = euler::convertFromPrimitiveToConservative(primitive_state, species);
   };
 
-  return std::make_unique<mfem::VectorFunctionCoefficient>(euler::ConservativeVariables::NUM_VARS, euler_vector_function);
+  return mfem::VectorFunctionCoefficient(euler::ConservativeVariables::NUM_VARS, euler_vector_function);
 }
 
 ConstantSourceParameters::ConstantSourceParameters(

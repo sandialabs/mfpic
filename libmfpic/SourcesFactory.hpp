@@ -37,11 +37,11 @@ struct SourceParameters {
   virtual SourceStateParameters sourceStateParametersAtPoint(const mfem::Vector& x) const = 0;
 
   /**
-   * @brief Get an mfem::VectorCoefficient that represents an Euler fluid with the parameters in this object
+   * @brief Get an mfem::VectorFunctionCoefficient that represents an Euler fluid with the parameters in this object
    * 
-   * @return std::unique_ptr<mfem::VectorCoefficient>
+   * @return mfem::VectorFunctionCoefficient
    */
-  std::unique_ptr<mfem::VectorFunctionCoefficient> getEulerVectorCoefficient() const;
+  mfem::VectorFunctionCoefficient getEulerVectorCoefficient() const;
 };
 
 /**
