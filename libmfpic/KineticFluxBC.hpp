@@ -17,7 +17,7 @@ namespace mfpic {
  * @note A mfem::NumericalFlux function is needed to pass to the
  * mfem::HyperbolicForm integrator. During boundary integration,
  * by default mfem will only call FluxFunction::ComputeFluxDotN 
- * via the NumericalFlux. \ref DGKineticFluxBCNumericalFlux should be used, which
+ * via the NumericalFlux. \ref KineticFluxBCNumericalFlux should be used, which
  * will throw an error if other functions are called. 
  *
  * @todo Assumes 5-moment fluid
@@ -26,7 +26,7 @@ namespace mfpic {
 class KineticFluxBC : public mfem::FluxFunction {
 
   /**
-   * @brief Construct a new DGKineticFluxBC with given spatial
+   * @brief Construct a new KineticFluxBC with given spatial
    * dimension for a \ref Species
    *
    * @param spatial_dim spatial dimension
