@@ -43,12 +43,8 @@ ParticleContainer buildParticlesFromYaml(
 
   ParticleContainer particles;
   for (const std::unique_ptr<SourceParameters>& parameters : list_of_parameters) {
-    auto constant_parameters = dynamic_cast<const ConstantSourceParameters&>(*parameters);
-
     particles.addParticles(loadUniformParticles(
-      parameters->species,
-      constant_parameters.constant_state,
-      parameters->num_particles,
+      *parameters
       generator,
       mesh
     ));
