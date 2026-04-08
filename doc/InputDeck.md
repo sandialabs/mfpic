@@ -218,43 +218,154 @@ This specifies two species, one of which is named `electron` and has roughly cor
 and the other of which is named `non-accelerated proton` which contributes charge to the fields
 but is not accelerated by them.
 
-## Particles
-Details for the (macro)particle physics are defined under the `Particles` key.
-
-### Particle Initial Conditions
-The initial particle populations are defined under the `Initial Conditions` key.
-An arbitrary number of populations may be provided as a sequence,
-each of which is a drifting Maxwellian distributed uniformly throughout the mesh.
-Only constant-in-space initial conditions are presently supported.
+## Initial Conditions
+The initial conditions for species present in the simulation are specified under ``Initial Conditions`` sub-blocks.
+Each initial condition is an item in a list under ``Initial Conditions`` and can have more than one species.
 ```yaml
-Particles:
+<Species Model Type>:
     Initial Conditions:
         - Species: list of strings
-          Number of Macroparticles per Species: integer
-          Constant:
-              Bulk Velocity: list of doubles, length 3 (default: [0.0, 0.0, 0.0]) #[m/s]
-              Temperature: double #[K]
-              Number Density: double #[-/m^3]
+          Number of Macroparticles per Species: integer (only applicable to Particles)
+          <Initial Condition Type>:
+              <Type Subparameters>
         ...
 ```
 
 **``Species``**: List of species for which particles will be loaded.
 These species must be defined in the top-level `Species` block.
 
-**``Bulk Velocity``**: The bulk velocity of the particle distributions.
-If left unset, this will be zero.
-
-**``Temperature``**: Temperature of the particle distribution.
-The temperature is computed independently for each species.
-If set to zero, each particle will have its velocity set to `Bulk Velocity`.
-
-**``Number Density``**: Number density of each species.
-
 **``Number of Macroparticles per Species``**: Total number of particles loaded for each species.
-The weight of each particle is given by
+This option is only applicable when the ``Species Model Type`` is ``Particles``.
+
+Each entry in the ``Initial Conditions`` list can only have one ``Initial Condition Type`` key.
+Valid keys and associated subparameters are described below.
+
+### Constant
+Describes a drifting Maxwellian distribution that is uniformly distributed in space.
+```yaml
+Constant:
+    Bulk Velocity: list of doubles, length 3 (default: [0.0, 0.0, 0.0]) #[m/s]
+    Temperature: double #[K]
+    Number Density: double #[-/m^3]
+```
+
+**``Bulk Velocity``**: The bulk velocity of the distribution in meters per second.
+
+**``Temperature``**: The temperature in Kelvin.
+This is required to be positive.
+
+**``Number Density``**: The number density in number per meter cubed.
+This is required to be positive.
+
+### Sod
+Describes a drifting Maxwellian distribution that is piecewise constant
+with a discontinuity at a prescribed $x$ coordinate.
+```yaml
+Sod:
+    Discontinuity Location: double #[m]
+    Left State:
+        <Same subparameters as Constant>
+    Right State:
+        <Same subparameters as Constant>
+```
+
+**``Discontinuity Location``**: The $x$ location of the jump/discontinuity.
+
+**``Left State``**: The state when $x$ is less than the discontinuity location.
+Valid parameters are the same as for the [Constant](#constant) initial condition type.
+
+**``Right State``**: The state when $x$ is greater than or equal to the discontinuity location.
+Valid parameters are the same as for the [Constant](#constant) initial condition type.
+
+### Gaussian
+Describes a drifting Maxwellian distribution whose parameters are all Gaussian functions in space,
+given by
 $$
-    \text{Weight} = \frac{\text{Number Density} \times \text{Volume of Mesh}}{\text{Number of Macroparticles per Species}}.
+    n = h_n e^{-(x - c)^2 / \sigma^2} + o_n, \\
+    u = h_u e^{-(x - c)^2 / \sigma^2} + o_u, \\
+    P = h_P e^{-(x - c)^2 / \sigma^2} + o_P.
 $$
+*Note*: This condition specifies pressure instead of temprature for the fluid.
+The fluid temperature will be given by the ideal gas law,
+$$
+    T = \frac{P}{n k}.
+$$
+```yaml
+Gaussian:
+    Center: list of doubles #[m]
+    Standard Deviation: double #[m]
+    Offsets:
+        Bulk Velocity: list of doubles, length 3 (default: [0.0, 0.0, 0.0]) #[m/s]
+        Pressure: double #[Pa]
+        Number Density: double #[-/m^3]
+    Heights:
+        Bulk Velocity: list of doubles, length 3 (default: [0.0, 0.0, 0.0]) #[m/s]
+        Pressure: double #[Pa]
+        Number Density: double #[-/m^3]
+```
+
+**``Center``**: The center or mean of the Gaussian function, denoted by $c$ above.
+This should be a point in space and the length of this input should match the dimension of the mesh being used.
+
+**``Standard Deviation``**: The standard deviation of the Gaussian function, denoted as $\sigma$ above.
+
+**``Offsets``**: The offset of the number density, pressure, and bulk velocity.
+This is denoted as $o_n$, $o_P$, and $o_u$ in the equations above, respectively.
+
+**``Heights``**: The height of the Gaussian above the offset at the peak.
+This is denoted as $h_n$, $h_P$, and $h_u$ in the equations above.
+
+**``Bulk Velocity``**: The bulk velocity of the distribution in meters per second.
+
+**``Pressure``**: The pressure in Pascals.
+This is required to be positive.
+
+**``Number Density``**: The number density in number per meter cubed.
+This is required to be positive.
+
+### Periodic Perturbation
+Describes a drifting Maxwellian distribution whose parameters are all sinusoidal functions in space,
+given by
+$$
+    n = n_0 \left(1 + {\varepsilon}_n \cos(\mathbf{k} \cdot \mathbf{x})\right), \\
+    v_i = v_{i,0} \left(1 + \varepsilon_{v_i} \cos(\mathbf{k} \cdot \mathbf{x})\right), \\
+    T = T_0 \left(1 + {\varepsilon}_T \cos(\mathbf{k} \cdot \mathbf{x})\right),
+$$
+for a given wavevector $\mathbf{k}$.
+```yaml
+Periodic Perturbation:
+    Wavevector: list of doubles, length 3 (default: [0.0, 0.0, 0.0]) # [1/m]
+    Base Values:
+        <Same subparameters as Constant>
+    Perturbations:
+        <Same subparameters as Constant>
+```
+
+**``Base Values``**: These entries correspond with $n_0$, $\mathbf{v}_0$, and $T_0$.
+Valid parameters are the same as for the [Constant](#constant) initial condition type.
+
+**``Perturbations``**: These entries correspond with $\varepsilon_n$, $\varepsilon_{\mathbf{v}}$, and $\varepsilon_T$.
+Valid parameters are the same as for the [Constant](#constant) initial condition type,
+but are interpreted as being unitless, relative perturbations in the corresponding quantity.
+
+**``Wavevector``**: This entry is $\mathbf{k}$. To get expected behavior, it should be of the form $\left(n_x 2 \pi / L_x, n_y 2 \pi / L_y, n_z 2 \pi / L_z\right)$ where $n_i \in \mathbb{Z}$ and $\mathbf{L}$ is the spatial extents of the domain.
+
+## Particles
+Details for the (macro)particle physics are defined under the `Particles` key.
+
+### Particle Initial Conditions
+The initial particle populations are defined under the `Initial Conditions` key.
+An arbitrary number of populations may be provided as a sequence,
+with parametrization options described in [Initial Conditions](#initial-conditions).
+```yaml
+Particles:
+    Initial Conditions:
+        - Species: list of strings
+          Number of Macroparticles per Species: integer
+          <Initial Condition Type>:
+              <Type Subparameters>
+        ...
+```
 
 #### Example
 ```yaml
@@ -268,20 +379,21 @@ Particles:
               Number Density: 1.0e15
         - Species: [proton, electron]
           Number of Macroparticles per Species: 10000
-          Constant:
-              Temperature: 11600.0
-              Number Density: 1.0e19
+          Sod:
+              Discontinuity Location: 0.7
+              Left State:
+                  Temperature: 20
+                  Number Density: 1e22
+              Right State:
+                  Temperature: 320
+                  Bulk Velocity: [-1., 0., 0.]
+                  Number Density: 1e23
 ```
 
 ### Particle Sources
 Particles can be dynamically loaded into the simulation with the optional `Sources` key.
-Particles are sourced every time step.
-As with the [Particle Initial Conditions](#particle-initial-conditions),
-particles are loaded uniformly throughout the domain
-according to a drifting Maxwellian velocity distribution.
-The options are identical to those of the initial conditions;
+The options are identical to those of the [Particle Initial Conditions](#particle-initial-conditions);
 the number density and number of macroparticles are loaded each time step.
-Only constant-in-space sources are presently supported.
 
 #### Example
 ```yaml
@@ -351,122 +463,17 @@ Euler Fluids:
 
 ### Euler Fluids Initial Conditions
 The fluids present in the simulation and their initial conditions are specied under ``Initial Conditions``.
-Each initial condition is an item in a list under ``Initial Conditions`` and can have more than one species.
-Only constant-in-space, Sod shock tube, Gaussian, or periodic perturbation initial conditions are supported.
-If a constant in space is desired, then the ``Constant`` keyword and subparameters should be specified.
-If a Sod shock tube problem is desired, then the ``Sod`` keyword and subparameters should be specified.
-If a Gaussian initial condition is desired, then the ``Gaussian`` keyword and subparameters should be specified.
-If a periodic perturbation initial condition is desired, then the ``Periodic Perturbation`` keyword and subparameters should be specified.
-Only one of ``Constant``, ``Sod``, ``Gaussian``, and ``Periodic Perturbation`` can be used.
+Each initial condition is an item in a list under ``Initial Conditions`` and can have more than one species,
+with parametrization options described in [Initial Conditions](#initial-conditions).
 
 ```yaml
 Euler Fluids:
     Initial Conditions:
         - Species: list of strings
-          Constant:
-            Bulk Velocity: list of doubles, length 3 (default: [0.0, 0.0, 0.0]) #[m/s]
-            Temperature: double #[K]
-            Number Density: double #[-/m^3]
-          Sod:
-            Discontinuity Location: double #[m]
-            Left State:
-                Bulk Velocity: list of doubles, length 3 (default: [0.0, 0.0, 0.0]) #[m/s]
-                Temperature: double #[K]
-                Number Density: double #[-/m^3]
-            Right State:
-                Bulk Velocity: list of doubles, length 3 (default: [0.0, 0.0, 0.0]) #[m/s]
-                Temperature: double #[K]
-                Number Density: double #[-/m^3]
-          Gaussian:
-            Center: list of doubles #[m]
-            Standard Deviation: double #[m]
-            Offsets:
-                Bulk Velocity: list of doubles, length 3 (default: [0.0, 0.0, 0.0]) #[m/s]
-                Pressure: double #[Pa]
-                Number Density: double #[-/m^3]
-            Heights:
-                Bulk Velocity: list of doubles, length 3 (default: [0.0, 0.0, 0.0]) #[m/s]
-                Pressure: double #[Pa]
-                Number Density: double #[-/m^3]
-          Periodic Perturbation:
-            Wavevector: list of doubles, length 3 (default: [0.0, 0.0, 0.0]) # [1/m]
-            Base Values:
-                Bulk Velocity: list of doubles, length 3 (default: [0.0, 0.0, 0.0]) #[m/s]
-                Temperature: double #[K]
-                Number Density: double #[-/m^3]
-            Perturbations:
-                Bulk Velocity: list of doubles, length 3 (default: [0.0, 0.0, 0.0]) #[-]
-                Temperature: double #[-]
-                Number Density: double #[-]
+          <Initial Condition Type>:
+              <Type Subparameters>
+        ...
 ```
-
-**``Species``**: A list of the species that will have the given initial conditions.
-Each entry needs to be present in the top-level ``Species`` block.
-
-**``Constant``**: The parameters for a constant initial condion are specified under this key.
-Incompatible with ``Sod`` and ``Gaussian``.
-
-**``Bulk Velocity``**: The bulk velocity of the fluids in meters per second.
-
-**``Temperature``**: The temperature in Kelvin of each fluid.
-This is required to be positive.
-
-**``Pressure``**: The pressure in Pascals of each fluid.
-This is required to be positive.
-
-**``Number Density``**: The number density of each fluid in number per meter cubed.
-This is required to be positive.
-
-**``Sod``**: The parameters for a Sod shock tube problem are specified under this key.
-Incompatible with ``Constant``, ``Gaussian``, and ``Periodic Perturbation``.
-
-**``Discontinuity Location``**: The x location of the jump/discontinuity.
-
-**``Left State``**: The state of the fluid when x is less than the discontinuity location.
-
-**``Right State``**: The state of the fluid when x is greater than or equal to the discontinuity location.
-
-**``Gaussian``**: The parameters for a Gaussian initial condition are specified under this key.
-Incompatible with ``Constant``, ``Sod``, and ``Periodic Pertubation``.
-The number density, velocity, and pressure will all be Gaussian functions in space, given by the following equations,
-$$
-    n = h_n e^{-(x - c)^2 / \sigma^2} + o_n \\
-    u = h_u e^{-(x - c)^2 / \sigma^2} + o_u \\
-    P = h_P e^{-(x - c)^2 / \sigma^2} + o_P
-$$
-*Note*: This condition specifies pressure instead of temprature for the fluid.
-The fluid temperature will be given by the ideal gas law,
-$$
-    T = \frac{P}{n k}.
-$$
-
-**``Center``**: The center or mean of the Gaussian function, denoted by $c$ above.
-This should a point in space and the length of this input should match the dimension of the mesh being used.
-
-**``Standard Deviation``**: The standard deviation of the Gaussian function, denoted as $\sigma$ above.
-
-**``Offsets``**: The offset of the number density, temperature, and bulk_velocity.
-This is denoted as $o_n$, $o_u$ and $o_P$ in the equations above.
-
-**``Heights``**: The height of the Gaussian above the offset at the peak.
-This is denoted as $h_n$, $h_u$ and $h_P$ in the equations above.
-
-**``Periodic Perturbation``**: The parameters for a periodic perturbation initial condition are specified under this key.
-Incompatible with ``Constant``, ``Sod``, and ``Gaussian``.
-The number density, velocity, and temperature are functions of space and the supplied wavevector $\mathbf{k}$ as follows:
-$$
-    n = n_0 \left(1 + {\varepsilon}_n \cos(\mathbf{k} \cdot \mathbf{x})\right) \\
-    v_i = v_{i,0} \left(1 + \varepsilon_{v_i} \cos(\mathbf{k} \cdot \mathbf{x})\right) \\
-    T = T_0 \left(1 + {\varepsilon}_T \cos(\mathbf{k} \cdot \mathbf{x})\right) \, .
-$$
-
-**``Base Values``**: These entries correspond with $n_0$, $\mathbf{v}_0$, and $T_0$.
-They carry the units of temperature, velocity, and number density.
-
-**``Perturbations``**: These entries correspond with $\varepsilon_n$, $\varepsilon_{\mathbf{v}}$, and $\varepsilon_T$.
-They are the unitless perturbation amplitudes.
-
-**``Wavevector``**: This entry is $\mathbf{k}$. To get expected behavior, it should be of the form $\left(n_x 2 \pi / L_x, n_y 2 \pi / L_y, n_z 2 \pi / L_z\right)$ where $n_i \in \mathbb{Z}$ and $\mathbf{L}$ is the spatial extents of the domain.
 
 #### Example
 
