@@ -1,11 +1,4 @@
 
-#include <libmfpic/Species.hpp>
-#include <libmfpic/Constants.hpp>
-#include <libmfpic/DGAssembly.hpp>
-#include <libmfpic/DGEulerAssembly.hpp>
-#include <libmfpic/DGEulerOperations.hpp>
-#include <libmfpic/ElectromagneticFieldsEvaluator.hpp>
-#include <libmfpic/Euler.hpp>
 #include <libmfpic/Constants.hpp>
 #include <libmfpic/DGAssembly.hpp>
 #include <libmfpic/DGEulerAssembly.hpp>
