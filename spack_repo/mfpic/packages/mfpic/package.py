@@ -27,20 +27,25 @@ class Mfpic(CMakePackage):
     depends_on("cxx", type="build")
     depends_on("c",   type="build")
     depends_on("cmake@3.10:", type="build")
-    depends_on("googletest", type="test")
-    depends_on("mfem+threadsafe~zlib~mpi~metis@=4.8.0")
-    depends_on("mfem+debug", when="build_type=Debug")
     depends_on("ninja", type="build")
+
+    depends_on("hdf5+hl")
+    depends_on("mfem+threadsafe~zlib~mpi~metis@=4.8.0")
+    depends_on("yaml-cpp")
+
+    depends_on("googletest", type="test")
     depends_on("python@3:", type="test")
     depends_on("py-h5py~mpi", type="test")
     depends_on("py-numpy", type="test")
     depends_on("py-scipy", type="test")
-    depends_on("vtk~mpi~opengl2+python", type="test")
     depends_on("py-matplotlib", type="test")
-    depends_on("yaml-cpp")
-    depends_on("hdf5+hl")
-    depends_on("hdf5 build_type=Debug", when="build_type=Debug")
+    depends_on("vtk~mpi~opengl2+python", type="test")
+
     depends_on("gdb", when="build_type=Debug")
+    depends_on("hdf5 build_type=Debug", when="build_type=Debug")
+    depends_on("mfem+debug", when="build_type=Debug")
+
+    depends_on("llvm-openmp", when="%llvm", type="build")
 
     @property
     def keep_werror(self):
