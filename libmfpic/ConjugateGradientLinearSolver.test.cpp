@@ -1,4 +1,3 @@
-#include "libmfpic/SourcesFactory.hpp"
 #include <libmfpic/ConjugateGradientLinearSolver.hpp>
 #include <libmfpic/Constants.hpp>
 #include <libmfpic/DirichletBoundaryConditions.hpp>
