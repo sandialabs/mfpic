@@ -25,16 +25,6 @@ ParticleContainer buildParticlesFromYaml(
   const std::unordered_map<std::string, Species>& species_map,
   Generator& generator,
   std::shared_ptr<mfem::Mesh> mesh
-);
-
-// template definitions
-
-template <std::uniform_random_bit_generator Generator>
-ParticleContainer buildParticlesFromYaml(
-  const YAML::Node& sources_node,
-  const std::unordered_map<std::string, Species>& species_map,
-  Generator& generator,
-  std::shared_ptr<mfem::Mesh> mesh
 ) {
   std::vector<std::unique_ptr<SourceParameters>> list_of_parameters = buildListOfSourceParametersFromYAML(
     sources_node,
