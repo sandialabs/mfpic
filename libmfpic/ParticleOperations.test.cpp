@@ -1,7 +1,7 @@
 #include <libmfpic/Constants.hpp>
 #include <libmfpic/Discretization.hpp>
 #include <libmfpic/ElectromagneticFieldsEvaluator.hpp>
-#include <libmfpic/LoadUniformParticles.hpp>
+#include <libmfpic/LoadParticles.hpp>
 #include <libmfpic/ParticleContainer.hpp>
 #include <libmfpic/ParticleOperations.hpp>
 #include <libmfpic/ReflectingParticleBoundary.hpp>
@@ -955,10 +955,8 @@ TEST(ParticleOperations, ParticleMomentsCorrectForMaxwellian) {
   constexpr int num_particles = 200000;
   std::mt19937 generator;
 
-  ParticleContainer particles = loadUniformParticles(
-    default_species,
-    source_state_parameters,
-    num_particles,
+  ParticleContainer particles = loadParticles(
+    ConstantSourceParameters(default_species, source_state_parameters, num_particles),
     generator,
     mesh
   );

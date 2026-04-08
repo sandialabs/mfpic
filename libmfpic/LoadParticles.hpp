@@ -26,7 +26,7 @@ namespace mfpic {
  * @returns Container of created particles.
  */
 template <std::uniform_random_bit_generator Generator>
-ParticleContainer loadUniformParticles(
+ParticleContainer loadParticles(
   const SourceParameters& source_parameters,
   Generator& generator,
   std::shared_ptr<mfem::Mesh> mesh

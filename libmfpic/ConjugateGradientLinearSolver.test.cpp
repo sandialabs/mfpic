@@ -1,10 +1,11 @@
+#include "libmfpic/SourcesFactory.hpp"
 #include <libmfpic/ConjugateGradientLinearSolver.hpp>
 #include <libmfpic/Constants.hpp>
 #include <libmfpic/DirichletBoundaryConditions.hpp>
 #include <libmfpic/DirichletBoundaryConditionsFactory.hpp>
 #include <libmfpic/Discretization.hpp>
 #include <libmfpic/ElectrostaticFieldState.hpp>
-#include <libmfpic/LoadUniformParticles.hpp>
+#include <libmfpic/LoadParticles.hpp>
 #include <libmfpic/ParticleOperations.hpp>
 #include <libmfpic/ReflectingParticleBoundary.hpp>
 
@@ -190,16 +191,12 @@ TEST(ConjugateGradientLinearSolver, InvertElectrostaticMatrix) {
   std::default_random_engine generator;
   ParticleContainer particle_container;
 
-  particle_container.addParticles(loadUniformParticles(
-    electron_species,
-    particle_source_state_parameters,
-    num_particles,
+  particle_container.addParticles(loadParticles(
+    ConstantSourceParameters(electron_species, particle_source_state_parameters, num_particles),
     generator,
     mesh));
-  particle_container.addParticles(loadUniformParticles(
-    proton_species,
-    particle_source_state_parameters,
-    num_particles,
+  particle_container.addParticles(loadParticles(
+    ConstantSourceParameters(proton_species, particle_source_state_parameters, num_particles),
     generator,
     mesh));
 

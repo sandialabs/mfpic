@@ -1,7 +1,7 @@
 #pragma once
 
 #include <libmfpic/Errors.hpp>
-#include <libmfpic/LoadUniformParticles.hpp>
+#include <libmfpic/LoadParticles.hpp>
 #include <libmfpic/ParticleContainer.hpp>
 #include <libmfpic/SourcesFactory.hpp>
 
@@ -33,7 +33,7 @@ ParticleContainer buildParticlesFromYaml(
 
   ParticleContainer particles;
   for (const std::unique_ptr<SourceParameters>& parameters : list_of_parameters) {
-    particles.addParticles(loadUniformParticles(
+    particles.addParticles(loadParticles(
       *parameters
       generator,
       mesh
