@@ -198,14 +198,13 @@ IntegratedCharge ParticleOperations::assembleCharge(
     const mfem::FiniteElement *fe = finite_element_space.GetFE(elem_id);
 
     const mfem::Vector particle_position(particle.position.GetData(), dim_); 
-    const mfem::Vector particle_velocity(particle.velocity.GetData(), dim_); 
     element_transformation->TransformBack(particle_position, integration_point);
     element_transformation->SetIntPoint(&integration_point);
     mfem::Vector psi_i(fe->GetDof());
     fe->CalcPhysShape(*element_transformation,psi_i);
     finite_element_space.GetElementVDofs(elem_id, vector_dofs);
 
-    double low_fidelity_pdf_value = low_fidelity_operations.evaluatePDF(low_fidelity_state,particle_position,particle_velocity,particle.element,particle_species);
+    double low_fidelity_pdf_value = low_fidelity_operations.evaluatePDF(low_fidelity_state,particle_position,particle.velocity,particle.element,particle_species);
     double noise_reducing_factor = (1 - low_fidelity_pdf_value / particle.pdf_value);
 
     for (int i = 0; i < fe->GetDof(); i++) {

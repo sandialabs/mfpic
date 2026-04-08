@@ -195,7 +195,7 @@ TEST(LoadUniformMaxwellianParticles, ParticlePDFsAreMaxwellian) {
   prim(euler::PrimitiveVariables::Z_BULK_VELOCITY) = bulk_velocity(2);
   prim(euler::PrimitiveVariables::TEMPERATURE) = temperature;
   for (const Particle& particle : particles) {
-  const double expected_pdf_value = euler::evaluateMaxwellian(prim, particle.velocity, species,simple_mesh->SpaceDimension());
+  const double expected_pdf_value = euler::evaluateMaxwellian(prim, particle.velocity, species);
     EXPECT_DOUBLE_EQ(particle.pdf_value, expected_pdf_value);
   }
 }

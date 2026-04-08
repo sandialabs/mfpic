@@ -145,7 +145,6 @@ namespace mfpic {
   {
     mfem::FiniteElementSpace & finite_element_space = charge_discretization_.getFeSpace();
     mfem::Mesh * mesh = finite_element_space.GetMesh();
-    int dim = mesh->SpaceDimension();
     for (int ispecies = 0; ispecies < current_state.numSpecies(); ++ispecies) {
       const LowFidelitySpeciesState& current_species_state = current_state.getSpeciesState(ispecies);
       Species current_species = current_species_state.getSpecies();
@@ -163,7 +162,7 @@ namespace mfpic {
         current_species_grid_function.GetVectorValue(element, ip_ref, fluid_state_at_position);
 
         mfem::Vector primitive_state = euler::convertFromConservativeToPrimitive(fluid_state_at_position,current_species); 
-        double pdf_value = euler::evaluateMaxwellian(primitive_state,velocity,current_species,dim);
+        double pdf_value = euler::evaluateMaxwellian(primitive_state,velocity,current_species);
         return pdf_value;
       }
     }

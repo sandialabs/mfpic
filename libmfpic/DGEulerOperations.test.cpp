@@ -305,7 +305,7 @@ TEST(DGEulerOperations, MoveConstant) {
   EXPECT_LE(error, tolerance);
 }
 
-TEST(DGEulerOperations, evaluatePDFCorrectIn1D) {
+TEST(DGEulerOperations, evaluatePDFCorrectIn3D) {
   Species default_species{.charge = -constants::elementary_charge, .mass = constants::electron_mass};
   constexpr double number_density = 1e22;
   constexpr double temperature = 300;
@@ -335,7 +335,7 @@ TEST(DGEulerOperations, evaluatePDFCorrectIn1D) {
   const double sigma = std::sqrt(constants::boltzmann_constant * temperature / default_species.mass);
 
   const double expected_at_mean =
-      number_density / (std::sqrt(2.0 * M_PI) * sigma);
+      number_density / std::pow(std::sqrt(2.0 * M_PI) * sigma,3);
   EXPECT_NEAR(pdf_value, expected_at_mean, expected_at_mean * 1e-12);
 
 }
