@@ -1,3 +1,5 @@
+#include "libmfpic/ParticleContainer.hpp"
+#include "libmfpic/SourcesFactory.hpp"
 #include <libmfpic/LoadParticles.hpp>
 
 #include <gtest/gtest.h>
@@ -245,6 +247,35 @@ TEST(LoadParticles, ParticleVelocitiesMeanAndStdAreCorrectWhenKappaDistributionI
   constexpr double expected_sample_variance_maxwellian = 3.0 * constants::boltzmann_constant * temperature / default_species.mass;
   constexpr double expected_sample_variance_kappa = expected_sample_variance_maxwellian * (kappa / (kappa - 0.5));
   EXPECT_NEAR(sample_variance, expected_sample_variance_kappa, relative_tolerance * expected_sample_variance_kappa);
+}
+
+TEST(LoadParticles, LoadedParticlesRespectSodDiscontinuity) {
+  constexpr int num_particles = 100;
+  constexpr double left_number_density = 1.0;
+  constexpr double discontinuity_location = 0.7;
+  const SourceStateParameters left_state_parameters{.number_density = left_number_density};
+  const SourceStateParameters right_state_parameters{.number_density = 0.0};
+  const SodSourceParameters sod_parameters(
+    default_species,
+    discontinuity_location,
+    left_state_parameters,
+    right_state_parameters,
+    num_particles
+  );
+  std::default_random_engine generator;
+
+  ParticleContainer particles = loadParticles(
+    sod_parameters,
+    generator,
+    simple_mesh
+  );
+
+  constexpr double expected_physical_particles = discontinuity_location * left_number_density;
+  constexpr double expected_particle_weight = expected_physical_particles / num_particles;
+  for (const Particle& particle : particles) {
+    EXPECT_DOUBLE_EQ(particle.weight, expected_particle_weight);
+    EXPECT_LE(particle.position[0], discontinuity_location);
+  }
 }
 
 } // namespace
