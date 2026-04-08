@@ -6,15 +6,16 @@
 
 namespace mfpic {
 
-/// Generate points uniformly throughout a mesh.
-class UniformMeshDistribution {
+/// Generate points in a mesh according to a given probability density function.
+class MeshDistribution {
 public:
   /**
    * @brief Ctor.
    *
-   * @param[in] mesh Mesh in which to generate points.
+   * @param[in] mesh         Mesh in which to generate points.
+   * @param[in] distribution Probability density function of points in the mesh (no need to normalize).
    */
-  UniformMeshDistribution(std::shared_ptr<mfem::Mesh> mesh);
+  MeshDistribution(std::shared_ptr<mfem::Mesh> mesh, std::function<double(const mfem::Vector&)> distribution);
 
   /**
    * @brief Generate a random point in the mesh and the index of the element containing it.
@@ -38,7 +39,7 @@ private:
 
 // template definitions
 template <std::uniform_random_bit_generator Generator>
-std::pair<mfem::Vector, int> UniformMeshDistribution::generateRandomPointAndElement(Generator& generator) {
+std::pair<mfem::Vector, int> MeshDistribution::generateRandomPointAndElement(Generator& generator) {
   const int random_element = element_distribution_(generator);
 
   mfem::IntegrationPoint random_reference_point;
