@@ -15,6 +15,9 @@ jobs:
   build_and_test:
     runs-on: ${{ matrix.os }}
 
+    permissions:
+      actions: write
+
     env:
       SPACK_DISABLE_LOCAL_CONFIG: true
       SPACK_USER_CACHE_PATH: spack_cache
@@ -71,8 +74,6 @@ jobs:
       env:
         GH_TOKEN: ${{ github.token }}
         GH_REPO: ${{ github.repository }}
-      permissions:
-        actions: write
       run: gh cache delete "${{env.SPACK_VERSION}}-${{matrix.os}}-${{matrix.build_type}}-${{matrix.compiler}}" || true
 
     - name: Save spack cache if on main branch
