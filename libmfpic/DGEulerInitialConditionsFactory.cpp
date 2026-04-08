@@ -6,8 +6,8 @@
 namespace mfpic {
 
 LowFidelitySpeciesState buildEulerSpeciesState(Discretization& discretization, const SourceParameters& parameters) {
-  std::unique_ptr<mfem::VectorCoefficient> initial_conditions_coefficient = parameters.getEulerVectorCoefficient();
-  LowFidelitySpeciesState euler_species_state(discretization, parameters.species, *initial_conditions_coefficient);
+  mfem::VectorFunctionCoefficient initial_conditions_coefficient = parameters.getEulerVectorCoefficient();
+  LowFidelitySpeciesState euler_species_state(discretization, parameters.species, initial_conditions_coefficient);
 
   return euler_species_state;
 }
@@ -18,7 +18,8 @@ LowFidelityState buildEulerState(
 {
   std::vector<std::pair<Species, std::unique_ptr<mfem::VectorCoefficient>>> species_coefficient_list;
   for (const std::unique_ptr<SourceParameters>& parameters : list_of_parameters) {
-    std::unique_ptr<mfem::VectorCoefficient> initial_conditions_coefficient = parameters->getEulerVectorCoefficient();
+    auto initial_conditions_coefficient =
+      std::make_unique<mfem::VectorFunctionCoefficient>(parameters->getEulerVectorCoefficient());
     species_coefficient_list.emplace_back(
       std::piecewise_construct,
       std::forward_as_tuple(parameters->species),

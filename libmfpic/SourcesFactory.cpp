@@ -10,6 +10,16 @@ mfem::Vector constructPrimitiveState(const SourceStateParameters state) {
 }
 }
 
+mfem::VectorFunctionCoefficient SourceParameters::getEulerVectorCoefficient() const {
+  auto euler_vector_function = [this] (const mfem::Vector& x, mfem::Vector& conservative_state) {
+    const SourceStateParameters source_state_parameters = sourceStateParametersAtPoint(x);
+    const mfem::Vector primitive_state = constructPrimitiveState(source_state_parameters);
+    conservative_state = euler::convertFromPrimitiveToConservative(primitive_state, species);
+  };
+
+  return mfem::VectorFunctionCoefficient(euler::ConservativeVariables::NUM_VARS, euler_vector_function);
+}
+
 ConstantSourceParameters::ConstantSourceParameters(
   const Species& species,
   const SourceStateParameters& state_parameters,
@@ -28,12 +38,8 @@ ConstantSourceParameters::ConstantSourceParameters(
   , constant_state{.number_density = number_density, .bulk_velocity = bulk_velocity, .temperature = temperature, .kappa = kappa}
 {}
 
-std::unique_ptr<mfem::VectorCoefficient> ConstantSourceParameters::getEulerVectorCoefficient() const {
-  const mfem::Vector primitive_state = constructPrimitiveState(constant_state);
-
-  const mfem::Vector conservative_state = euler::convertFromPrimitiveToConservative(primitive_state, species);
-  auto euler_coefficient = std::make_unique<mfem::VectorConstantCoefficient>(conservative_state);
-  return euler_coefficient;
+SourceStateParameters ConstantSourceParameters::sourceStateParametersAtPoint(const mfem::Vector&) const {
+  return constant_state;
 }
 
 SodSourceParameters::SodSourceParameters(
@@ -48,26 +54,12 @@ SodSourceParameters::SodSourceParameters(
   , right_state(right_state_parameters)
 {}
 
-std::unique_ptr<mfem::VectorCoefficient> SodSourceParameters::getEulerVectorCoefficient() const {
-  const mfem::Vector primitive_state_left = constructPrimitiveState(left_state);
-  const mfem::Vector primitive_state_right = constructPrimitiveState(right_state);
-
-  const mfem::Vector conservative_state_left = euler::convertFromPrimitiveToConservative(primitive_state_left, species);
-  const mfem::Vector conservative_state_right = euler::convertFromPrimitiveToConservative(primitive_state_right, species);
-
-  auto function = [
-    &discontinuity_location = discontinuity_location,
-    conservative_state_right = conservative_state_right,
-    conservative_state_left = conservative_state_left](const mfem::Vector &x, mfem::Vector &y)
-  {
-    if (x[0] < discontinuity_location) {
-      y = conservative_state_left;
-    } else {
-      y = conservative_state_right;
-    }
-  };
-  auto euler_coefficient = std::make_unique<mfem::VectorFunctionCoefficient>(euler::ConservativeVariables::NUM_VARS, function);
-  return euler_coefficient;
+SourceStateParameters SodSourceParameters::sourceStateParametersAtPoint(const mfem::Vector& x) const {
+  if (x[0] < discontinuity_location) {
+    return left_state;
+  } else {
+    return right_state;
+  }
 }
 
 GaussianSourceParameters::GaussianSourceParameters(
@@ -88,42 +80,29 @@ GaussianSourceParameters::GaussianSourceParameters(
   , pressure_height(pressure_height)
 {}
 
-std::unique_ptr<mfem::VectorCoefficient> GaussianSourceParameters::getEulerVectorCoefficient() const {
-  const mfem::Vector offsets_primitive = constructPrimitiveState(offsets);
-  const mfem::Vector heights_primitive = constructPrimitiveState(heights);
+SourceStateParameters GaussianSourceParameters::sourceStateParametersAtPoint(const mfem::Vector& x) const {
+  mfem::Vector shifted_x(x.Size());
+  for (int i_dim = 0; i_dim < x.Size(); ++i_dim) {
+    shifted_x = x[i_dim] - center[i_dim];
+  }
+  const double exponential = exp(-0.5 * (shifted_x * shifted_x) / (standard_deviation * standard_deviation));
 
-  auto function = [
-    standard_deviation = standard_deviation,
-    center = center,
-    species = species,
-    offsets_primitive = offsets_primitive,
-    heights_primitive = heights_primitive,
-    pressure_offset = pressure_offset,
-    pressure_height = pressure_height](const mfem::Vector& x, mfem::Vector& y)
-  {
-    mfem::Vector shifted_x(x.Size());
-    for (int i_dim = 0; i_dim < x.Size(); ++i_dim) {
-      shifted_x = x[i_dim] - center[i_dim];
-    }
-    const double exponential = exp(-0.5 * (shifted_x * shifted_x) / (standard_deviation * standard_deviation));
+  const double number_density_offset = offsets.number_density;
+  const mfem::Vector velocity_offset = offsets.bulk_velocity;
+  const double number_density_height = heights.number_density;
+  const mfem::Vector velocity_height = heights.bulk_velocity;
 
-    const double number_density_offset = offsets_primitive[euler::PrimitiveVariables::NUMBER_DENSITY];
-    const mfem::Vector velocity_offset = euler::getBulkVelocityFromPrimitiveState(offsets_primitive);
-    const double number_density_height = heights_primitive[euler::PrimitiveVariables::NUMBER_DENSITY];
-    const mfem::Vector velocity_height = euler::getBulkVelocityFromPrimitiveState(heights_primitive);
+  const double number_density = number_density_offset + exponential * number_density_height;
+  mfem::Vector velocity(velocity_offset);
+  velocity.Add(exponential, velocity_height);
+  const double pressure = pressure_offset + exponential * pressure_height;
+  const double temperature = euler::temperature(number_density, pressure);
 
-    const double number_density = number_density_offset + exponential * number_density_height;
-    mfem::Vector velocity(velocity_offset);
-    velocity.Add(exponential, velocity_height);
-    const double pressure = pressure_offset + exponential * pressure_height;
-    const double temperature = euler::temperature(number_density, pressure);
-
-    const mfem::Vector primitive_state = euler::constructPrimitiveState(number_density, velocity, temperature);
-    y = euler::convertFromPrimitiveToConservative(primitive_state, species);
+  return SourceStateParameters{
+    .number_density = number_density,
+    .bulk_velocity = velocity,
+    .temperature = temperature,
   };
-
-  auto euler_coefficient = std::make_unique<mfem::VectorFunctionCoefficient>(euler::ConservativeVariables::NUM_VARS, function);
-  return euler_coefficient;
 }
 
 PeriodicPerturbationSourceParameters::PeriodicPerturbationSourceParameters(
@@ -138,33 +117,25 @@ PeriodicPerturbationSourceParameters::PeriodicPerturbationSourceParameters(
   , perturbations(perturbations)
 {}
 
-std::unique_ptr<mfem::VectorCoefficient> PeriodicPerturbationSourceParameters::getEulerVectorCoefficient() const {
+SourceStateParameters PeriodicPerturbationSourceParameters::sourceStateParametersAtPoint(const mfem::Vector& x) const {
+  double k_dot_x = 0.;
+  for (int i_dim = 0; i_dim < x.Size(); ++i_dim) {
+    k_dot_x += wavevector[i_dim] * x[i_dim];
+  }
+  const double cos_kx = cos(k_dot_x);
 
-  auto function = [
-    &wavevector = wavevector,
-    &species = species,
-    &base = base_values,
-    &perturbations = perturbations](const mfem::Vector& x, mfem::Vector& y)
-  {
-    double k_dot_x = 0.;
-    for (int i_dim = 0; i_dim < x.Size(); ++i_dim) {
-      k_dot_x += wavevector[i_dim] * x[i_dim];
-    }
-    const double cos_kx = cos(k_dot_x);
+  const double number_density = base_values.number_density * (1. + perturbations.number_density * cos_kx);
+  mfem::Vector velocity(base_values.bulk_velocity.Size());
+  for (int i_dim = 0; i_dim < velocity.Size(); ++ i_dim) {
+    velocity[i_dim] = base_values.bulk_velocity[i_dim] * (1. + perturbations.bulk_velocity[i_dim] * cos_kx);
+  }
+  const double temperature = base_values.temperature * (1. + perturbations.temperature * cos_kx);
 
-    const double number_density = base.number_density * (1. + perturbations.number_density * cos_kx);
-    mfem::Vector velocity(base.bulk_velocity.Size());
-    for (int i_dim = 0; i_dim < velocity.Size(); ++ i_dim) {
-      velocity[i_dim] = base.bulk_velocity[i_dim] * (1. + perturbations.bulk_velocity[i_dim] * cos_kx);
-    }
-    const double temperature = base.temperature * (1. + perturbations.temperature * cos_kx);
-
-    mfem::Vector primitive_state = euler::constructPrimitiveState(number_density, velocity, temperature);
-    y = euler::convertFromPrimitiveToConservative(primitive_state, species);
+  return SourceStateParameters{
+    .number_density = number_density,
+    .bulk_velocity = velocity,
+    .temperature = temperature,
   };
-
-  auto euler_coefficient = std::make_unique<mfem::VectorFunctionCoefficient>(euler::ConservativeVariables::NUM_VARS, function);
-  return euler_coefficient;
 }
 
 SourceStateParameters buildSourceStateParametersFromYAML(const YAML::Node& state_node) {
