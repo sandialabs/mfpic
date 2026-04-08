@@ -1,5 +1,3 @@
-#include "libmfpic/ParticleContainer.hpp"
-#include "libmfpic/SourcesFactory.hpp"
 #include <libmfpic/LoadParticles.hpp>
 
 #include <gtest/gtest.h>
