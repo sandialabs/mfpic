@@ -1,3 +1,4 @@
+#include "libmfpic/SourcesFactory.hpp"
 #include <libmfpic/LoadParticles.hpp>
 
 #include <gtest/gtest.h>
@@ -21,9 +22,7 @@ TEST(LoadParticles, NoParticlesAddedWhenNoParticlesRequested) {
   std::default_random_engine generator;
 
   ParticleContainer particles = loadParticles(
-    default_species,
-    source_state_parameters,
-    num_particles,
+    ConstantSourceParameters(default_species, source_state_parameters, num_particles),
     generator,
     simple_mesh
   );
@@ -41,9 +40,7 @@ TEST(LoadParticles, NumLoadedParticlesIsAsRequested) {
   std::default_random_engine generator;
 
   ParticleContainer particles = loadParticles(
-    default_species,
-    source_state_parameters,
-    num_particles,
+    ConstantSourceParameters(default_species, source_state_parameters, num_particles),
     generator,
     simple_mesh
   );
@@ -63,9 +60,7 @@ TEST(LoadParticles, LoadedParticlesAllUseBulkVelocityWithZeroTemperature) {
   std::default_random_engine generator;
 
   ParticleContainer particles = loadParticles(
-    default_species,
-    source_state_parameters,
-    num_particles,
+    ConstantSourceParameters(default_species, source_state_parameters, num_particles),
     generator,
     simple_mesh
   );
@@ -89,9 +84,7 @@ TEST(LoadParticles, ParticleWeightSetCorrectly) {
   std::default_random_engine generator;
 
   ParticleContainer particles = loadParticles(
-    default_species,
-    source_state_parameters,
-    num_particles,
+    ConstantSourceParameters(default_species, source_state_parameters, num_particles),
     generator,
     simple_mesh
   );
@@ -113,9 +106,7 @@ TEST(LoadParticles, ParticlesAreUniformlyDistributedInSpace) {
   std::default_random_engine generator;
 
   ParticleContainer particles = loadParticles(
-    default_species,
-    source_state_parameters,
-    num_particles,
+    ConstantSourceParameters(default_species, source_state_parameters, num_particles),
     generator,
     simple_mesh
   );
@@ -151,9 +142,7 @@ TEST(LoadParticles, ParticleVelocitiesAreMaxwellianWhenMaxwellianParticlesAreReq
   std::default_random_engine generator;
 
   ParticleContainer particles = loadParticles(
-    default_species,
-    source_state_parameters,
-    num_particles,
+    ConstantSourceParameters(default_species, source_state_parameters, num_particles),
     generator,
     simple_mesh
   );
@@ -192,9 +181,7 @@ TEST(LoadParticles, ParticleVelocitiesAreMaxwellianWithLargeKappa) {
   std::default_random_engine generator;
 
   ParticleContainer particles = loadParticles(
-    default_species,
-    source_state_parameters,
-    num_particles,
+    ConstantSourceParameters(default_species, source_state_parameters, num_particles),
     generator,
     simple_mesh
   );
@@ -234,9 +221,7 @@ TEST(LoadParticles, ParticleVelocitiesMeanAndStdAreCorrectWhenKappaDistributionI
   std::default_random_engine generator;
 
   ParticleContainer particles = loadParticles(
-    default_species,
-    source_state_parameters,
-    num_particles,
+    ConstantSourceParameters(default_species, source_state_parameters, num_particles),
     generator,
     simple_mesh
   );

@@ -34,7 +34,7 @@ ParticleContainer buildParticlesFromYaml(
   ParticleContainer particles;
   for (const std::unique_ptr<SourceParameters>& parameters : list_of_parameters) {
     particles.addParticles(loadParticles(
-      *parameters
+      *parameters,
       generator,
       mesh
     ));
