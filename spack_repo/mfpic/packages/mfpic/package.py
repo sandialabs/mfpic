@@ -28,8 +28,8 @@ class Mfpic(CMakePackage):
     depends_on("c",   type="build")
     depends_on("cmake@3.10:", type="build")
     depends_on("googletest", type="test")
-    depends_on("mfem~zlib~mpi~metis@=4.8.0", when="build_type=Release")
-    depends_on("mfem~zlib~mpi~metis@=4.8.0 +debug", when="build_type=Debug")
+    depends_on("mfem+threadsafe~zlib~mpi~metis@=4.8.0")
+    depends_on("mfem+debug", when="build_type=Debug")
     depends_on("ninja", type="build")
     depends_on("python@3:", type="test")
     depends_on("py-h5py~mpi", type="test")
@@ -38,8 +38,8 @@ class Mfpic(CMakePackage):
     depends_on("vtk~mpi~opengl2+python", type="test")
     depends_on("py-matplotlib", type="test")
     depends_on("yaml-cpp")
-    depends_on("hdf5+hl", when="build_type=Release")
-    depends_on("hdf5+hl build_type=Debug", when="build_type=Debug")
+    depends_on("hdf5+hl")
+    depends_on("hdf5 build_type=Debug", when="build_type=Debug")
     depends_on("gdb", when="build_type=Debug")
 
     @property
