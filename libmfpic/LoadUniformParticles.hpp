@@ -15,13 +15,11 @@
 namespace mfpic {
 
 /**
- * @brief Load a requested number of particles distributed uniformly in space and a parametrized velocity distribuion.
+ * @brief Load a requested number of particles according to a parametrized distribution.
  *
  * @tparam Generator A UniformRandomBitGenerator type.
  *
- * @param[in]     species                    Species for which to create particles.
- * @param[in]     source_state_parameters    Parameters for the state of the particle distribution.
- * @param[in]     num_particles              Number of particles to create.
+ * @param[in]     source_parameters          Parameters for the particle distribution.
  * @param[in,out] generator                  A UniformRandomBitGenerator used to generate some random numbers.
  * @param[in]     mesh                       Mesh in which to create particles.
  *
