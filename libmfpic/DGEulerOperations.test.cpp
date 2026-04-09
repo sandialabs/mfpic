@@ -328,8 +328,9 @@ TEST(DGEulerOperations, evaluatePDFCorrectIn3D) {
   LowFidelityState low_fidelity_state = buildEulerState(dg_discretization, list_of_parameters);
 
   const mfem::Vector position({0.5,0.0,0.0});
+  const mfem::Vector particle_position(position.GetData(), 1); 
   const mfem::Vector velocity({bulk_velocity(0),0.0,0.0});
-  double pdf_value = dg_euler_operations.evaluatePDF(low_fidelity_state,position,velocity,0,default_species);
+  double pdf_value = dg_euler_operations.evaluatePDF(low_fidelity_state,particle_position,velocity,0,default_species);
 
   mfem::Vector prim = euler::constructPrimitiveState(number_density, bulk_velocity, temperature);
   const double sigma = std::sqrt(constants::boltzmann_constant * temperature / default_species.mass);
