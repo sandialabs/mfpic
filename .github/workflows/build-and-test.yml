@@ -54,8 +54,7 @@ jobs:
 
     - name: Build and test
       run: |
-        sudo apt install llvm
-        apt search libomp
+        sudo apt install llvm libomp5-18
         . spack/share/spack/setup-env.sh
         spack bootstrap now
         spack compiler find
