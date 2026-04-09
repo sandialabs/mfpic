@@ -4,7 +4,7 @@
 #include <libmfpic/DirichletBoundaryConditionsFactory.hpp>
 #include <libmfpic/Discretization.hpp>
 #include <libmfpic/ElectrostaticFieldState.hpp>
-#include <libmfpic/LoadUniformMaxwellianParticles.hpp>
+#include <libmfpic/LoadUniformParticles.hpp>
 #include <libmfpic/ParticleOperations.hpp>
 #include <libmfpic/ReflectingParticleBoundary.hpp>
 
@@ -172,32 +172,33 @@ TEST(ConjugateGradientLinearSolver, InvertElectrostaticMatrix) {
   mfem::GridFunction potential = field_state.getPotential();
 
   auto default_particle_boundary_factory = std::make_shared<ReflectingParticleBoundaryFactory>();
+  const int num_species = 2;
   ParticleOperations particle_operations(
     electrostatic_discretization,
     {},
-    default_particle_boundary_factory);
+    default_particle_boundary_factory,
+    num_species);
 
   Species electron_species{.charge = qe, .mass = me};
   Species proton_species{.charge = constants::elementary_charge, .mass = constants::proton_mass};
   constexpr int num_particles = 100000;
-  constexpr double temperature = 0.;
-  const mfem::Vector bulk_velocity{0, 0, 0};
+  const SourceStateParameters particle_source_state_parameters{
+    .number_density = number_density,
+    .bulk_velocity = mfem::Vector({0.0, 0.0, 0.0}),
+    .temperature = 0.0,
+  };
   std::default_random_engine generator;
   ParticleContainer particle_container;
 
-  particle_container.addParticles(loadUniformMaxwellianParticles(
+  particle_container.addParticles(loadUniformParticles(
     electron_species,
-    bulk_velocity,
-    temperature,
-    number_density,
+    particle_source_state_parameters,
     num_particles,
     generator,
     mesh));
-  particle_container.addParticles(loadUniformMaxwellianParticles(
+  particle_container.addParticles(loadUniformParticles(
     proton_species,
-    bulk_velocity,
-    temperature,
-    number_density,
+    particle_source_state_parameters,
     num_particles,
     generator,
     mesh));

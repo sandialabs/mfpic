@@ -17,24 +17,27 @@ class Discretization;
 class VerletTimeIntegrator {
 public:
 
-  VerletTimeIntegrator(Discretization &discretization)
-  : discretization_(discretization)
+  VerletTimeIntegrator(Discretization &discretization, const bool &push_low_fidelity_with_particle_fields = false)
+  : discretization_(discretization), push_lf_with_particle_fields_(push_low_fidelity_with_particle_fields)
   {}
 
   /**
    * @brief Advance the particle and low fidelity states one timestep using the Verlet algorithm
    *
    * @param[inout] low_fidelity_states Vector of \ref LowFidelityState 's to be updated
+   * @param[inout] low_fidelity_field_states Vector of \ref ElectrostaticFieldStates to be updated
    * @param low_fidelity_operations Vector of \ref LowFidelityOperations that form right-hand-side contributions
    * @param[inout] particle_container Particle container to be updated
    * @param particle_operations \ref ParticleOperations that form the right-hand-side contributions
-   * @param[inout] field_state \ref ElectrostaticFieldState to be updated
+   * @param[inout] particle_field_state Particle \ref ElectrostaticFieldState to be updated
    * @param field_operations \ref ElectrostaticFieldOperations that form right-hand-side contributions
    * @param dt Time step
    */
 
   void advanceTimestep(
+    // TODO BWR is states and field_states confusing?
     std::vector<LowFidelityState>& low_fidelity_states,
+    std::vector<ElectrostaticFieldState>& low_fidelity_field_states,
     const std::vector<std::unique_ptr<LowFidelityOperations>>& low_fidelity_operations,
     ParticleContainer& particle_container,
     const ParticleOperations& particle_operations,
@@ -44,6 +47,7 @@ public:
   );
 private:
   Discretization & discretization_;
+  const bool & push_lf_with_particle_fields_;
 };
 
 } // namespace mfpic

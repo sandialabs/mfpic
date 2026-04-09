@@ -1,3 +1,4 @@
+#include <libmfpic/Discretization.hpp>
 #include <libmfpic/Errors.hpp>
 #include <libmfpic/MeshUtilities.hpp>
 #include <limits>
@@ -166,6 +167,46 @@ double getSmallestCellLengthscale(mfem::Mesh& mesh) {
     min_length = fmin(min_length, mesh.GetElementSize(i, 1));
 
   return min_length;
+}
+
+mfem::Vector elementwiseIntegral(
+  mfem::Mesh& mesh,
+  std::function<double(const mfem::Vector&)> function,
+  int integrand_order
+) {
+  constexpr int finite_element_order = 0;
+  constexpr FETypes element_type = FETypes::DG;
+  Discretization integrals_discretization(&mesh, finite_element_order, element_type);
+
+  mfem::FunctionCoefficient function_coefficient(function);
+
+  mfem::LinearForm integrals(&integrals_discretization.getFeSpace());
+  constexpr int element_transform_order_multiplier = 1;
+  integrals.AddDomainIntegrator(new mfem::DomainLFIntegrator(
+    function_coefficient,
+    element_transform_order_multiplier,
+    integrand_order
+  ));
+
+  integrals.Assemble();
+
+  return integrals;
+}
+
+mfem::Mesh createMeshOfUnitBoxWith2ElemsPerDimension(mfem::Element::Type element_type) {
+  constexpr int num_elems_per_dim = 2;
+  switch (element_type) {
+  case mfem::Element::SEGMENT:
+    return mfem::Mesh::MakeCartesian1D(num_elems_per_dim);
+  case mfem::Element::TRIANGLE:
+  case mfem::Element::QUADRILATERAL:
+    return mfem::Mesh::MakeCartesian2D(num_elems_per_dim, num_elems_per_dim, element_type);
+  case mfem::Element::TETRAHEDRON:
+  case mfem::Element::HEXAHEDRON:
+    return mfem::Mesh::MakeCartesian3D(num_elems_per_dim, num_elems_per_dim, num_elems_per_dim, element_type);
+  default:
+    errorWithDeveloperMessage("Element type not supported.");
+  }
 }
 
 } // namespace mfpic

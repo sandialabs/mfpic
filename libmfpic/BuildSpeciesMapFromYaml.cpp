@@ -10,6 +10,7 @@ namespace mfpic {
 std::unordered_map<std::string, Species> buildSpeciesMapFromYaml(const YAML::Node& species_nodes) {
   std::unordered_map<std::string, Species> species_map;
   if (species_nodes.IsMap()) {
+    int species_id = 0;
     for (YAML::const_iterator it = species_nodes.begin(); it != species_nodes.end(); it++) {
       const std::string species_name = it->first.as<std::string>();
       const YAML::Node species_node = it->second;
@@ -29,12 +30,13 @@ std::unordered_map<std::string, Species> buildSpeciesMapFromYaml(const YAML::Nod
       }
 
       Species species{
-        .charge = charge, .mass = mass, .charge_over_mass = charge_over_mass, .specific_heat_ratio = specific_heat_ratio};
+        .charge = charge, .mass = mass, .charge_over_mass = charge_over_mass, .specific_heat_ratio = specific_heat_ratio, .id = species_id};
       species_map.emplace(
         std::piecewise_construct,
         std::forward_as_tuple(species_name),
         std::forward_as_tuple(species)
       );
+      species_id += 1;
     }
   } else {
     errorWithUserMessage(formatParseMessage(species_nodes, "Species must be a map/object!"));

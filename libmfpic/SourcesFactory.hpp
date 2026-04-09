@@ -35,11 +35,20 @@ struct SourceParameters {
   virtual ~SourceParameters() = default;
 
   /**
-   * @brief Get an mfem::VectorCoefficient that represents an Euler fluid with the parameters in this object
-   * 
-   * @return std::unique_ptr<mfem::VectorCoefficient>
+   * @brief Evaluate the basic state parameters at a point in space.
+   *
+   * @param[in] x Point in space at which to evaluate.
+   *
+   * @returns Basic state parameters at @a x.
    */
-  virtual std::unique_ptr<mfem::VectorCoefficient> getEulerVectorCoefficient() const = 0;
+  virtual SourceStateParameters sourceStateParametersAtPoint(const mfem::Vector& x) const = 0;
+
+  /**
+   * @brief Get an mfem::VectorFunctionCoefficient that represents an Euler fluid with the parameters in this object
+   * 
+   * @return mfem::VectorFunctionCoefficient
+   */
+  mfem::VectorFunctionCoefficient getEulerVectorCoefficient() const;
 };
 
 /**
@@ -61,11 +70,11 @@ struct ConstantSourceParameters : public SourceParameters {
     const double kappa=-1);
 
   /**
-   * @brief Get an mfem::VectorCoefficient that represents an constant euler fluid with parameters in this struct
-   * 
-   * @return std::unique_ptr<mfem::VectorCoefficient>
+   * @brief Give the basic state parameters that represent a uniform distribution in space.
+   *
+   * @returns The constant state parameters.
    */
-  std::unique_ptr<mfem::VectorCoefficient> getEulerVectorCoefficient() const override;
+  virtual SourceStateParameters sourceStateParametersAtPoint(const mfem::Vector&) const override;
 };
 
 /**
@@ -85,11 +94,13 @@ struct SodSourceParameters : public SourceParameters {
     const int num_particles = 0);
 
   /**
-   * @brief Get an mfem::VectorCoefficient that represents a piecewise constant euler fluid with parameters in this struct
-   * 
-   * @return std::unique_ptr<mfem::VectorCoefficient>
+   * @brief Evaluate the basic state parameters that represent a piecewise uniform distribution.
+   *
+   * @param[in] x Point in space at which to evaluate.
+   *
+   * @returns Basic state parameters at @a x.
    */
-  std::unique_ptr<mfem::VectorCoefficient> getEulerVectorCoefficient() const override;
+  virtual SourceStateParameters sourceStateParametersAtPoint(const mfem::Vector& x) const override;
 };
 
 /**
@@ -121,11 +132,13 @@ struct GaussianSourceParameters: public SourceParameters {
     const int num_particles = 0);
 
   /**
-   * @brief Get an mfem::VectorCoefficient that represents a gaussian in space euler fluid with parameters in this struct
-   * 
-   * @return std::unique_ptr<mfem::VectorCoefficient>
+   * @brief Evaluate the basic state parameters that represent a distribution that is Gaussian in space.
+   *
+   * @param[in] x Point in space at which to evaluate.
+   *
+   * @returns Basic state parameters at @a x.
    */
-  std::unique_ptr<mfem::VectorCoefficient> getEulerVectorCoefficient() const override;
+  virtual SourceStateParameters sourceStateParametersAtPoint(const mfem::Vector& x) const override;
 };
 
 /**
@@ -146,11 +159,13 @@ struct PeriodicPerturbationSourceParameters : public SourceParameters {
     const int num_particles = 0);
 
   /**
-   * @brief Get an mfem::VectorCoefficient that represents a periodically perturbed euler fluid with parameters in this struct
-   * 
-   * @return std::unique_ptr<mfem::VectorCoefficient>
+   * @brief Evaluate the basic state parameters that represent a distribution that is periodically perturbed in space.
+   *
+   * @param[in] x Point in space at which to evaluate.
+   *
+   * @returns Basic state parameters at @a x.
    */
-  std::unique_ptr<mfem::VectorCoefficient> getEulerVectorCoefficient() const override;
+  virtual SourceStateParameters sourceStateParametersAtPoint(const mfem::Vector& x) const override;
 };
 
 /**

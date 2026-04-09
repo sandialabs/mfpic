@@ -337,13 +337,16 @@ Particles:
 ## Euler Fluids
 
 Fluids that obey the Euler equations can be added under the ``Euler Fluids`` key.
-The only option at the top level is ``Basis Order`` which specifies the discontinuous Galerkin finite element basis order that
-will be used for all Euler fluids.
+The options at the top level are 
+- **``Basis Order``**: Specifies the discontinuous Galerkin finite element basis order that will be used for all Euler fluids.
+- **``Use Particle Fields``**: Push the fluid with the particle fields (rather than those from it's own charge distribution).
+
 This block is optional and can be omitted if no Euler fluids are desired.
 
 ```yaml
 Euler Fluids:
     Basis Order: int (default = 0)
+    Use Particle Fields: bool (default = False)
 ```
 
 ### Euler Fluids Initial Conditions

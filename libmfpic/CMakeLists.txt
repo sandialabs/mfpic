@@ -23,6 +23,7 @@ add_library(libmfpic
   IntegratedCharge.cpp
   LowFidelityState.cpp
   MeshDataWriter.cpp
+  MeshDistribution.cpp
   MeshFactory.cpp
   MeshUtilities.cpp
   ParticleBoundary.cpp
@@ -34,7 +35,6 @@ add_library(libmfpic
   RunSimulation.cpp
   SourcesFactory.cpp
   TimeSteppingFactory.cpp
-  UniformMeshDistribution.cpp
   VerletTimeIntegrator.cpp
 )
 target_include_directories(libmfpic PRIVATE
@@ -72,10 +72,12 @@ mfpic_unit_test(ElementFaceContainer)
 mfpic_unit_test(Errors)
 mfpic_unit_test(Euler)
 mfpic_unit_test(EulerFlux)
-mfpic_unit_test(LoadUniformKappaParticles)
-mfpic_unit_test(LoadUniformMaxwellianParticles)
+mfpic_unit_test(GenerateKappaVelocity)
+mfpic_unit_test(GenerateMaxwellianVelocity)
+mfpic_unit_test(LoadUniformParticles)
 mfpic_unit_test(LowFidelityState)
 mfpic_unit_test(MeshDataWriter)
+mfpic_unit_test(MeshDistribution)
 mfpic_unit_test(MeshFactory)
 mfpic_unit_test(MeshUtilities)
 mfpic_unit_test(ParticleContainer)
@@ -84,4 +86,3 @@ mfpic_unit_test(Pinning)
 mfpic_unit_test(ReflectingParticleBoundary)
 mfpic_unit_test(SourcesFactory)
 mfpic_unit_test(TimeSteppingFactory)
-mfpic_unit_test(UniformMeshDistribution)

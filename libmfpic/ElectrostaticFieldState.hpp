@@ -52,6 +52,8 @@ public:
    */
   mfem::Vector getBFieldAt(const mfem::Vector& position, const int element_index) const;
 
+  virtual ~ElectrostaticFieldState() = default;
+
 private:
   /// value of electrostatic potential on mesh
   mfem::GridFunction potential_;
