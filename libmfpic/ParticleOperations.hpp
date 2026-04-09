@@ -104,6 +104,11 @@ public:
    */
   mfem::DenseMatrix& getTemperature(const ParticleContainer& particles, const bool sum_weights = true, const bool compute_bulk_velocity = true);
 
+  void writeMomentsCSVsPerSpecies(const ParticleContainer& particles,
+                                                   const std::string& file_prefix,
+                                                   const int step,
+                                                   const double time);
+
 private: 
 
   void sumParticleWeights_(
