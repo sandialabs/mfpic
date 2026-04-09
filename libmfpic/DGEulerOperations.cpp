@@ -1,4 +1,3 @@
-
 #include <libmfpic/DGAssembly.hpp>
 #include <libmfpic/DGEulerAssembly.hpp>
 #include <libmfpic/DGEulerOperations.hpp>
