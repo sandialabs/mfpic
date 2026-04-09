@@ -54,15 +54,15 @@ jobs:
 
     - name: Build and test
       run: |
+        sudo apt install llvm
         . spack/share/spack/setup-env.sh
         spack bootstrap now
         spack compiler find
-        spack install llvm@20
         spack env rm -y mfpic-dev || true
         spack env create mfpic-dev
         spack env activate mfpic-dev
         spack repo add mfpic/spack_repo/mfpic
-        spack add mfpic build_type=${{matrix.build_type}} %${{matrix.compiler}}
+        spack add mfpic build_type=${{matrix.build_type}} %${{matrix.compiler}}@21.1.4
         mkdir build
         spack develop --no-clone --path $PWD/mfpic --build-directory $PWD/build mfpic
         spack concretize -f --test=root
