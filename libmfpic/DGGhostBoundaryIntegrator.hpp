@@ -1,6 +1,6 @@
 #pragma once
 
-#include <libmfpic/DGGhostBC.hpp>
+#include <libmfpic/GhostDOFSetter.hpp>
 #include <mfem/fem/hyperbolic.hpp>
 #include <mfem/linalg/densemat.hpp>
 
@@ -14,6 +14,8 @@ namespace mfpic {
 
   public:
 
+  DGGhostBoundaryIntegrator() = delete;
+
   /**
    * @brief Construct a new DGGhostBoundaryIntegrator
    * 
@@ -22,7 +24,7 @@ namespace mfpic {
    */
 
   DGGhostBoundaryIntegrator(const mfem::NumericalFlux & numerical_flux,
-                            const DGGhostBC & ghost_dof_setter) :
+                            const GhostDOFSetter & ghost_dof_setter) :
     mfem::HyperbolicFormIntegrator(numerical_flux),
     num_equations_(numerical_flux.GetFluxFunction().num_equations),
     ghost_dof_setter_(ghost_dof_setter) {};
@@ -109,7 +111,7 @@ namespace mfpic {
   private:
     /// number of equations in the system
     const int num_equations_;
-    const DGGhostBC & ghost_dof_setter_;
+    const GhostDOFSetter & ghost_dof_setter_;
 
 };
 

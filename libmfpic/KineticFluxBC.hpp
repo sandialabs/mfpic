@@ -1,8 +1,11 @@
 #pragma once
 
+#include <libmfpic/DGBC.hpp>
 #include <libmfpic/Errors.hpp>
 #include <libmfpic/Euler.hpp>
 #include <libmfpic/Species.hpp>
+#include <memory>
+#include <mfem/fem/hyperbolic.hpp>
 #include <mfem/mfem.hpp>
 
 namespace mfpic {
@@ -23,7 +26,9 @@ namespace mfpic {
  * @todo Assumes 5-moment fluid
  */
 
-class KineticFluxBC : public mfem::FluxFunction {
+class KineticFluxFluxFunction : public mfem::FluxFunction {
+
+  public:
 
   /**
    * @brief Construct a new KineticFluxBC with given spatial
@@ -33,7 +38,7 @@ class KineticFluxBC : public mfem::FluxFunction {
    * @param species Species type
    */
 
-  KineticFluxBC(const int spatial_dim, const Species species)
+  KineticFluxFluxFunction(const int spatial_dim, const Species species)
     : mfem::FluxFunction(euler::PrimitiveVariables::NUM_VARS, spatial_dim),
       species_(species) {}
   /// Errors out if called
@@ -72,9 +77,11 @@ class KineticFluxBC : public mfem::FluxFunction {
  * in the assembly routines.
  */
 
-class KineticFluxBCNumericalFlux : public mfem::NumericalFlux {
+class DummyNumericalFlux : public mfem::NumericalFlux {
+  
+  public:
 
-  KineticFluxBCNumericalFlux(const mfem::FluxFunction & flux)
+  DummyNumericalFlux(const mfem::FluxFunction & flux)
     : mfem::NumericalFlux(flux) {};
 
   double Eval(const mfem::Vector &, const mfem::Vector &, const mfem::Vector &,
@@ -83,6 +90,27 @@ class KineticFluxBCNumericalFlux : public mfem::NumericalFlux {
     errorWithDeveloperMessage("Evaluation routines should never be called!");
     return -1;
   }
+
+};
+
+struct KineticFluxBC : public DGBC {
+
+  KineticFluxBC() = delete;
+  KineticFluxBC(const int boundary_attribute, const mfem::Mesh& mesh) 
+  : DGBC(boundary_attribute, mesh) {};
+
+  virtual ~KineticFluxBC() = default;
+
+  std::shared_ptr<mfem::HyperbolicFormIntegrator> makeIntegrator(const mfem::NumericalFlux & dg_assembly_numerical_flux, Species species) override {
+    flux_function_ = std::make_unique<KineticFluxFluxFunction>(dg_assembly_numerical_flux.GetFluxFunction().dim, species);
+    numerical_flux_ = std::make_unique<DummyNumericalFlux>(*flux_function_);
+
+    return std::make_shared<mfem::HyperbolicFormIntegrator>(*numerical_flux_);
+  }
+
+  private:
+    std::unique_ptr<KineticFluxFluxFunction> flux_function_;
+    std::unique_ptr<DummyNumericalFlux> numerical_flux_;
 
 };
 

@@ -1,6 +1,7 @@
 #pragma once
 
-#include <libmfpic/DGGhostBoundaryIntegrator.hpp>
+#include <libmfpic/DGBC.hpp>
+#include <libmfpic/DGGhostBC.hpp>
 #include <libmfpic/ElectromagneticFieldsEvaluator.hpp>
 #include <memory>
 #include <mfem.hpp>
@@ -26,7 +27,7 @@ class LowFidelitySpeciesState;
  * where \f$F(U)\f$ is the hyperbolic flux function and \f$S(U)\f$ is the source term.
  *
  */
-class DGAssembly{
+class DGAssembly {
 
 public:
  /**
@@ -114,17 +115,17 @@ public:
   mfem::FiniteElementSpace & getFiniteElementSpace() const { return finite_element_space_;}
 
   /**
-   * @brief Add a ghost cell boundary condition to the nonlinear form
+   * @brief Add a boundary condition to the nonlinear form
    *
-   * @param boundary_condition \ref DGGhostBC that sets the ghost cell state
+   * @param boundary_condition \ref DGBC
+   * @param species \ref Species  
    */
-  void addGhostBoundaryCondition(std::unique_ptr<DGGhostBC> && boundary_condition)
+  virtual void addBoundaryCondition(std::unique_ptr<DGBC> && boundary_condition, Species species)
   {
-    nonlinear_form_->UseExternalIntegrators();
-    ghost_bcs_.push_back(std::move(boundary_condition));
-    const auto & current_bc = ghost_bcs_.back();
-    const auto integrator = std::make_shared<DGGhostBoundaryIntegrator>(*numerical_flux_function_, *current_bc);
-    addBoundaryCondition(integrator, current_bc->boundary_attribute_has_boundary_condition);
+    bcs_.push_back(std::move(boundary_condition));
+    const auto & current_bc = bcs_.back();
+    const auto integrator = current_bc->makeIntegrator(*numerical_flux_function_, species);
+    addBoundaryIntegrator(integrator, current_bc->boundary_attribute_has_boundary_condition);
   }
 
   /**
@@ -134,7 +135,8 @@ public:
    * @param boundary_attribute_has_boundary_condition mfem::Array of flags
    */
 
-  void addBoundaryCondition(std::shared_ptr<mfem::HyperbolicFormIntegrator> && integrator, mfem::Array<int> & boundary_attribute_has_boundary_condition) {
+  void addBoundaryIntegrator(const std::shared_ptr<mfem::HyperbolicFormIntegrator> & integrator, mfem::Array<int> & boundary_attribute_has_boundary_condition) {
+    nonlinear_form_->UseExternalIntegrators();
     bc_integrators_.push_back(integrator);
     nonlinear_form_->AddBdrFaceIntegrator((bc_integrators_.back()).get(), boundary_attribute_has_boundary_condition);
   }
@@ -167,8 +169,8 @@ private:
   std::shared_ptr<mfem::HyperbolicFormIntegrator> hyperbolic_form_integrator_;
   /// Number of equations
   int num_equations_;
-  /// ghost boundary condition setters
-  std::vector<std::shared_ptr<DGGhostBC>> ghost_bcs_;
+  /// boundary conditions
+  std::vector<std::shared_ptr<DGBC>> bcs_;
   /// boundary condition integrators
   std::vector<std::shared_ptr<mfem::NonlinearFormIntegrator>> bc_integrators_;
 

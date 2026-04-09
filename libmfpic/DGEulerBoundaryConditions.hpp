@@ -5,6 +5,7 @@
 #include <libmfpic/DGGhostBC.hpp>
 #include <libmfpic/Euler.hpp>
 #include <memory>
+#include <mfem/fem/hyperbolic.hpp>
 
 namespace mfpic {
 
@@ -40,7 +41,7 @@ struct DGEulerReflectingBC : public DGGhostBC {
 
   std::unique_ptr<DGGhostBC> clone() const override {
     return std::make_unique<DGEulerReflectingBC>(*this);
-  };
+  }
 
 };
 

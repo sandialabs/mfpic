@@ -3,10 +3,10 @@
 
 namespace mfpic {
 
-  double KineticFluxBC::ComputeFluxDotN(const mfem::Vector &conservative_state, 
-                                        const mfem::Vector &normal,
-                                        mfem::FaceElementTransformations &,
-                                        mfem::Vector &flux_dot_n) const
+  double KineticFluxFluxFunction::ComputeFluxDotN(const mfem::Vector &conservative_state, 
+                                                  const mfem::Vector &normal,
+                                                  mfem::FaceElementTransformations &,
+                                                  mfem::Vector &flux_dot_n) const
   {
     using namespace euler;
     const double pressure = getPressureFromConservativeState(conservative_state, species_);

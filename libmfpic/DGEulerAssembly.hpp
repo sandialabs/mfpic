@@ -1,6 +1,5 @@
 #pragma once
 
-#include "libmfpic/KineticFluxBC.hpp"
 #include <libmfpic/DGAssembly.hpp>
 #include <libmfpic/ElectromagneticFieldsEvaluator.hpp>
 #include <libmfpic/EulerFlux.hpp>
@@ -78,8 +77,6 @@ private:
     return DGEulerAssembly(finite_element_space, euler_flux, numerical_euler_flux);
   }
 
-  std::vector<KineticFluxBCNumericalFlux> kinetic_flux_bc_numerical_flux_;
-  std::vector<KineticFluxBC> kinetic_flux_bc_;
 };
   
 } // namespace mfpic
