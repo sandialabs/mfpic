@@ -1,11 +1,11 @@
 #pragma once
 
-#include "libmfpic/LowFidelityState.hpp"
 #include <libmfpic/DGEulerAssembly.hpp>
 #include <libmfpic/Discretization.hpp>
 #include <libmfpic/ElectromagneticFieldsEvaluator.hpp>
 #include <libmfpic/IntegratedCharge.hpp>
 #include <libmfpic/LowFidelityOperations.hpp>
+#include <libmfpic/LowFidelityState.hpp>
 
 #include <mfem/mfem.hpp>
 
