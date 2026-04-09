@@ -45,8 +45,6 @@ class Mfpic(CMakePackage):
     depends_on("hdf5 build_type=Debug", when="build_type=Debug")
     depends_on("mfem+debug", when="build_type=Debug")
 
-    depends_on("llvm openmp=project", when="%llvm", type="build")
-
     @property
     def keep_werror(self):
         return "all"
