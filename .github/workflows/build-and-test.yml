@@ -54,10 +54,11 @@ jobs:
 
     - name: Build and test
       run: |
-        sudo apt install llvm libomp5
+        sudo apt install llvm
         . spack/share/spack/setup-env.sh
         spack bootstrap now
         spack compiler find
+        spack compiler list
         spack env rm -y mfpic-dev || true
         spack env create mfpic-dev
         spack env activate mfpic-dev
