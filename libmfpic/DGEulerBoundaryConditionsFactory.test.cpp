@@ -1,6 +1,8 @@
+#include "libmfpic/Species.hpp"
+#include <iterator>
 #include <libmfpic/DGEulerBoundaryConditions.hpp>
 #include <libmfpic/DGEulerBoundaryConditionsFactory.hpp>
-#include <libmfpic/DGGhostBC.hpp>
+#include <libmfpic/DGBC.hpp>
 #include <libmfpic/MeshUtilities.hpp>
 
 #include <gtest/gtest.h>
@@ -110,7 +112,8 @@ TEST(DGEulerBoundaryConditionsFactory, SpecifyingBCsWithBoundaryAttributesGivesC
 TEST(DGEulerBoundaryConditionsFactory, EmptyBoundaryAttributeToBCTypeGivesEmptyBoundaryConditions) {
   mfem::Mesh mesh = mfem::Mesh::MakeCartesian1D(10);
   std::unordered_map<int, DGEulerBCType> boundary_attribute_to_bc_type;
-  std::vector<std::unique_ptr<DGGhostBC>> dg_euler_bcs = buildDGEulerBoundaryConditions(boundary_attribute_to_bc_type, mesh);
+  std::vector<Species> species_list;
+  std::vector<std::vector<std::unique_ptr<DGBC>>> dg_euler_bcs = buildDGEulerBoundaryConditions(boundary_attribute_to_bc_type, mesh, species_list);
   EXPECT_TRUE(dg_euler_bcs.empty());
 }
 
@@ -118,20 +121,25 @@ TEST(DGEulerBoundaryConditionsFactory, BoundaryAttributeToBCTypeGivesCorrectBoun
   mfem::Mesh mesh = mfem::Mesh::MakeCartesian1D(10);
   constexpr int boundary_attribute = 1;
   std::unordered_map<int, DGEulerBCType> boundary_attribute_to_bc_type{{1, DGEulerBCType::REFLECTING}};
-  std::vector<std::unique_ptr<DGGhostBC>> dg_euler_bcs = buildDGEulerBoundaryConditions(boundary_attribute_to_bc_type, mesh);
-  EXPECT_EQ(1, std::ssize(dg_euler_bcs));
+  constexpr Species default_species;
+  std::vector<Species> species_list = {default_species, default_species};
+  std::vector<std::vector<std::unique_ptr<DGBC>>> dg_euler_bcs = buildDGEulerBoundaryConditions(boundary_attribute_to_bc_type, mesh, species_list);
+  EXPECT_EQ(2, std::ssize(dg_euler_bcs));
 
-  ASSERT_NO_THROW([[maybe_unused]] DGEulerReflectingBC& reflecting_bc = dynamic_cast<DGEulerReflectingBC&>(*dg_euler_bcs[0]));
+  ASSERT_NO_THROW([[maybe_unused]] DGEulerReflectingBC& reflecting_bc = dynamic_cast<DGEulerReflectingBC&>(*dg_euler_bcs[0][0]));
 
-  mfem::Array<int>& boundary_attribute_has_boundary_condition = dg_euler_bcs[0]->boundary_attribute_has_boundary_condition;
-  for (int i = 0; i < boundary_attribute_has_boundary_condition.Size(); ++i) {
-    if (i == boundary_attribute - 1) {
-      EXPECT_TRUE(boundary_attribute_has_boundary_condition[i]);
-    } else {
-      EXPECT_FALSE(boundary_attribute_has_boundary_condition[i]);
+  for (const auto & species_bcs : dg_euler_bcs) {
+    EXPECT_EQ(1, std::ssize(species_bcs));
+    ASSERT_NO_THROW([[maybe_unused]] DGEulerReflectingBC& reflecting_bc = dynamic_cast<DGEulerReflectingBC&>(*species_bcs[0]));
+    mfem::Array<int>& boundary_attribute_has_boundary_condition = species_bcs[0]->boundary_attribute_has_boundary_condition;
+    for (int i = 0; i < boundary_attribute_has_boundary_condition.Size(); ++i) {
+      if (i == boundary_attribute - 1) {
+        EXPECT_TRUE(boundary_attribute_has_boundary_condition[i]);
+      } else {
+        EXPECT_FALSE(boundary_attribute_has_boundary_condition[i]);
+      }
     }
   }
-
 }
 
 }

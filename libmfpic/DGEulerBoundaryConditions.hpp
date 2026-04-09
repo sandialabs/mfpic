@@ -4,7 +4,7 @@
 #include <libmfpic/DGGhostBoundaryIntegrator.hpp>
 #include <libmfpic/DGGhostBC.hpp>
 #include <libmfpic/Euler.hpp>
-#include <memory>
+#include <libmfpic/GhostDOFSetter.hpp>
 #include <mfem/fem/hyperbolic.hpp>
 
 namespace mfpic {
@@ -14,11 +14,9 @@ namespace mfpic {
  * state equal to the interior state but with normal momentum reversed.
  */
 
-struct DGEulerReflectingBC : public DGGhostBC {
+struct DGEulerReflectingBC : public GhostDOFSetter {
 
-  DGEulerReflectingBC() = delete;
-  DGEulerReflectingBC(const int boundary_attribute, const mfem::Mesh& mesh) :
-    DGGhostBC(boundary_attribute, mesh) {};
+  DGEulerReflectingBC() {};
 
   void setDOFsInGhost(const mfem::DenseMatrix & interior_dofs,
                       const mfem::Vector & unit_normal,
@@ -37,10 +35,6 @@ struct DGEulerReflectingBC : public DGGhostBC {
       ghost_dofs(idof, euler::ConservativeVariables::Y_MOMENTUM_DENSITY) -= 2. * p_dot_n * unit_normal(1);
       ghost_dofs(idof, euler::ConservativeVariables::Z_MOMENTUM_DENSITY) -= 2. * p_dot_n * unit_normal(2);
     }
-  }
-
-  std::unique_ptr<DGGhostBC> clone() const override {
-    return std::make_unique<DGEulerReflectingBC>(*this);
   }
 
 };

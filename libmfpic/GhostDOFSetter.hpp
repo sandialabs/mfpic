@@ -27,8 +27,6 @@ struct GhostDOFSetter {
                               const mfem::Vector & unit_normal,
                               mfem::DenseMatrix & ghost_dofs) const = 0;
 
-  /// Clone method allows for derived class to deep copy itself but return as base
-  virtual std::unique_ptr<GhostDOFSetter> clone() const = 0;
 };
 
 } // namespace mfpic

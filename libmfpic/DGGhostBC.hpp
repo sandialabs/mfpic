@@ -2,7 +2,9 @@
 
 #include <libmfpic/DGBC.hpp>
 #include <libmfpic/DGGhostBoundaryIntegrator.hpp>
+#include <memory>
 #include <mfem.hpp>
+#include <mfem/fem/nonlininteg.hpp>
 
 namespace mfpic {
 
@@ -12,13 +14,13 @@ namespace mfpic {
 struct DGGhostBC : public DGBC {
 
   DGGhostBC() = delete;
-  DGGhostBC(const int boundary_attribute, const mfem::Mesh& mesh, std::unique_ptr<GhostDOFSetter> && dof_setter) 
-  : DGBC(boundary_attribute, mesh), ghost_dof_setter(std::move(dof_setter)) {};
+  DGGhostBC(const int boundary_attribute, const mfem::Mesh& mesh, const Species species, std::unique_ptr<GhostDOFSetter> && dof_setter) 
+  : DGBC(boundary_attribute, mesh, species), ghost_dof_setter(std::move(dof_setter)) {};
 
   virtual ~DGGhostBC() = default;
 
-  std::shared_ptr<mfem::HyperbolicFormIntegrator> makeIntegrator(const mfem::NumericalFlux & numerical_flux, Species) override {
-    return std::make_shared<DGGhostBoundaryIntegrator>(numerical_flux, *ghost_dof_setter);
+  std::unique_ptr<mfem::NonlinearFormIntegrator> makeIntegrator(const mfem::NumericalFlux & numerical_flux) override {
+    return std::make_unique<DGGhostBoundaryIntegrator>(numerical_flux, *ghost_dof_setter);
   }
 
   std::unique_ptr<GhostDOFSetter> ghost_dof_setter;

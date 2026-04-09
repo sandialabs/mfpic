@@ -118,26 +118,26 @@ public:
    * @brief Add a boundary condition to the nonlinear form
    *
    * @param boundary_condition \ref DGBC
-   * @param species \ref Species  
+   * @param species \ref Species
    */
-  virtual void addBoundaryCondition(std::unique_ptr<DGBC> && boundary_condition, Species species)
+  virtual void addBoundaryCondition(std::unique_ptr<DGBC> && boundary_condition)
   {
     bcs_.push_back(std::move(boundary_condition));
     const auto & current_bc = bcs_.back();
-    const auto integrator = current_bc->makeIntegrator(*numerical_flux_function_, species);
-    addBoundaryIntegrator(integrator, current_bc->boundary_attribute_has_boundary_condition);
+    auto integrator = current_bc->makeIntegrator(*numerical_flux_function_);
+    addBoundaryIntegrator(std::move(integrator), current_bc->boundary_attribute_has_boundary_condition);
   }
 
   /**
    * @brief Add a boundary face integrator to the nonlinear form and store reference so it stays in scope for mfem
    *
-   * @param integrator mfem::HyperbolicFormIntegrator
+   * @param integrator mfem::NonlinearFormIntegrator
    * @param boundary_attribute_has_boundary_condition mfem::Array of flags
    */
 
-  void addBoundaryIntegrator(const std::shared_ptr<mfem::HyperbolicFormIntegrator> & integrator, mfem::Array<int> & boundary_attribute_has_boundary_condition) {
+  void addBoundaryIntegrator(std::unique_ptr<mfem::NonlinearFormIntegrator> && integrator, mfem::Array<int> & boundary_attribute_has_boundary_condition) {
     nonlinear_form_->UseExternalIntegrators();
-    bc_integrators_.push_back(integrator);
+    bc_integrators_.push_back(std::move(integrator));
     nonlinear_form_->AddBdrFaceIntegrator((bc_integrators_.back()).get(), boundary_attribute_has_boundary_condition);
   }
 
@@ -170,9 +170,9 @@ private:
   /// Number of equations
   int num_equations_;
   /// boundary conditions
-  std::vector<std::shared_ptr<DGBC>> bcs_;
+  std::vector<std::unique_ptr<DGBC>> bcs_;
   /// boundary condition integrators
-  std::vector<std::shared_ptr<mfem::NonlinearFormIntegrator>> bc_integrators_;
+  std::vector<std::unique_ptr<mfem::NonlinearFormIntegrator>> bc_integrators_;
 
   /// Compute element-wise inverse mass matrix
   void computeInvMass_();

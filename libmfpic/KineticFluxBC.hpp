@@ -96,16 +96,16 @@ class DummyNumericalFlux : public mfem::NumericalFlux {
 struct KineticFluxBC : public DGBC {
 
   KineticFluxBC() = delete;
-  KineticFluxBC(const int boundary_attribute, const mfem::Mesh& mesh) 
-  : DGBC(boundary_attribute, mesh) {};
+  KineticFluxBC(const int boundary_attribute, const mfem::Mesh& mesh, const Species species) 
+  : DGBC(boundary_attribute, mesh, species) {};
 
   virtual ~KineticFluxBC() = default;
 
-  std::shared_ptr<mfem::HyperbolicFormIntegrator> makeIntegrator(const mfem::NumericalFlux & dg_assembly_numerical_flux, Species species) override {
+  std::unique_ptr<mfem::NonlinearFormIntegrator> makeIntegrator(const mfem::NumericalFlux & dg_assembly_numerical_flux) override {
     flux_function_ = std::make_unique<KineticFluxFluxFunction>(dg_assembly_numerical_flux.GetFluxFunction().dim, species);
     numerical_flux_ = std::make_unique<DummyNumericalFlux>(*flux_function_);
 
-    return std::make_shared<mfem::HyperbolicFormIntegrator>(*numerical_flux_);
+    return std::make_unique<mfem::HyperbolicFormIntegrator>(*numerical_flux_);
   }
 
   private:

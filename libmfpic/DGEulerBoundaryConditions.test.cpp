@@ -15,7 +15,7 @@ using namespace mfpic;
 
 TEST(DGEulerBoundaryConditions, DGEulerReflectingBCSetsGhostCorrectly) {
   mfem::Mesh mesh = mfem::Mesh::MakeCartesian1D(10);
-  DGEulerReflectingBC bc(1, mesh);
+  DGEulerReflectingBC bc;
 
   constexpr int num_eqns = 5;
   constexpr int num_dof  = 4;
@@ -122,8 +122,11 @@ TEST(DGEulerBoundaryConditions, DGEulerReflectingBCCheckGhostBoundaryIntegrator)
   PickOneFlux numerical_flux(linear_flux, pick_ghost);
   mfem::NonlinearForm form(&finite_element_space);
   constexpr int boundary_attribute = 3; // this should be the right face (x = 1)
-  DGEulerReflectingBC bc(boundary_attribute, mesh);
-  form.AddBdrFaceIntegrator(new DGGhostBoundaryIntegrator(numerical_flux, bc), bc.boundary_attribute_has_boundary_condition);
+
+  auto bc_setter = std::make_unique<DGEulerReflectingBC>();
+  auto bc = DGGhostBC(boundary_attribute, mesh, Species(), std::move(bc_setter));
+  auto integrator = bc.makeIntegrator(numerical_flux);
+  form.AddBdrFaceIntegrator(integrator.get(), bc.boundary_attribute_has_boundary_condition);
 
   mfem::Vector rhs(fluid_dofs.Size());
   rhs = 0.;

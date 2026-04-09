@@ -57,6 +57,7 @@ TEST(DGEulerOperationsFactory, BasicChecksOnOperationsAndState) {
   LowFidelityState dg_euler_state = buildEulerState(discretization, list_of_parameters);
 
   constexpr int boundary_attribute = 3;
+  // TODO BWR HERE HERE
   auto bc = std::make_unique<DGEulerReflectingBC>(boundary_attribute, mesh);
   std::vector<std::unique_ptr<DGGhostBC>> bcs;
   bcs.push_back(std::move(bc));

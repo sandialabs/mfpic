@@ -4,6 +4,7 @@
 #include <libmfpic/Errors.hpp>
 #include <libmfpic/MeshUtilities.hpp>
 
+#include <memory>
 #include <yaml-cpp/yaml.h>
 
 namespace mfpic {
@@ -41,18 +42,24 @@ std::unordered_map<int, DGEulerBCType> buildBoundaryAttributeToBCTypeFromYAML(
   return boundary_attribute_to_bc_type;
 }
 
-std::vector<std::unique_ptr<DGGhostBC>> buildDGEulerBoundaryConditions(
+std::vector<std::vector<std::unique_ptr<DGBC>>> buildDGEulerBoundaryConditions(
   const std::unordered_map<int, DGEulerBCType>& boundary_attribute_to_bc_type,
-  const mfem::Mesh& mesh)
+  const mfem::Mesh& mesh,
+  const std::vector<Species>& species_list)
 {
-  std::vector<std::unique_ptr<DGGhostBC>> dg_euler_bcs;
+  std::vector<std::vector<std::unique_ptr<DGBC>>> dg_euler_bcs;
 
-  for (const auto& [boundary_attribute, bc_type] : boundary_attribute_to_bc_type) {
-    switch (bc_type) {
-      case DGEulerBCType::REFLECTING:
-        dg_euler_bcs.push_back(std::make_unique<DGEulerReflectingBC>(boundary_attribute, mesh));
-        break;
+  for (const Species& species : species_list) {
+    std::vector<std::unique_ptr<DGBC>> species_bcs;
+    for (const auto& [boundary_attribute, bc_type] : boundary_attribute_to_bc_type) {
+      switch (bc_type) {
+        case DGEulerBCType::REFLECTING:
+          auto dof_setter = std::make_unique<DGEulerReflectingBC>();
+          species_bcs.push_back(std::make_unique<DGGhostBC>(boundary_attribute, mesh, species, std::move(dof_setter)));
+          break;
+      }
     }
+    dg_euler_bcs.push_back(std::move(species_bcs));
   }
 
   return dg_euler_bcs;
