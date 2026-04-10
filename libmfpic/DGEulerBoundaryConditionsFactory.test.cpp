@@ -1,4 +1,3 @@
-#include "libmfpic/Species.hpp"
 #include <iterator>
 #include <libmfpic/DGEulerBoundaryConditions.hpp>
 #include <libmfpic/DGEulerBoundaryConditionsFactory.hpp>
@@ -126,11 +125,11 @@ TEST(DGEulerBoundaryConditionsFactory, BoundaryAttributeToBCTypeGivesCorrectBoun
   std::vector<std::vector<std::unique_ptr<DGBC>>> dg_euler_bcs = buildDGEulerBoundaryConditions(boundary_attribute_to_bc_type, mesh, species_list);
   EXPECT_EQ(2, std::ssize(dg_euler_bcs));
 
-  ASSERT_NO_THROW([[maybe_unused]] DGEulerReflectingBC& reflecting_bc = dynamic_cast<DGEulerReflectingBC&>(*dg_euler_bcs[0][0]));
-
   for (const auto & species_bcs : dg_euler_bcs) {
     EXPECT_EQ(1, std::ssize(species_bcs));
-    ASSERT_NO_THROW([[maybe_unused]] DGEulerReflectingBC& reflecting_bc = dynamic_cast<DGEulerReflectingBC&>(*species_bcs[0]));
+    ASSERT_NO_THROW([[maybe_unused]] DGGhostBC& reflecting_bc = dynamic_cast<DGGhostBC&>(*species_bcs[0]));
+    DGGhostBC& reflecting_bc = dynamic_cast<DGGhostBC&>(*species_bcs[0]);
+    ASSERT_NO_THROW([[maybe_unused]] DGEulerReflectingBC& dof_setter = dynamic_cast<DGEulerReflectingBC&>(*(reflecting_bc.ghost_dof_setter)));
     mfem::Array<int>& boundary_attribute_has_boundary_condition = species_bcs[0]->boundary_attribute_has_boundary_condition;
     for (int i = 0; i < boundary_attribute_has_boundary_condition.Size(); ++i) {
       if (i == boundary_attribute - 1) {

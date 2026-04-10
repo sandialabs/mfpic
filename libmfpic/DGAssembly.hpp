@@ -30,6 +30,9 @@ class LowFidelitySpeciesState;
 class DGAssembly {
 
 public:
+
+  DGAssembly() = delete;
+  DGAssembly(DGAssembly&& other) noexcept = default;
  /**
   * @brief Construct a new DGAssembly.
   *
@@ -120,7 +123,7 @@ public:
    * @param boundary_condition \ref DGBC
    * @param species \ref Species
    */
-  virtual void addBoundaryCondition(std::unique_ptr<DGBC> && boundary_condition)
+  void addBoundaryCondition(std::unique_ptr<DGBC> && boundary_condition)
   {
     bcs_.push_back(std::move(boundary_condition));
     const auto & current_bc = bcs_.back();

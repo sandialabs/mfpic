@@ -9,6 +9,8 @@
 #include <libmfpic/Species.hpp>
 
 #include <gtest/gtest.h>
+#include <memory>
+#include <ranges>
 
 namespace {
 
@@ -21,7 +23,7 @@ constexpr Species species_3{.charge = -2.0, .mass = 1.5, .specific_heat_ratio = 
 
 const std::vector<Species> species_list{species_0,species_1,species_2,species_3};
 
-const std::vector<std::unique_ptr<DGGhostBC>> empty_bcs{};
+std::vector<std::vector<std::unique_ptr<DGBC>>> empty_bcs{};
 
 TEST(DGEulerOperationsFactory, ErrorsOutIfDiscretizationIsWrong) {
   constexpr int nx = 5;
@@ -57,10 +59,14 @@ TEST(DGEulerOperationsFactory, BasicChecksOnOperationsAndState) {
   LowFidelityState dg_euler_state = buildEulerState(discretization, list_of_parameters);
 
   constexpr int boundary_attribute = 3;
-  // TODO BWR HERE HERE
-  auto bc = std::make_unique<DGEulerReflectingBC>(boundary_attribute, mesh);
-  std::vector<std::unique_ptr<DGGhostBC>> bcs;
-  bcs.push_back(std::move(bc));
+  std::vector<std::vector<std::unique_ptr<DGBC>>> bcs;
+
+  for (const auto & [i_species, species] : std::views::enumerate(species_list)) {
+    std::vector<std::unique_ptr<DGBC>> species_bcs;
+    auto dof_setter = std::make_unique<DGEulerReflectingBC>();
+    species_bcs.push_back(std::make_unique<DGGhostBC>(boundary_attribute, mesh, species, std::move(dof_setter)));
+    bcs.push_back(std::move(species_bcs));
+  }
 
   std::unique_ptr<LowFidelityOperations> dg_euler_operations = buildDGEulerOperations(
     discretization, charge_discretization, species_list, bcs);

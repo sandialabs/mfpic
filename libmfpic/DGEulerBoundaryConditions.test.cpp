@@ -123,10 +123,9 @@ TEST(DGEulerBoundaryConditions, DGEulerReflectingBCCheckGhostBoundaryIntegrator)
   mfem::NonlinearForm form(&finite_element_space);
   constexpr int boundary_attribute = 3; // this should be the right face (x = 1)
 
-  auto bc_setter = std::make_unique<DGEulerReflectingBC>();
-  auto bc = DGGhostBC(boundary_attribute, mesh, Species(), std::move(bc_setter));
+  auto bc = DGGhostBC(boundary_attribute, mesh, Species(), std::make_unique<DGEulerReflectingBC>());
   auto integrator = bc.makeIntegrator(numerical_flux);
-  form.AddBdrFaceIntegrator(integrator.get(), bc.boundary_attribute_has_boundary_condition);
+  form.AddBdrFaceIntegrator(integrator.release(), bc.boundary_attribute_has_boundary_condition);
 
   mfem::Vector rhs(fluid_dofs.Size());
   rhs = 0.;
