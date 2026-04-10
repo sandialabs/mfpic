@@ -1,3 +1,5 @@
+set(end_to_end_test_num_threads 2)
+
 function(mfpic_end_to_end_test test_name)
   if(mfpic_enable_testing)
     set(test_prefix "end_to_end_tests:${test_name}")
@@ -14,7 +16,11 @@ function(mfpic_end_to_end_test test_name)
       COMMAND ${Python3_EXECUTABLE} ${test_name}.py analyze
     )
 
-    set_tests_properties("${test_prefix}:run" PROPERTIES FIXTURES_SETUP ${test_prefix})
+    set_tests_properties("${test_prefix}:run" PROPERTIES
+      FIXTURES_SETUP ${test_prefix}
+      PROCESSORS ${end_to_end_test_num_threads}
+      ENVIRONMENT "OMP_NUM_THREADS=${end_to_end_test_num_threads}"
+    )
     set_tests_properties("${test_prefix}:analyze" PROPERTIES FIXTURES_REQUIRED ${test_prefix})
   endif()
 endfunction()
