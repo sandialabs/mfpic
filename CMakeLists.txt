@@ -40,7 +40,9 @@ function(mfpic_unit_test test_name)
       GTest::gtest_main
       OpenMP::OpenMP_CXX
     )
-    gtest_discover_tests("${test_name}.test")
+    gtest_discover_tests("${test_name}.test"
+      PROPERTIES ENVIRONMENT "OMP_NUM_THREADS=1"
+    )
   endif()
 endfunction()
 
