@@ -173,9 +173,9 @@ double evaluateMaxwellian(const mfem::Vector& primitive_state,
     difference -= bulk_velocity;
     double exponent = inv_sq_sigma * (difference * difference);
     const double norm = 1.0 / std::pow(std::sqrt(2.0 * M_PI) * sigma, 3);
-    const double pdf  = norm * std::exp(-0.5 * exponent);
+    const double probability_density_function = norm * std::exp(-0.5 * exponent);
 
-    return pdf * primitive_state(euler::PrimitiveVariables::NUMBER_DENSITY);
+    return probability_density_function * primitive_state(euler::PrimitiveVariables::NUMBER_DENSITY);
   }
 }
 
