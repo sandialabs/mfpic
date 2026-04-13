@@ -1,7 +1,7 @@
 #pragma once
 
 #include <libmfpic/Errors.hpp>
-#include <libmfpic/LoadUniformParticles.hpp>
+#include <libmfpic/LoadParticles.hpp>
 #include <libmfpic/ParticleContainer.hpp>
 #include <libmfpic/SourcesFactory.hpp>
 
@@ -25,16 +25,6 @@ ParticleContainer buildParticlesFromYaml(
   const std::unordered_map<std::string, Species>& species_map,
   Generator& generator,
   std::shared_ptr<mfem::Mesh> mesh
-);
-
-// template definitions
-
-template <std::uniform_random_bit_generator Generator>
-ParticleContainer buildParticlesFromYaml(
-  const YAML::Node& sources_node,
-  const std::unordered_map<std::string, Species>& species_map,
-  Generator& generator,
-  std::shared_ptr<mfem::Mesh> mesh
 ) {
   std::vector<std::unique_ptr<SourceParameters>> list_of_parameters = buildListOfSourceParametersFromYAML(
     sources_node,
@@ -43,12 +33,8 @@ ParticleContainer buildParticlesFromYaml(
 
   ParticleContainer particles;
   for (const std::unique_ptr<SourceParameters>& parameters : list_of_parameters) {
-    auto constant_parameters = dynamic_cast<const ConstantSourceParameters&>(*parameters);
-
-    particles.addParticles(loadUniformParticles(
-      parameters->species,
-      constant_parameters.constant_state,
-      parameters->num_particles,
+    particles.addParticles(loadParticles(
+      *parameters,
       generator,
       mesh
     ));
