@@ -3,7 +3,7 @@
 #include <libmfpic/DGEulerInitialConditionsFactory.hpp>
 #include <libmfpic/Discretization.hpp>
 #include <libmfpic/ElectromagneticFieldsEvaluator.hpp>
-#include <libmfpic/LoadUniformParticles.hpp>
+#include <libmfpic/LoadParticles.hpp>
 #include <libmfpic/LowFidelityState.hpp>
 #include <libmfpic/ParticleContainer.hpp>
 #include <libmfpic/ParticleOperations.hpp>
@@ -983,12 +983,10 @@ TEST(ParticleOperations, VarianceReducedChargeIsExactForMaxwellianIn3D) {
     .temperature = temperature,
   };
 
-  ParticleContainer particles = loadUniformParticles(
-    species,
-    source_state_parameters,
-    num_particles,
+  ParticleContainer particles = loadParticles(
+    ConstantSourceParameters(species, source_state_parameters, num_particles),
     generator,
-    mesh 
+    mesh  
   );
 
   ParticleOperations particle_operations(
@@ -1065,12 +1063,10 @@ TEST(ParticleOperations, VarianceReducedChargeAndPICChargeConvergeForKappa) {
   };
   std::mt19937 gen_for_n(12345);
 
-  ParticleContainer particles_all = loadUniformParticles(
-    species,
-    source_state_parameters,
-    num_particles_list[4],
+  ParticleContainer particles_all = loadParticles(
+    ConstantSourceParameters(species, source_state_parameters, num_particles_list[4]),
     gen_for_n,
-    mesh 
+    mesh  
   );
 
   for (int num_particles : num_particles_list) {
@@ -1118,10 +1114,8 @@ TEST(ParticleOperations, ParticleMomentsCorrectForMaxwellian) {
   constexpr int num_particles = 200000;
   std::mt19937 generator;
 
-  ParticleContainer particles = loadUniformParticles(
-    default_species,
-    source_state_parameters,
-    num_particles,
+  ParticleContainer particles = loadParticles(
+    ConstantSourceParameters(default_species, source_state_parameters, num_particles),
     generator,
     mesh
   );

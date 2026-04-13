@@ -1,4 +1,4 @@
-#include <libmfpic/LoadUniformParticles.hpp>
+#include <libmfpic/LoadParticles.hpp>
 
 #include <gtest/gtest.h>
 
@@ -11,7 +11,7 @@ const mfem::Vector zero_vector({0.0, 0.0, 0.0});
 const int num_elems = 10;
 std::shared_ptr<mfem::Mesh> simple_mesh = std::make_shared<mfem::Mesh>(mfem::Mesh::MakeCartesian1D(num_elems));
 
-TEST(LoadUniformParticles, NoParticlesAddedWhenNoParticlesRequested) {
+TEST(LoadParticles, NoParticlesAddedWhenNoParticlesRequested) {
   const SourceStateParameters source_state_parameters{
     .number_density = 1.0e18,
     .bulk_velocity = zero_vector,
@@ -20,10 +20,8 @@ TEST(LoadUniformParticles, NoParticlesAddedWhenNoParticlesRequested) {
   constexpr int num_particles = 0;
   std::default_random_engine generator;
 
-  ParticleContainer particles = loadUniformParticles(
-    default_species,
-    source_state_parameters,
-    num_particles,
+  ParticleContainer particles = loadParticles(
+    ConstantSourceParameters(default_species, source_state_parameters, num_particles),
     generator,
     simple_mesh
   );
@@ -31,7 +29,7 @@ TEST(LoadUniformParticles, NoParticlesAddedWhenNoParticlesRequested) {
   ASSERT_EQ(particles.numParticles(), 0);
 }
 
-TEST(LoadUniformParticles, NumLoadedParticlesIsAsRequested) {
+TEST(LoadParticles, NumLoadedParticlesIsAsRequested) {
   const SourceStateParameters source_state_parameters{
     .number_density = 1.0e18,
     .bulk_velocity = zero_vector,
@@ -40,10 +38,8 @@ TEST(LoadUniformParticles, NumLoadedParticlesIsAsRequested) {
   constexpr int num_particles = 40;
   std::default_random_engine generator;
 
-  ParticleContainer particles = loadUniformParticles(
-    default_species,
-    source_state_parameters,
-    num_particles,
+  ParticleContainer particles = loadParticles(
+    ConstantSourceParameters(default_species, source_state_parameters, num_particles),
     generator,
     simple_mesh
   );
@@ -51,7 +47,7 @@ TEST(LoadUniformParticles, NumLoadedParticlesIsAsRequested) {
   ASSERT_EQ(particles.numParticles(), num_particles);
 }
 
-TEST(LoadUniformParticles, LoadedParticlesAllUseBulkVelocityWithZeroTemperature) {
+TEST(LoadParticles, LoadedParticlesAllUseBulkVelocityWithZeroTemperature) {
   const mfem::Vector bulk_velocity({1.0, 2.0, 3.0});
   const SourceStateParameters source_state_parameters{
     .number_density = 1.0e18,
@@ -62,10 +58,8 @@ TEST(LoadUniformParticles, LoadedParticlesAllUseBulkVelocityWithZeroTemperature)
   constexpr int num_particles = 5;
   std::default_random_engine generator;
 
-  ParticleContainer particles = loadUniformParticles(
-    default_species,
-    source_state_parameters,
-    num_particles,
+  ParticleContainer particles = loadParticles(
+    ConstantSourceParameters(default_species, source_state_parameters, num_particles),
     generator,
     simple_mesh
   );
@@ -78,7 +72,7 @@ TEST(LoadUniformParticles, LoadedParticlesAllUseBulkVelocityWithZeroTemperature)
   }
 }
 
-TEST(LoadUniformParticles, ParticleWeightSetCorrectly) {
+TEST(LoadParticles, ParticleWeightSetCorrectly) {
   constexpr double number_density = 1.0e18;
   const SourceStateParameters source_state_parameters{
     .number_density = number_density,
@@ -88,10 +82,8 @@ TEST(LoadUniformParticles, ParticleWeightSetCorrectly) {
   constexpr int num_particles = 20;
   std::default_random_engine generator;
 
-  ParticleContainer particles = loadUniformParticles(
-    default_species,
-    source_state_parameters,
-    num_particles,
+  ParticleContainer particles = loadParticles(
+    ConstantSourceParameters(default_species, source_state_parameters, num_particles),
     generator,
     simple_mesh
   );
@@ -103,7 +95,7 @@ TEST(LoadUniformParticles, ParticleWeightSetCorrectly) {
   }
 }
 
-TEST(LoadUniformParticles, ParticlesAreUniformlyDistributedInSpace) {
+TEST(LoadParticles, ParticlesAreUniformlyDistributedInSpace) {
   const SourceStateParameters source_state_parameters{
     .number_density = 1.0e18,
     .bulk_velocity = zero_vector,
@@ -112,10 +104,8 @@ TEST(LoadUniformParticles, ParticlesAreUniformlyDistributedInSpace) {
   constexpr int num_particles = 20000;
   std::default_random_engine generator;
 
-  ParticleContainer particles = loadUniformParticles(
-    default_species,
-    source_state_parameters,
-    num_particles,
+  ParticleContainer particles = loadParticles(
+    ConstantSourceParameters(default_species, source_state_parameters, num_particles),
     generator,
     simple_mesh
   );
@@ -139,7 +129,7 @@ TEST(LoadUniformParticles, ParticlesAreUniformlyDistributedInSpace) {
   }
 }
 
-TEST(LoadUniformParticles, ParticleVelocitiesAreMaxwellianWhenMaxwellianParticlesAreRequested) {
+TEST(LoadParticles, ParticleVelocitiesAreMaxwellianWhenMaxwellianParticlesAreRequested) {
   const mfem::Vector nominal_bulk_velocity({300.0, 600.0, 1000.0});
   constexpr double temperature = 11600.0;
   const SourceStateParameters source_state_parameters{
@@ -150,10 +140,8 @@ TEST(LoadUniformParticles, ParticleVelocitiesAreMaxwellianWhenMaxwellianParticle
   constexpr int num_particles = 20000;
   std::default_random_engine generator;
 
-  ParticleContainer particles = loadUniformParticles(
-    default_species,
-    source_state_parameters,
-    num_particles,
+  ParticleContainer particles = loadParticles(
+    ConstantSourceParameters(default_species, source_state_parameters, num_particles),
     generator,
     simple_mesh
   );
@@ -179,7 +167,7 @@ TEST(LoadUniformParticles, ParticleVelocitiesAreMaxwellianWhenMaxwellianParticle
   EXPECT_NEAR(sample_variance, expected_sample_variance, relative_tolerance * expected_sample_variance);
 }
 
-TEST(LoadUniformParticles, ParticleVelocitiesAreMaxwellianWithLargeKappa) {
+TEST(LoadParticles, ParticleVelocitiesAreMaxwellianWithLargeKappa) {
   const mfem::Vector nominal_bulk_velocity({300.0, 600.0, 1000.0});
   constexpr double temperature = 11600.0;
   const SourceStateParameters source_state_parameters{
@@ -191,10 +179,8 @@ TEST(LoadUniformParticles, ParticleVelocitiesAreMaxwellianWithLargeKappa) {
   constexpr int num_particles = 20000;
   std::default_random_engine generator;
 
-  ParticleContainer particles = loadUniformParticles(
-    default_species,
-    source_state_parameters,
-    num_particles,
+  ParticleContainer particles = loadParticles(
+    ConstantSourceParameters(default_species, source_state_parameters, num_particles),
     generator,
     simple_mesh
   );
@@ -220,7 +206,7 @@ TEST(LoadUniformParticles, ParticleVelocitiesAreMaxwellianWithLargeKappa) {
   EXPECT_NEAR(sample_variance, expected_sample_variance, relative_tolerance * expected_sample_variance);
 }
 
-TEST(LoadUniformParticles, ParticleVelocitiesMeanAndStdAreCorrectWhenKappaDistributionIsRequested) {
+TEST(LoadParticles, ParticleVelocitiesMeanAndStdAreCorrectWhenKappaDistributionIsRequested) {
   const mfem::Vector nominal_bulk_velocity({300.0, 600.0, 1000.0});
   constexpr double temperature = 11600.0;
   constexpr int num_particles = 20000;
@@ -233,10 +219,8 @@ TEST(LoadUniformParticles, ParticleVelocitiesMeanAndStdAreCorrectWhenKappaDistri
   };
   std::default_random_engine generator;
 
-  ParticleContainer particles = loadUniformParticles(
-    default_species,
-    source_state_parameters,
-    num_particles,
+  ParticleContainer particles = loadParticles(
+    ConstantSourceParameters(default_species, source_state_parameters, num_particles),
     generator,
     simple_mesh
   );
@@ -263,7 +247,6 @@ TEST(LoadUniformParticles, ParticleVelocitiesMeanAndStdAreCorrectWhenKappaDistri
   EXPECT_NEAR(sample_variance, expected_sample_variance_kappa, relative_tolerance * expected_sample_variance_kappa);
 }
 
-
 TEST(LoadUniformMaxwellianParticles, ParticlePDFsAreMaxwellian) {
   Species species{.charge = -constants::elementary_charge, .mass = constants::electron_mass};
   constexpr double number_density = 1e22;
@@ -278,10 +261,8 @@ TEST(LoadUniformMaxwellianParticles, ParticlePDFsAreMaxwellian) {
     .temperature = temperature,
   };
 
-  ParticleContainer particles = loadUniformParticles(
-    species,
-    source_state_parameters,
-    num_particles,
+  ParticleContainer particles = loadParticles(
+    ConstantSourceParameters(species, source_state_parameters, num_particles),
     generator,
     simple_mesh
   );
@@ -295,6 +276,35 @@ TEST(LoadUniformMaxwellianParticles, ParticlePDFsAreMaxwellian) {
   for (const Particle& particle : particles) {
     const double expected_pdf_value = euler::evaluateMaxwellian(prim, particle.velocity, species);
     EXPECT_DOUBLE_EQ(particle.pdf_value, expected_pdf_value);
+  }
+}
+
+TEST(LoadParticles, LoadedParticlesRespectSodDiscontinuity) {
+  constexpr int num_particles = 100;
+  constexpr double left_number_density = 1.0;
+  constexpr double discontinuity_location = 0.7;
+  const SourceStateParameters left_state_parameters{.number_density = left_number_density};
+  const SourceStateParameters right_state_parameters{.number_density = 0.0};
+  const SodSourceParameters sod_parameters(
+    default_species,
+    discontinuity_location,
+    left_state_parameters,
+    right_state_parameters,
+    num_particles
+  );
+  std::default_random_engine generator;
+
+  ParticleContainer particles = loadParticles(
+    sod_parameters,
+    generator,
+    simple_mesh
+  );
+
+  constexpr double expected_physical_particles = discontinuity_location * left_number_density;
+  constexpr double expected_particle_weight = expected_physical_particles / num_particles;
+  for (const Particle& particle : particles) {
+    EXPECT_DOUBLE_EQ(particle.weight, expected_particle_weight);
+    EXPECT_LE(particle.position[0], discontinuity_location);
   }
 }
 
