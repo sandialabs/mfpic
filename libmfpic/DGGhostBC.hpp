@@ -4,7 +4,6 @@
 #include <libmfpic/DGGhostBoundaryIntegrator.hpp>
 #include <memory>
 #include <mfem.hpp>
-#include <mfem/fem/nonlininteg.hpp>
 
 namespace mfpic {
 

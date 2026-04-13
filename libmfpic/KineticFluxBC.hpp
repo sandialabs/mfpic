@@ -5,7 +5,6 @@
 #include <libmfpic/Euler.hpp>
 #include <libmfpic/Species.hpp>
 #include <memory>
-#include <mfem/fem/hyperbolic.hpp>
 #include <mfem/mfem.hpp>
 
 namespace mfpic {

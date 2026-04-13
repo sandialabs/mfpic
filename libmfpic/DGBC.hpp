@@ -3,7 +3,6 @@
 #include <libmfpic/Species.hpp>
 #include <memory.h>
 #include <mfem.hpp>
-#include <mfem/fem/hyperbolic.hpp>
 
 namespace mfpic {
 

@@ -1,4 +1,3 @@
-#include <iterator>
 #include <libmfpic/DGEulerBoundaryConditions.hpp>
 #include <libmfpic/DGEulerBoundaryConditionsFactory.hpp>
 #include <libmfpic/DGBC.hpp>
