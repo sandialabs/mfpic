@@ -81,7 +81,7 @@ std::pair<double, ParticleContainer> readTimeValueAndParticlesFromStep(int step)
   return std::make_pair(timevalue, particles);
 }
 
-TEST(DumpParticles, ReadParticlesMatcDumpedParticles) {
+TEST(DumpParticles, ReadParticlesMatchDumpedParticles) {
   const mfem::Vector position({1.0, 2.0, 3.0});
   const mfem::Vector velocity({4.0, 5.0, 6.0});
   constexpr int element = 505;

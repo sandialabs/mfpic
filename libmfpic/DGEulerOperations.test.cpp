@@ -305,7 +305,7 @@ TEST(DGEulerOperations, MoveConstant) {
   EXPECT_LE(error, tolerance);
 }
 
-TEST(DGEulerOperations, evaluatePDFCorrectIn3D) {
+TEST(DGEulerOperations, evaluatePDFCorrectIn1D) {
   Species default_species{.charge = -constants::elementary_charge, .mass = constants::electron_mass};
   constexpr double number_density = 1e22;
   constexpr double temperature = 300;
