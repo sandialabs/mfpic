@@ -11,7 +11,8 @@ else()
   add_compile_options(-Wall -Wextra -Wpedantic -Werror)
 endif()
 
-find_package(HDF5)
+find_package(HDF5 REQUIRED)
+find_package(OpenMP COMPONENTS CXX REQUIRED)
 
 find_package(GTest)
 find_package(Python3 COMPONENTS Interpreter)
@@ -37,8 +38,11 @@ function(mfpic_unit_test test_name)
       libmfpic
       mfem
       GTest::gtest_main
+      OpenMP::OpenMP_CXX
     )
-    gtest_discover_tests("${test_name}.test")
+    gtest_discover_tests("${test_name}.test"
+      PROPERTIES ENVIRONMENT "OMP_NUM_THREADS=1"
+    )
   endif()
 endfunction()
 
