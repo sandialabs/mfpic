@@ -207,7 +207,7 @@ IntegratedCharge ParticleOperations::assembleVarianceReducedCharge(
     const mfem::Vector particle_position(particle.position.GetData(), dim_); 
     element_transformation->TransformBack(particle_position, integration_point);
     element_transformation->SetIntPoint(&integration_point);
-    mfem::Vector psi_i(fe->GetDof());
+    mfem::Vector psi(fe->GetDof());
     fe->CalcPhysShape(*element_transformation,psi_i);
     finite_element_space.GetElementVDofs(elem_id, vector_dofs);
 
@@ -215,7 +215,7 @@ IntegratedCharge ParticleOperations::assembleVarianceReducedCharge(
     double noise_reducing_factor = (1 - low_fidelity_pdf_value / particle.pdf_value);
 
     for (int i = 0; i < fe->GetDof(); i++) {
-      charge_state.addIntegratedChargeValue(vector_dofs[i],particle.weight * particle_charge * psi_i(i) * noise_reducing_factor);
+      charge_state.addIntegratedChargeValue(vector_dofs[i],particle.weight * particle_charge * psi(i) * noise_reducing_factor);
     }
   }
 
