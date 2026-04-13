@@ -71,7 +71,7 @@ public:
   virtual double estimateCFL(const double & dt, const double & smallest_cell_lengthscale) const override;
 
   /**
-  * @brief Evaluates the particle distribution function for the low fidelity state at a given position and velocity. The PDF corresponds to a Maxwellian in velocity space and a Uniform distribution in physical space
+  * @brief Evaluates the particle distribution function for the low fidelity state at a given position and velocity.
   *
   * @param current_state State including dofs and species list 
   * @param position Location in physical space to evaluate PDF
