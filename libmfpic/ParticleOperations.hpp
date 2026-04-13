@@ -1,7 +1,5 @@
 #pragma once
 
-#include "libmfpic/LowFidelityOperations.hpp"
-#include "libmfpic/LowFidelityState.hpp"
 #include <libmfpic/Discretization.hpp>
 #include <libmfpic/ElectromagneticFieldsEvaluator.hpp>
 #include <libmfpic/ElementFaceContainer.hpp>
