@@ -168,4 +168,4 @@ namespace mfpic {
     error_message << "Species not found in low fidelity state.\n";
     errorWithUserMessage(error_message.str());
   }
-}
+} // namespace mfpic
