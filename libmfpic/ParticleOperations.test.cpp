@@ -942,18 +942,25 @@ TEST(ParticleOperations, ParticleMovesAcrossPeriodicBoundariesIn3D) {
   }
 }
 
-TEST(ParticleOperations, VarianceReducedChargeIsExactForMaxwellianInCell1D) {
+TEST(ParticleOperations, VarianceReducedChargeIsExactForMaxwellianIn3D) {
   Species species{.charge = -constants::elementary_charge, .mass = constants::electron_mass};
   constexpr double number_density = 1e22;
   constexpr double temperature = 300;
-  mfem::Vector bulk_velocity({1.0,0.0,0.0});
+  mfem::Vector bulk_velocity({1.0,2.0,3.0});
   constexpr int num_particles = 20000;
   std::mt19937 generator;
 
   const int num_elems = 5;
   constexpr int dg_order = 0;
   constexpr int num_equations = 5;
-  std::shared_ptr<mfem::Mesh> mesh = std::make_shared<mfem::Mesh>(mfem::Mesh::MakeCartesian1D(num_elems));
+  constexpr mfem::Element::Type element_type = mfem::Element::HEXAHEDRON;
+  std::shared_ptr<mfem::Mesh> mesh = std::make_shared<mfem::Mesh>(mfem::Mesh::MakeCartesian3D(
+    num_elems,
+    num_elems,
+    num_elems,
+    element_type
+  ));
+
   Discretization dg_discretization(mesh.get(), dg_order, FETypes::DG, num_equations);
 
   constexpr int charge_order = 1;
