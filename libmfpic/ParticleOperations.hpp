@@ -2,9 +2,6 @@
 
 #include <libmfpic/Discretization.hpp>
 #include <libmfpic/ElectromagneticFieldsEvaluator.hpp>
-#include <libmfpic/ElementFaceContainer.hpp>
-#include <libmfpic/IntegratedCharge.hpp>
-#include <libmfpic/ParticleBoundary.hpp>
 #include <libmfpic/Discretization.hpp>
 #include <libmfpic/ElectromagneticFieldsEvaluator.hpp>
 #include <libmfpic/ElementFaceContainer.hpp>
