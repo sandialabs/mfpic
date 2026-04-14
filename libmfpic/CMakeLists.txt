@@ -46,6 +46,7 @@ target_include_directories(libmfpic SYSTEM PRIVATE
 target_link_libraries(libmfpic
   HDF5::HDF5
   mfem
+  OpenMP::OpenMP_CXX
   yaml-cpp
 )
 
