@@ -4,6 +4,7 @@
 #include <libmfpic/ElectromagneticFieldsEvaluator.hpp>
 #include <libmfpic/Euler.hpp>
 #include <libmfpic/LowFidelityState.hpp>
+#include <libmfpic/Species.hpp>
 
 namespace mfpic {
 
@@ -138,4 +139,33 @@ namespace mfpic {
     return max_speed * dt / smallest_cell_lengthscale;
   }
 
-} // namespace
+  double DGEulerOperations::evaluateParticleDistributionFunction(const LowFidelityState& current_state, const mfem::Vector position, const mfem::Vector velocity, const int element, const Species& species) const
+  {
+    mfem::FiniteElementSpace & finite_element_space = charge_discretization_.getFeSpace();
+    mfem::Mesh * mesh = finite_element_space.GetMesh();
+    for (int ispecies = 0; ispecies < current_state.numSpecies(); ++ispecies) {
+      const LowFidelitySpeciesState& current_species_state = current_state.getSpeciesState(ispecies);
+      Species current_species = current_species_state.getSpecies();
+      if (current_species == species)
+      {
+        const mfem::GridFunction& current_species_grid_function = current_species_state.getGridFunction();
+        mfem::ElementTransformation *element_transformation = mesh->GetElementTransformation(element);
+
+        mfem::InverseElementTransformation inverse_element_transformation(element_transformation);
+        mfem::IntegrationPoint ip_ref;
+        int info = inverse_element_transformation.Transform(position, ip_ref);  
+        MFEM_VERIFY(info == mfem::InverseElementTransformation::Inside,
+            "Point is not inside the element.");
+        mfem::Vector fluid_state_at_position;
+        current_species_grid_function.GetVectorValue(element, ip_ref, fluid_state_at_position);
+
+        mfem::Vector primitive_state = euler::convertFromConservativeToPrimitive(fluid_state_at_position,current_species); 
+        double particle_distribution_function_value = euler::evaluateMaxwellian(primitive_state,velocity,current_species);
+        return particle_distribution_function_value;
+      }
+    }
+    std::ostringstream error_message;
+    error_message << "Species not found in low fidelity state.\n";
+    errorWithUserMessage(error_message.str());
+  }
+} // namespace mfpic

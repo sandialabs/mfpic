@@ -64,6 +64,8 @@ mfem::Vector getBulkVelocityFromPrimitiveState(const mfem::Vector& primitive_sta
 double getPressureFromPrimitiveState(const mfem::Vector& primitive_state);
 double getInternalEnergyDensityFromPrimitiveState(const mfem::Vector& primitive_state, const Species& species);
 
+double evaluateMaxwellian(const mfem::Vector& primitive_state, const mfem::Vector& velocity, const Species& species);
+
 }
 
 }

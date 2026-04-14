@@ -247,6 +247,38 @@ TEST(LoadParticles, ParticleVelocitiesMeanAndStdAreCorrectWhenKappaDistributionI
   EXPECT_NEAR(sample_variance, expected_sample_variance_kappa, relative_tolerance * expected_sample_variance_kappa);
 }
 
+TEST(LoadUniformMaxwellianParticles, ParticleDistributionFunctionsAreMaxwellian) {
+  Species species{.charge = -constants::elementary_charge, .mass = constants::electron_mass};
+  constexpr double number_density = 1e22;
+  constexpr double temperature = 300;
+  mfem::Vector bulk_velocity({1.0,2.0,3.0});
+  constexpr int num_particles = 1;
+  std::mt19937 generator;
+
+  const SourceStateParameters source_state_parameters{
+    .number_density = number_density,
+    .bulk_velocity = bulk_velocity,
+    .temperature = temperature,
+  };
+
+  ParticleContainer particles = loadParticles(
+    ConstantSourceParameters(species, source_state_parameters, num_particles),
+    generator,
+    simple_mesh
+  );
+
+  mfem::Vector prim(5);
+  prim(euler::PrimitiveVariables::NUMBER_DENSITY) = number_density;
+  prim(euler::PrimitiveVariables::X_BULK_VELOCITY) = bulk_velocity(0);
+  prim(euler::PrimitiveVariables::Y_BULK_VELOCITY) = bulk_velocity(1);
+  prim(euler::PrimitiveVariables::Z_BULK_VELOCITY) = bulk_velocity(2);
+  prim(euler::PrimitiveVariables::TEMPERATURE) = temperature;
+  for (const Particle& particle : particles) {
+    const double expected_particle_distribution_value = euler::evaluateMaxwellian(prim, particle.velocity, species);
+    EXPECT_DOUBLE_EQ(particle.particle_distribution_function_value, expected_particle_distribution_value);
+  }
+}
+
 TEST(LoadParticles, LoadedParticlesRespectSodDiscontinuity) {
   constexpr int num_particles = 100;
   constexpr double left_number_density = 1.0;

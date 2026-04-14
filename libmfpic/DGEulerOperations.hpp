@@ -1,11 +1,11 @@
 #pragma once
 
-#include "libmfpic/LowFidelityState.hpp"
 #include <libmfpic/DGEulerAssembly.hpp>
 #include <libmfpic/Discretization.hpp>
 #include <libmfpic/ElectromagneticFieldsEvaluator.hpp>
 #include <libmfpic/IntegratedCharge.hpp>
 #include <libmfpic/LowFidelityOperations.hpp>
+#include <libmfpic/LowFidelityState.hpp>
 
 #include <mfem/mfem.hpp>
 
@@ -69,6 +69,23 @@ public:
   * @return CFL
   */
   virtual double estimateCFL(const double & dt, const double & smallest_cell_lengthscale) const override;
+
+  /**
+  * @brief Evaluates the particle distribution function for the low fidelity state at a given position and velocity.
+  *
+  * @param current_state State including dofs and species list 
+  * @param position Location in physical space to evaluate PDF
+  * @param velocity Location in velocity space to evaluate PDF
+  * @param element  Element containing position
+  * @param species  Evaluate PDF for the given species
+  * @return PDF value 
+  */
+  virtual double evaluateParticleDistributionFunction(
+    const LowFidelityState & current_state, 
+    const mfem::Vector position, 
+    const mfem::Vector velocity, 
+    const int element, 
+    const Species& species) const override; 
 
 private:
   Discretization & charge_discretization_;

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <libmfpic/Euler.hpp>
 #include <libmfpic/GenerateKappaVelocity.hpp>
 #include <libmfpic/GenerateMaxwellianVelocity.hpp>
 #include <libmfpic/MeshDistribution.hpp>
@@ -76,6 +77,14 @@ ParticleContainer loadParticles(
       );
     }
 
+    mfem::Vector primitive_state(5);
+    primitive_state(0) = source_state_parameters.number_density;
+    primitive_state(1) = source_state_parameters.bulk_velocity(0);
+    primitive_state(2) = source_state_parameters.bulk_velocity(1);
+    primitive_state(3) = source_state_parameters.bulk_velocity(2);
+    primitive_state(4) = source_state_parameters.temperature;
+    double particle_distribution_function_value = euler::evaluateMaxwellian(primitive_state,velocity,species);
+
     particles.addParticle(Particle{
       .position = position,
       .velocity = velocity,
@@ -83,6 +92,7 @@ ParticleContainer loadParticles(
       .species = species,
       .weight = particle_weight,
       .is_alive = true,
+      .particle_distribution_function_value = particle_distribution_function_value,
     });
   }
 

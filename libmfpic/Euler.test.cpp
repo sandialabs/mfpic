@@ -105,4 +105,84 @@ TEST(Euler, getPressureFromConservativeState) {
   EXPECT_DOUBLE_EQ(expected_pressure, pressure);
 }
 
+TEST(Maxwellian, MaxwellianValueAtMean)
+{
+  constexpr double number_density = 1.2e16;
+  const mfem::Vector bulk_velocity{5.4, 4.7, 8.3};
+  constexpr double temperature = 305.1;
+  constexpr Species species{.mass = constants::electron_mass};
+  mfem::Vector prim(5);
+  prim(euler::PrimitiveVariables::NUMBER_DENSITY) = number_density;
+  prim(euler::PrimitiveVariables::X_BULK_VELOCITY) = bulk_velocity(0);
+  prim(euler::PrimitiveVariables::Y_BULK_VELOCITY) = bulk_velocity(1);
+  prim(euler::PrimitiveVariables::Z_BULK_VELOCITY) = bulk_velocity(2);
+  prim(euler::PrimitiveVariables::TEMPERATURE) = temperature;
+
+  const double sigma = std::sqrt(constants::boltzmann_constant * temperature / species.mass);
+
+  double val_at_mean = euler::evaluateMaxwellian(prim, bulk_velocity, species);
+  double expected_at_mean =
+      number_density / std::pow(std::sqrt(2.0 * M_PI) * sigma,3);
+  EXPECT_NEAR(val_at_mean, expected_at_mean, expected_at_mean * 1e-12);
+}
+
+TEST(Maxwellian, MaxwellianShiftInV)
+{
+  constexpr double number_density = 1.2e16;
+  const mfem::Vector bulk_velocity{5.4, 4.7, 8.3};
+  constexpr double temperature = 305.1;
+  constexpr Species species{.mass = constants::electron_mass};
+  mfem::Vector prim(5);
+  prim(euler::PrimitiveVariables::NUMBER_DENSITY) = number_density;
+  prim(euler::PrimitiveVariables::X_BULK_VELOCITY) = bulk_velocity(0);
+  prim(euler::PrimitiveVariables::Y_BULK_VELOCITY) = bulk_velocity(1);
+  prim(euler::PrimitiveVariables::Z_BULK_VELOCITY) = bulk_velocity(2);
+  prim(euler::PrimitiveVariables::TEMPERATURE) = temperature;
+
+  const double sigma = std::sqrt(constants::boltzmann_constant * temperature / species.mass);
+
+  const double val_at_mean = euler::evaluateMaxwellian(prim, bulk_velocity, species);
+
+  const double a = 0.7 * sigma;
+  mfem::Vector v_shift(3);
+  v_shift(0) = bulk_velocity(0) + a; v_shift(1) = bulk_velocity(1); v_shift(2) = bulk_velocity(2);
+
+  const double val_shift = euler::evaluateMaxwellian(prim, v_shift, species);
+  const double expected_ratio = std::exp(-0.5 * (a*a) / (sigma*sigma));
+  EXPECT_NEAR(val_shift / val_at_mean, expected_ratio, 1e-12);
+}
+
+TEST(Maxwellian, MaxwellianIntegratesToOnein3D)
+{
+  constexpr double number_density = 1.0;
+  const mfem::Vector bulk_velocity{5.4, 4.7, 8.3};
+  constexpr double temperature = 305.1;
+  constexpr Species species{.mass = constants::electron_mass};
+  mfem::Vector prim(5);
+  prim(euler::PrimitiveVariables::NUMBER_DENSITY) = number_density;
+  prim(euler::PrimitiveVariables::X_BULK_VELOCITY) = bulk_velocity(0);
+  prim(euler::PrimitiveVariables::Y_BULK_VELOCITY) = bulk_velocity(1);
+  prim(euler::PrimitiveVariables::Z_BULK_VELOCITY) = bulk_velocity(2);
+  prim(euler::PrimitiveVariables::TEMPERATURE) = temperature;
+
+  const double sigma = std::sqrt(constants::boltzmann_constant * temperature / species.mass);
+  const double L = 6.0 * sigma;
+  const int N = 41; 
+  const double dv = 2.0 * L / (N - 1);
+  double integral = 0.0;
+  mfem::Vector v(3);
+  for (int i = 0; i < N; ++i) {
+    v(0) = bulk_velocity(0) + (-L + i * dv);
+    for (int j = 0; j < N; ++j) {
+      v(1) = bulk_velocity(1) + (-L + j * dv);
+      for (int k = 0; k < N; ++k) {
+        v(2) = bulk_velocity(2) + (-L + k * dv);
+        integral += euler::evaluateMaxwellian(prim, v, species);
+      }
+    }
+  }
+  integral *= (dv * dv * dv);
+  EXPECT_NEAR(integral, 1.0, 1e-5);
+}
+
 }

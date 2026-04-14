@@ -54,6 +54,10 @@ std::pair<double, ParticleContainer> readTimeValueAndParticlesFromStep(int step)
   std::vector<double> weight(num_particles);
   H5Dread(dataset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, weight.data());
   H5Dclose(dataset);
+  dataset = H5Dopen(step_group, "particle_distribution_function_value", H5P_DEFAULT);
+  std::vector<double> particle_distribution_function_value(num_particles);
+  H5Dread(dataset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, particle_distribution_function_value.data());
+  H5Dclose(dataset);
   dataset = H5Dopen(step_group, "element", H5P_DEFAULT);
   std::vector<int> element(num_particles);
   H5Dread(dataset, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, element.data());
@@ -70,17 +74,19 @@ std::pair<double, ParticleContainer> readTimeValueAndParticlesFromStep(int step)
       .element = element[i],
       .weight = weight[i],
       .is_alive = true,
+      .particle_distribution_function_value = particle_distribution_function_value[i],
     });
   }
 
   return std::make_pair(timevalue, particles);
 }
 
-TEST(DumpParticles, ReadParticlesMatcDumpedParticles) {
+TEST(DumpParticles, ReadParticlesMatchDumpedParticles) {
   const mfem::Vector position({1.0, 2.0, 3.0});
   const mfem::Vector velocity({4.0, 5.0, 6.0});
   constexpr int element = 505;
   constexpr double weight = 1.0e9;
+  constexpr double particle_distribution_function_value = 21492e9;
   ParticleContainer particles_to_dump;
   constexpr int num_timesteps = 3;
   constexpr double dt = 1.0e-12;
@@ -92,6 +98,7 @@ TEST(DumpParticles, ReadParticlesMatcDumpedParticles) {
       .velocity = velocity,
       .element = element,
       .weight = weight,
+      .particle_distribution_function_value = particle_distribution_function_value
     });
   }
 
@@ -103,6 +110,7 @@ TEST(DumpParticles, ReadParticlesMatcDumpedParticles) {
     EXPECT_DOUBLE_EQ(expected_time, simulation_time);
     for (const Particle& particle : particles_from_step) {
       EXPECT_DOUBLE_EQ(weight, particle.weight);
+      EXPECT_DOUBLE_EQ(particle_distribution_function_value, particle.particle_distribution_function_value);
       EXPECT_EQ(element, particle.element);
       for (int dim = 0; dim < 3; dim++) {
         EXPECT_DOUBLE_EQ(position[dim], particle.position[dim]);

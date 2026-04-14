@@ -2,8 +2,12 @@
 
 #include <libmfpic/Discretization.hpp>
 #include <libmfpic/ElectromagneticFieldsEvaluator.hpp>
+#include <libmfpic/Discretization.hpp>
+#include <libmfpic/ElectromagneticFieldsEvaluator.hpp>
 #include <libmfpic/ElementFaceContainer.hpp>
 #include <libmfpic/IntegratedCharge.hpp>
+#include <libmfpic/LowFidelityOperations.hpp>
+#include <libmfpic/LowFidelityState.hpp>
 #include <libmfpic/ParticleBoundary.hpp>
 #include <libmfpic/ParticleContainer.hpp>
 
@@ -56,6 +60,18 @@ public:
   */
   IntegratedCharge assembleCharge(
     const ParticleContainer& current_particles
+  ) const;
+
+  /**
+  * @brief Assemble charges from the particles into the charge density using a variance reduced formulation
+  *
+  * @param current_particles - ParticleContainer of particles
+  * @return IntegratedCharge - integrated charge state
+  */
+  IntegratedCharge assembleVarianceReducedCharge(
+    const ParticleContainer& current_particles,
+    const LowFidelityState& low_fidelity_state,
+    const LowFidelityOperations& low_fidelity_operations
   ) const;
 
   /**

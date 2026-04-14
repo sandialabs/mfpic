@@ -23,6 +23,13 @@ public:
     const LowFidelityState& current_state
   ) const = 0;
 
+  virtual double evaluateParticleDistributionFunction(
+    const LowFidelityState& current_state,
+    const mfem::Vector position,
+    const mfem::Vector velocity,
+    const int element,
+    const Species& species) const = 0;
+
   virtual double estimateCFL(const double & dt, const double & smallest_cell_lengthscale) const = 0;
 
   virtual ~LowFidelityOperations() = default;

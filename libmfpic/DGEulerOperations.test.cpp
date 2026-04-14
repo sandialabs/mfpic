@@ -305,4 +305,42 @@ TEST(DGEulerOperations, MoveConstant) {
   EXPECT_LE(error, tolerance);
 }
 
+TEST(DGEulerOperations, evaluateParticleDistributionFunctionCorrectIn1D) {
+  Species default_species{.charge = -constants::elementary_charge, .mass = constants::electron_mass};
+  constexpr double number_density = 1e22;
+  constexpr double temperature = 300;
+
+  mfem::Vector bulk_velocity({1.0,0.0,0.0});
+  const int num_elems = 1;
+  constexpr int dg_order = 0;
+  constexpr int num_equations = 5;
+  std::shared_ptr<mfem::Mesh> mesh = std::make_shared<mfem::Mesh>(mfem::Mesh::MakeCartesian1D(num_elems));
+  Discretization dg_discretization(mesh.get(), dg_order, FETypes::DG, num_equations);
+  Discretization charge_discretization(mesh.get(), dg_order, FETypes::DG, num_equations);
+
+  mfem::FiniteElementSpace finite_element_space = dg_discretization.getFeSpace();
+  std::shared_ptr<DGEulerAssembly> operator_ptr = std::make_shared<DGEulerAssembly>(finite_element_space, default_species);
+  std::vector<std::shared_ptr<DGEulerAssembly>> dg_operators({operator_ptr});
+  DGEulerOperations dg_euler_operations(charge_discretization, dg_operators);
+
+  std::vector<std::unique_ptr<SourceParameters>> list_of_parameters;
+  list_of_parameters.push_back(std::make_unique<ConstantSourceParameters>(default_species, number_density, temperature, bulk_velocity));
+  LowFidelityState low_fidelity_state = buildEulerState(dg_discretization, list_of_parameters);
+
+  const mfem::Vector position({0.5,0.0,0.0});
+  const mfem::Vector particle_position(position.GetData(), 1); 
+  const mfem::Vector velocity({bulk_velocity(0),0.0,0.0});
+  double particle_distribution_value = dg_euler_operations.evaluateParticleDistributionFunction(low_fidelity_state,particle_position,velocity,0,default_species);
+
+  mfem::Vector prim = euler::constructPrimitiveState(number_density, bulk_velocity, temperature);
+  const double sigma = std::sqrt(constants::boltzmann_constant * temperature / default_species.mass);
+
+  const double expected_at_mean =
+      number_density / std::pow(std::sqrt(2.0 * M_PI) * sigma,3);
+  EXPECT_NEAR(particle_distribution_value, expected_at_mean, expected_at_mean * 1e-12);
+
+}
+
+
+
 } // namespace

@@ -13,6 +13,7 @@ struct Particle {
   Species species = Species{};
   double weight = 0.0;
   bool is_alive = true;
+  double particle_distribution_function_value = 0.0;
 };
 
 } // namespace mfpic
