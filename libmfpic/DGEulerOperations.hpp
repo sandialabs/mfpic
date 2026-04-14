@@ -80,7 +80,7 @@ public:
   * @param species  Evaluate PDF for the given species
   * @return PDF value 
   */
-  virtual double evaluatePDF(
+  virtual double evaluateParticleDistributionFunction(
     const LowFidelityState & current_state, 
     const mfem::Vector position, 
     const mfem::Vector velocity, 

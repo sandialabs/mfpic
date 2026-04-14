@@ -83,7 +83,7 @@ ParticleContainer loadParticles(
     primitive_state(2) = source_state_parameters.bulk_velocity(1);
     primitive_state(3) = source_state_parameters.bulk_velocity(2);
     primitive_state(4) = source_state_parameters.temperature;
-    double pdf_value = euler::evaluateMaxwellian(primitive_state,velocity,species);
+    double particle_distribution_function_value = euler::evaluateMaxwellian(primitive_state,velocity,species);
 
     particles.addParticle(Particle{
       .position = position,
@@ -92,7 +92,7 @@ ParticleContainer loadParticles(
       .species = species,
       .weight = particle_weight,
       .is_alive = true,
-      .pdf_value = pdf_value,
+      .particle_distribution_function_value = particle_distribution_function_value,
     });
   }
 

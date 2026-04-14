@@ -23,7 +23,7 @@ public:
     const LowFidelityState& current_state
   ) const = 0;
 
-  virtual double evaluatePDF(
+  virtual double evaluateParticleDistributionFunction(
     const LowFidelityState& current_state,
     const mfem::Vector position,
     const mfem::Vector velocity,

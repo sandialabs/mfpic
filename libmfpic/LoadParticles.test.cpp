@@ -247,7 +247,7 @@ TEST(LoadParticles, ParticleVelocitiesMeanAndStdAreCorrectWhenKappaDistributionI
   EXPECT_NEAR(sample_variance, expected_sample_variance_kappa, relative_tolerance * expected_sample_variance_kappa);
 }
 
-TEST(LoadUniformMaxwellianParticles, ParticlePDFsAreMaxwellian) {
+TEST(LoadUniformMaxwellianParticles, ParticleDistributionFunctionsAreMaxwellian) {
   Species species{.charge = -constants::elementary_charge, .mass = constants::electron_mass};
   constexpr double number_density = 1e22;
   constexpr double temperature = 300;
@@ -274,8 +274,8 @@ TEST(LoadUniformMaxwellianParticles, ParticlePDFsAreMaxwellian) {
   prim(euler::PrimitiveVariables::Z_BULK_VELOCITY) = bulk_velocity(2);
   prim(euler::PrimitiveVariables::TEMPERATURE) = temperature;
   for (const Particle& particle : particles) {
-    const double expected_pdf_value = euler::evaluateMaxwellian(prim, particle.velocity, species);
-    EXPECT_DOUBLE_EQ(particle.pdf_value, expected_pdf_value);
+    const double expected_particle_distribution_value = euler::evaluateMaxwellian(prim, particle.velocity, species);
+    EXPECT_DOUBLE_EQ(particle.particle_distribution_function_value, expected_particle_distribution_value);
   }
 }
 

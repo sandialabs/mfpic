@@ -139,7 +139,7 @@ namespace mfpic {
     return max_speed * dt / smallest_cell_lengthscale;
   }
 
-  double DGEulerOperations::evaluatePDF(const LowFidelityState& current_state, const mfem::Vector position, const mfem::Vector velocity, const int element, const Species& species) const
+  double DGEulerOperations::evaluateParticleDistributionFunction(const LowFidelityState& current_state, const mfem::Vector position, const mfem::Vector velocity, const int element, const Species& species) const
   {
     mfem::FiniteElementSpace & finite_element_space = charge_discretization_.getFeSpace();
     mfem::Mesh * mesh = finite_element_space.GetMesh();
@@ -160,8 +160,8 @@ namespace mfpic {
         current_species_grid_function.GetVectorValue(element, ip_ref, fluid_state_at_position);
 
         mfem::Vector primitive_state = euler::convertFromConservativeToPrimitive(fluid_state_at_position,current_species); 
-        double pdf_value = euler::evaluateMaxwellian(primitive_state,velocity,current_species);
-        return pdf_value;
+        double particle_distribution_function_value = euler::evaluateMaxwellian(primitive_state,velocity,current_species);
+        return particle_distribution_function_value;
       }
     }
     std::ostringstream error_message;
