@@ -44,6 +44,8 @@ namespace mfpic {
     const double a_plus = func_erf(plus);
     const double b_plus = func_exp(plus);
 
+    flux_dot_n = 0.;
+
     flux_dot_n(ConservativeVariables::MASS_DENSITY) = 
       conservative_state[ConservativeVariables::MASS_DENSITY] *
       ( normal_velocity * a_plus + b_plus );

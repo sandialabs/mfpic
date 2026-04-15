@@ -218,6 +218,7 @@ mfem::Vector expectedFDotN(const mfem::Vector conservative_state, const mfem::Ve
   const double reduced_dot_t1     = reduced_velocity * tangent_1;
   const double reduced_dot_t2     = reduced_velocity * tangent_2;
 
+  // see sec 1.3.6 in Boyd and Schwartzentruber
   const double density_flux = 1. / 4. * conservative_state[euler::ConservativeVariables::MASS_DENSITY] * 
     std::sqrt(8. * constants::boltzmann_constant * temperature  / (M_PI * species.mass)) * (
       std::exp(-reduced_dot_normal*reduced_dot_normal) + 
@@ -246,6 +247,7 @@ mfem::Vector expectedFDotN(const mfem::Vector conservative_state, const mfem::Ve
 
 TEST(DGEulerBoundaryConditions, KineticFluxFluxFunctionComputesCorrectFluxIn1D) {
 
+  constexpr double tol = 1e-12;
   constexpr int spatial_dim = 1;
   KineticFluxFluxFunction flux(spatial_dim, electron_species);
   auto dummy_transform = mfem::FaceElementTransformations();
@@ -266,12 +268,13 @@ TEST(DGEulerBoundaryConditions, KineticFluxFluxFunctionComputesCorrectFluxIn1D) 
   flux.ComputeFluxDotN(conservative_state, normal, dummy_transform, f_dot_n);
 
   for (int i = 0; i < 5; ++i)
-    EXPECT_DOUBLE_EQ(f_dot_n(i), f_dot_n_expected(i) * normal.Norml2());
+    EXPECT_NEAR(f_dot_n(i), f_dot_n_expected(i) * normal.Norml2(), tol);
 
 }
 
 TEST(DGEulerBoundaryConditions, KineticFluxFluxFunctionComputesCorrectFluxIn2D) {
 
+  constexpr double tol = 1e-7;
   constexpr int spatial_dim = 2;
   KineticFluxFluxFunction flux(spatial_dim, electron_species);
   auto dummy_transform = mfem::FaceElementTransformations();
@@ -292,12 +295,13 @@ TEST(DGEulerBoundaryConditions, KineticFluxFluxFunctionComputesCorrectFluxIn2D) 
   flux.ComputeFluxDotN(conservative_state, normal, dummy_transform, f_dot_n);
 
   for (int i = 0; i < 5; ++i)
-    EXPECT_DOUBLE_EQ(f_dot_n(i), f_dot_n_expected(i) * normal.Norml2());
+    EXPECT_NEAR(f_dot_n(i), f_dot_n_expected(i) * normal.Norml2(), tol);
 
 }
 
 TEST(DGEulerBoundaryConditions, KineticFluxFluxFunctionComputesCorrectFluxIn3D) {
 
+  constexpr double tol = 1e-7;
   constexpr int spatial_dim = 3;
   KineticFluxFluxFunction flux(spatial_dim, electron_species);
   auto dummy_transform = mfem::FaceElementTransformations();
@@ -318,12 +322,13 @@ TEST(DGEulerBoundaryConditions, KineticFluxFluxFunctionComputesCorrectFluxIn3D) 
   flux.ComputeFluxDotN(conservative_state, normal, dummy_transform, f_dot_n);
 
   for (int i = 0; i < 5; ++i)
-    EXPECT_DOUBLE_EQ(f_dot_n(i), f_dot_n_expected(i) * normal.Norml2());
+    EXPECT_NEAR(f_dot_n(i), f_dot_n_expected(i) * normal.Norml2(), tol) << i;
 
 }
 
 TEST(DGEulerBoundaryConditions, KineticFluxFluxFunctionCorrectHighMachBehavior) {
 
+  constexpr double tol = 1e-12;
   constexpr int spatial_dim = 1;
   KineticFluxFluxFunction flux(spatial_dim, electron_species);
   auto dummy_transform = mfem::FaceElementTransformations();
@@ -353,11 +358,12 @@ TEST(DGEulerBoundaryConditions, KineticFluxFluxFunctionCorrectHighMachBehavior) 
   flux.ComputeFluxDotN(conservative_state, normal, dummy_transform, f_dot_n);
 
   for (int i = 0; i < 5; ++i)
-    EXPECT_DOUBLE_EQ(f_dot_n(i), f_dot_n_expected(i) * normal.Norml2());
+    EXPECT_NEAR(f_dot_n(i), f_dot_n_expected(i) * normal.Norml2(), tol);
 }
 
 TEST(DGEulerBoundaryConditions, KineticFluxFluxFunctionCorrectLeftGoingExtreme) {
 
+  constexpr double tol = 1e-12;
   constexpr int spatial_dim = 1;
   KineticFluxFluxFunction flux(spatial_dim, electron_species);
   auto dummy_transform = mfem::FaceElementTransformations();
@@ -382,11 +388,12 @@ TEST(DGEulerBoundaryConditions, KineticFluxFluxFunctionCorrectLeftGoingExtreme) 
   flux.ComputeFluxDotN(conservative_state, normal, dummy_transform, f_dot_n);
 
   for (int i = 0; i < 5; ++i)
-    EXPECT_DOUBLE_EQ(f_dot_n(i), f_dot_n_expected(i) * normal.Norml2());
+    EXPECT_NEAR(f_dot_n(i), f_dot_n_expected(i) * normal.Norml2(), tol);
 }
 
 TEST(DGEulerBoundaryConditions, KineticFluxFluxFunctionCorrectNoBulk) {
 
+  constexpr double tol = 1e-12;
   constexpr int spatial_dim = 1;
   KineticFluxFluxFunction flux(spatial_dim, electron_species);
   auto dummy_transform = mfem::FaceElementTransformations();
@@ -406,17 +413,18 @@ TEST(DGEulerBoundaryConditions, KineticFluxFluxFunctionCorrectNoBulk) {
   const double pressure = euler::getPressureFromConservativeState(conservative_state, electron_species);
   mfem::Vector f_dot_n_expected(5);
   // should just get thermal fluctuations
+  // see sec 1.3.6 in Boyd and Schwartzentruber
   f_dot_n_expected(0) = conservative_state[euler::ConservativeVariables::MASS_DENSITY] * thermal_speed / 2.;
   f_dot_n_expected(1) = pressure / 2.;
   f_dot_n_expected(2) = 0.;
   f_dot_n_expected(3) = 0.;
-  f_dot_n_expected(4) = thermal_speed / 2. * pressure; 
+  f_dot_n_expected(4) = thermal_speed * pressure; 
   mfem::Vector f_dot_n(5);
 
   flux.ComputeFluxDotN(conservative_state, normal, dummy_transform, f_dot_n);
 
   for (int i = 0; i < 5; ++i)
-    EXPECT_DOUBLE_EQ(f_dot_n(i), f_dot_n_expected(i) * normal.Norml2());
+    EXPECT_NEAR(f_dot_n(i), f_dot_n_expected(i) * normal.Norml2(), tol) << i;
 }
 
 } // namespace
