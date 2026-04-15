@@ -92,6 +92,10 @@ class DummyNumericalFlux : public mfem::NumericalFlux {
 
 };
 
+/**
+ * @brief A DG BC that uses the kinetic flux vector splitting approach
+ */
+
 struct KineticFluxBC : public DGBC {
 
   KineticFluxBC() = delete;

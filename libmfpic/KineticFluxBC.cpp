@@ -1,4 +1,5 @@
 #include <libmfpic/Constants.hpp>
+#include <libmfpic/Euler.hpp>
 #include <libmfpic/KineticFluxBC.hpp>
 
 namespace mfpic {
@@ -37,15 +38,15 @@ namespace mfpic {
       return 1. / 2. * (1. + sign * erf_term);
     };
     auto func_exp = [&] (const double & sign) {
-      return sign * reduced_velocity / (2. * sqrt_pi) * exp_term;
+      return sign * most_probable_speed / (2. * sqrt_pi) * exp_term;
     };
-    const double plus = 1., minus = -1.;
-    const double a_plus = func_erf(plus), a_minus = func_erf(minus);
-    const double b_plus = func_exp(plus), b_minus = func_exp(minus);
+    const double plus = 1.; // assume only particle absorption
+    const double a_plus = func_erf(plus);
+    const double b_plus = func_exp(plus);
 
     flux_dot_n(ConservativeVariables::MASS_DENSITY) = 
       conservative_state[ConservativeVariables::MASS_DENSITY] *
-      ( normal_velocity * ( a_plus + a_minus ) + b_plus + b_minus );
+      ( normal_velocity * a_plus + b_plus );
 
     flux_dot_n(ConservativeVariables::X_MOMENTUM_DENSITY) = 
       flux_dot_n(ConservativeVariables::MASS_DENSITY) * velocity(0);
@@ -58,19 +59,19 @@ namespace mfpic {
 
     switch (dim) {
     case 3:
-      flux_dot_n(ConservativeVariables::Z_MOMENTUM_DENSITY) += pressure * normal(2) * ( a_plus + a_minus );
+      flux_dot_n(ConservativeVariables::Z_MOMENTUM_DENSITY) += pressure * unit_normal(2) * a_plus;
       [[fallthrough]];
     case 2:
-      flux_dot_n(ConservativeVariables::Y_MOMENTUM_DENSITY) += pressure * normal(1) * ( a_plus + a_minus );
+      flux_dot_n(ConservativeVariables::Y_MOMENTUM_DENSITY) += pressure * unit_normal(1) * a_plus;
       [[fallthrough]];
     case 1:
-      flux_dot_n(ConservativeVariables::X_MOMENTUM_DENSITY) += pressure * normal(0) * ( a_plus + a_minus );
+      flux_dot_n(ConservativeVariables::X_MOMENTUM_DENSITY) += pressure * unit_normal(0) * a_plus;
       break;
     }
 
     flux_dot_n(ConservativeVariables::TOTAL_ENERGY_DENSITY) = 
       flux_dot_n(ConservativeVariables::MASS_DENSITY) / conservative_state[ConservativeVariables::MASS_DENSITY] *
-      ( conservative_state[ConservativeVariables::TOTAL_ENERGY_DENSITY] + pressure);
+      ( conservative_state[ConservativeVariables::TOTAL_ENERGY_DENSITY] + pressure ) - 1. / 2. * pressure * b_plus;
 
     flux_dot_n *= d_area; // rescale final result
 

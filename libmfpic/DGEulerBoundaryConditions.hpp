@@ -5,7 +5,6 @@
 #include <libmfpic/DGGhostBC.hpp>
 #include <libmfpic/Euler.hpp>
 #include <libmfpic/GhostDOFSetter.hpp>
-#include <mfem/fem/hyperbolic.hpp>
 
 namespace mfpic {
 
