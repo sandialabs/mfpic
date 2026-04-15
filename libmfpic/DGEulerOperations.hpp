@@ -143,16 +143,17 @@ public:
     const int element,
     const Species& species) const override;
 
-  void computeIntegralsForVarianceReduction(
-    const LowFidelityState& current_state
-  ); 
-
   mfem::DenseMatrix integralForVarianceReducedNumberDensity(
     mfem::FiniteElementSpace finite_element_space, 
     const LowFidelityState& current_state
   ) const;
 
   mfem::DenseTensor integralForVarianceReducedBulkVelocity(
+    mfem::FiniteElementSpace finite_element_space, 
+    const LowFidelityState& current_state
+  ) const;
+
+  mfem::DenseMatrix integralForVarianceReducedTemperature(
     mfem::FiniteElementSpace finite_element_space, 
     const LowFidelityState& current_state
   ) const;

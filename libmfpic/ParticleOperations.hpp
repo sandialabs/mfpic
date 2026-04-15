@@ -126,6 +126,12 @@ public:
     const DGEulerOperations& low_fidelity_operations
   );
 
+  mfem::DenseMatrix& getVarianceReducedTemperature(
+    const ParticleContainer& particles, 
+    const LowFidelityState& low_fidelity_state,
+    const DGEulerOperations& low_fidelity_operations
+  );
+
   /**
    * @brief Compute the temperature in each element
    *
