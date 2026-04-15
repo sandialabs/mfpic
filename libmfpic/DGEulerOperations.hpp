@@ -143,11 +143,26 @@ public:
     const int element,
     const Species& species) const override;
 
+  void computeIntegralsForVarianceReduction(
+    const LowFidelityState& current_state
+  ); 
+
+  mfem::DenseMatrix integralForVarianceReducedNumberDensity(
+    mfem::FiniteElementSpace finite_element_space, 
+    const LowFidelityState& current_state
+  ) const;
+
+  mfem::DenseTensor integralForVarianceReducedBulkVelocity(
+    mfem::FiniteElementSpace finite_element_space, 
+    const LowFidelityState& current_state
+  ) const;
+
 private:
   Discretization & charge_discretization_;
   std::vector<std::shared_ptr<DGEulerAssembly>> dg_assemblers_;
   mutable mfem::Vector rhs_;
   mutable mfem::Vector temp_vector_;
+  mfem::Vector number_density_variance_reduction_integral_;
 
 };
 

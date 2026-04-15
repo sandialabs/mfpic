@@ -1,3 +1,4 @@
+#include <libmfpic/DGEulerOperations.hpp>
 #include <libmfpic/Constants.hpp>
 #include <libmfpic/IntegratedCharge.hpp>
 #include <libmfpic/LowFidelityOperations.hpp>
@@ -258,7 +259,43 @@ std::unordered_map<Species, mfem::Vector>& ParticleOperations::getNumberDensity(
   return this->particle_number_density_;
 }
 
+<<<<<<< HEAD
 std::unordered_map<Species, mfem::DenseMatrix>& ParticleOperations::getBulkVelocity(const ParticleContainer& particles, const bool sum_weights
+=======
+mfem::DenseMatrix& ParticleOperations::getVarianceReducedNumberDensity(
+  const ParticleContainer& particles, 
+  const LowFidelityState& low_fidelity_state,
+  const DGEulerOperations& low_fidelity_operations
+) {
+
+  variance_reduced_particle_number_density_ = 0.0;
+
+  mfem::FiniteElementSpace finite_element_space = discretization_.getFeSpace();
+  mfem::Mesh &mesh = *finite_element_space.GetMesh();
+
+  mfem::DenseMatrix low_fidelity_integral = low_fidelity_operations.integralForVarianceReducedNumberDensity(finite_element_space, low_fidelity_state);
+
+  for (const Particle& particle : particles) {
+    if (not particle.is_alive) continue;
+
+    //TODO: May need map between particle / species ID and low_fidelity_integral indexing
+    const int elem_id = particle.element;
+    const int species_id = particle.species.id;
+    const double element_volume = mesh.GetElementVolume(elem_id);
+
+    const mfem::Vector particle_position(particle.position.GetData(), dim_);
+
+    double low_fidelity_particle_distribution_function_value = low_fidelity_operations.evaluateParticleDistributionFunction(low_fidelity_state,particle_position,particle.velocity,particle.element,particle.species);
+    double noise_reducing_factor = (1 - low_fidelity_particle_distribution_function_value / particle.particle_distribution_function_value);
+
+    variance_reduced_particle_number_density_(elem_id, species_id) += (particle.weight * noise_reducing_factor + low_fidelity_integral(elem_id,species_id)) / element_volume;
+  }
+
+  return this->variance_reduced_particle_number_density_;
+}
+
+mfem::DenseTensor& ParticleOperations::getBulkVelocity(const ParticleContainer& particles, const bool sum_weights
+>>>>>>> b91093f (Initial implementation of variance reduced number density and bulk velocity)
 ) {
 
   for (auto & species_and_bulk_velocity : particle_bulk_velocity_)

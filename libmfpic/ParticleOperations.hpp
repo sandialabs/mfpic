@@ -1,5 +1,6 @@
 #pragma once
 
+#include <libmfpic/DGEulerOperations.hpp>
 #include <libmfpic/Discretization.hpp>
 #include <libmfpic/ElectromagneticFieldsEvaluator.hpp>
 #include <libmfpic/Discretization.hpp>
@@ -87,6 +88,20 @@ public:
    */
   std::unordered_map<Species, mfem::Vector>& getNumberDensity(const ParticleContainer& particles);
 
+
+  /**
+   * @brief Compute the variance reduced number density in each element from the low fidelity state
+   *
+   * @param[in] particles   \ref ParticleContainer
+   *
+   * @return mfem::DenseMatrix of number density for each particle species, (element, species)
+   */
+  mfem::DenseMatrix& getVarianceReducedNumberDensity(
+    const ParticleContainer& particles,
+    const LowFidelityState& low_fidelity_state,
+    const DGEulerOperations& low_fidelity_operations
+  );
+
   /**
    * @brief Compute the bulk velocity in each element
    *
@@ -96,6 +111,20 @@ public:
    * @return Map of particle species to bulk velocity (species, (dimension, element))
    */
   std::unordered_map<Species, mfem::DenseMatrix>& getBulkVelocity(const ParticleContainer& particles, const bool sum_weights = true);
+
+  /**
+   * @brief Compute the bulk velocity in each element
+   *
+   * @param[in] particles   \ref ParticleContainer
+   * @param[in] sum_weights Optional flag that resums the weights. Default is true.
+   *
+   * @return mfem::DenseTensor of bulk velocity for each particle species, (dimension, element, species)
+   */
+  mfem::DenseTensor& getVarianceReducedBulkVelocity(
+    const ParticleContainer& particles, 
+    const LowFidelityState& low_fidelity_state,
+    const DGEulerOperations& low_fidelity_operations
+  );
 
   /**
    * @brief Compute the temperature in each element
@@ -147,6 +176,15 @@ private:
 
   /// Particle temperature
   std::unordered_map<Species, mfem::Vector> particle_temperature_;
+
+  /// Variance reduced particle number density
+  mfem::DenseMatrix variance_reduced_particle_number_density_;
+
+  /// Variance reduced particle bulk velocity
+  mfem::DenseTensor variance_reduced_particle_bulk_velocity_;
+
+  /// Variance reduced particle temperature
+  mfem::DenseMatrix variance_reduced_particle_temperature_;
 
   /// Particle sum of weights
   std::unordered_map<Species, mfem::Vector> sum_of_weights_;
