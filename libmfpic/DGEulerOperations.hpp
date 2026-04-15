@@ -162,8 +162,6 @@ private:
   std::vector<std::shared_ptr<DGEulerAssembly>> dg_assemblers_;
   mutable mfem::Vector rhs_;
   mutable mfem::Vector temp_vector_;
-  mfem::Vector number_density_variance_reduction_integral_;
-
 };
 
 } // namespace
