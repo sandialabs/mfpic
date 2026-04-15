@@ -1241,21 +1241,23 @@ TEST(ParticleOperations, ParticleMomentsCorrectForKnownParticles) {
 };
 
 
-TEST(ParticleOperations, VarianceReducedMomentsAreExactForMaxwellianIn1D) {
+TEST(ParticleOperations, VarianceReducedMomentsAreExactForMaxwellianIn3D) {
   Species species{.charge = -constants::elementary_charge, .mass = constants::electron_mass};
   constexpr double number_density = 1e22;
   constexpr double temperature = 300;
-  mfem::Vector bulk_velocity({293.0,0.0,0.0});
+  mfem::Vector bulk_velocity({293.0,581.0,902.0});
   constexpr int num_particles = 20000;
   std::mt19937 generator;
 
-  const int num_elems = 1;
+  const int num_elems = 5;
   constexpr int dg_order = 0;
   constexpr int num_equations = 5;
-  //constexpr mfem::Element::Type element_type = mfem::Element::HEXAHEDRON;
-  std::shared_ptr<mfem::Mesh> mesh = std::make_shared<mfem::Mesh>(mfem::Mesh::MakeCartesian1D(
+  constexpr mfem::Element::Type element_type = mfem::Element::HEXAHEDRON;
+  std::shared_ptr<mfem::Mesh> mesh = std::make_shared<mfem::Mesh>(mfem::Mesh::MakeCartesian3D(
     num_elems,
-    1.0
+    num_elems,
+    num_elems,
+    element_type
   ));
 
   Discretization dg_discretization(mesh.get(), dg_order, FETypes::DG, num_equations);
@@ -1295,11 +1297,14 @@ TEST(ParticleOperations, VarianceReducedMomentsAreExactForMaxwellianIn1D) {
   mfem::DenseTensor variance_reduced_bulk_velocity = particle_operations.getVarianceReducedBulkVelocity(particles,low_fidelity_state,dg_euler_operations);
   mfem::DenseMatrix variance_reduced_temperature = particle_operations.getVarianceReducedTemperature(particles,low_fidelity_state,dg_euler_operations);
 
-  EXPECT_DOUBLE_EQ(variance_reduced_number_density(0,0),number_density);
-  EXPECT_DOUBLE_EQ(variance_reduced_bulk_velocity(0,0,0),bulk_velocity(0));
-  EXPECT_DOUBLE_EQ(variance_reduced_bulk_velocity(1,0,0),bulk_velocity(1));
-  EXPECT_DOUBLE_EQ(variance_reduced_bulk_velocity(2,0,0),bulk_velocity(2));
-  EXPECT_DOUBLE_EQ(variance_reduced_temperature(0,0),temperature);
+  for (int elem_id = 0; elem_id < num_elems; ++elem_id)
+  {
+    EXPECT_DOUBLE_EQ(variance_reduced_number_density(elem_id,0),number_density);
+    EXPECT_DOUBLE_EQ(variance_reduced_bulk_velocity(0,elem_id,0),bulk_velocity(0));
+    EXPECT_DOUBLE_EQ(variance_reduced_bulk_velocity(1,elem_id,0),bulk_velocity(1));
+    EXPECT_DOUBLE_EQ(variance_reduced_bulk_velocity(2,elem_id,0),bulk_velocity(2));
+    EXPECT_DOUBLE_EQ(variance_reduced_temperature(elem_id,0),temperature);
+  }
 }
 
 } // namespace
