@@ -294,8 +294,11 @@ mfem::DenseMatrix& ParticleOperations::getVarianceReducedNumberDensity(
   for (int elem_id = 0; elem_id < finite_element_space.GetNE(); ++elem_id)
   {
     const double element_volume = mesh.GetElementVolume(elem_id);
-    for(int species_id = 0; species_id < low_fidelity_state.numSpecies(); ++species_id)
+    for(int ispecies = 0; ispecies < low_fidelity_state.numSpecies(); ++ispecies)
     {
+      const LowFidelitySpeciesState& current_species_state = low_fidelity_state.getSpeciesState(ispecies);
+      Species current_species = current_species_state.getSpecies();
+      int species_id = current_species.id;
       variance_reduced_particle_number_density_(elem_id, species_id) += low_fidelity_integral(elem_id,species_id) / element_volume;
     }
   } 
@@ -365,8 +368,11 @@ std::unordered_map<Species, mfem::Vector>& ParticleOperations::getTemperature(co
   for (int elem_id = 0; elem_id < finite_element_space.GetNE(); ++elem_id)
   {
     const double element_volume = mesh.GetElementVolume(elem_id);
-    for(int species_id = 0; species_id < low_fidelity_state.numSpecies(); ++species_id)
+    for(int ispecies = 0; ispecies < low_fidelity_state.numSpecies(); ++ispecies)
     {
+      const LowFidelitySpeciesState& current_species_state = low_fidelity_state.getSpeciesState(ispecies);
+      Species current_species = current_species_state.getSpecies();
+      int species_id = current_species.id;
       mfem::Vector low_fidelity_integral_in_element(low_fidelity_integral(species_id).GetColumn(elem_id), 3);
       mfem::Vector velocity_in_element(variance_reduced_particle_bulk_velocity_(species_id).GetColumn(elem_id), 3);
       double number_density = variance_reduced_particle_number_density_(elem_id,species_id);
@@ -460,10 +466,11 @@ mfem::DenseMatrix& ParticleOperations::getVarianceReducedTemperature(
   for (int elem_id = 0; elem_id < finite_element_space.GetNE(); ++elem_id)
   {
     const double element_volume = mesh.GetElementVolume(elem_id);
-    for(int species_id = 0; species_id < low_fidelity_state.numSpecies(); ++species_id)
+    for(int ispecies = 0; ispecies < low_fidelity_state.numSpecies(); ++ispecies)
     {
-      const LowFidelitySpeciesState& current_species_state = low_fidelity_state.getSpeciesState(species_id);
+      const LowFidelitySpeciesState& current_species_state = low_fidelity_state.getSpeciesState(ispecies);
       Species current_species = current_species_state.getSpecies();
+      int species_id = current_species.id;
       const double m_over_3kb = current_species.mass / (3.0 * constants::boltzmann_constant);
       double number_density = variance_reduced_particle_number_density_(elem_id,species_id);
       double x_bulk_velocity = variance_reduced_particle_bulk_velocity_(0,elem_id,species_id);

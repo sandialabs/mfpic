@@ -297,6 +297,7 @@ mfem::DenseMatrix DGEulerOperations::integralForVarianceReducedNumberDensity(mfe
     for (int ispecies = 0; ispecies < current_state.numSpecies(); ++ispecies) {
       const LowFidelitySpeciesState& current_species_state = current_state.getSpeciesState(ispecies);
       Species current_species = current_species_state.getSpecies();
+      int species_id = current_species.id;
       const mfem::GridFunction& current_species_grid_function = current_species_state.getGridFunction();
       mfem::DenseMatrix fluid_state_at_integration_point_locations, integration_point_locations_in_physical_frame;
 
@@ -322,7 +323,7 @@ mfem::DenseMatrix DGEulerOperations::integralForVarianceReducedNumberDensity(mfe
           fluid_state_at_integration_point_locations.GetColumn(ipoint, fluid_state);
           mfem::Vector primitive_state = euler::convertFromConservativeToPrimitive(fluid_state, current_species);
           const double weight = integration_point.weight * element_transformation->Weight();
-          number_density_integral(element,ispecies) += weight * primitive_state(euler::PrimitiveVariables::NUMBER_DENSITY);
+          number_density_integral(element,species_id) += weight * primitive_state(euler::PrimitiveVariables::NUMBER_DENSITY);
         }
       }
     }
@@ -341,6 +342,7 @@ mfem::DenseMatrix DGEulerOperations::integralForVarianceReducedNumberDensity(mfe
     for (int ispecies = 0; ispecies < current_state.numSpecies(); ++ispecies) {
       const LowFidelitySpeciesState& current_species_state = current_state.getSpeciesState(ispecies);
       Species current_species = current_species_state.getSpecies();
+      int species_id = current_species.id;
       const mfem::GridFunction& current_species_grid_function = current_species_state.getGridFunction();
       mfem::DenseMatrix fluid_state_at_integration_point_locations, integration_point_locations_in_physical_frame;
 
@@ -366,9 +368,9 @@ mfem::DenseMatrix DGEulerOperations::integralForVarianceReducedNumberDensity(mfe
           fluid_state_at_integration_point_locations.GetColumn(ipoint, fluid_state);
           mfem::Vector primitive_state = euler::convertFromConservativeToPrimitive(fluid_state, current_species);
           const double weight = integration_point.weight * element_transformation->Weight();
-          bulk_velocity_integral(0,element,ispecies) += weight * primitive_state(euler::PrimitiveVariables::NUMBER_DENSITY) * primitive_state(euler::PrimitiveVariables::X_BULK_VELOCITY);
-          bulk_velocity_integral(1,element,ispecies) += weight * primitive_state(euler::PrimitiveVariables::NUMBER_DENSITY) * primitive_state(euler::PrimitiveVariables::Y_BULK_VELOCITY);
-          bulk_velocity_integral(2,element,ispecies) += weight * primitive_state(euler::PrimitiveVariables::NUMBER_DENSITY) * primitive_state(euler::PrimitiveVariables::Z_BULK_VELOCITY);
+          bulk_velocity_integral(0,element,species_id) += weight * primitive_state(euler::PrimitiveVariables::NUMBER_DENSITY) * primitive_state(euler::PrimitiveVariables::X_BULK_VELOCITY);
+          bulk_velocity_integral(1,element,species_id) += weight * primitive_state(euler::PrimitiveVariables::NUMBER_DENSITY) * primitive_state(euler::PrimitiveVariables::Y_BULK_VELOCITY);
+          bulk_velocity_integral(2,element,species_id) += weight * primitive_state(euler::PrimitiveVariables::NUMBER_DENSITY) * primitive_state(euler::PrimitiveVariables::Z_BULK_VELOCITY);
         }
       }
     }
@@ -386,6 +388,7 @@ mfem::DenseMatrix DGEulerOperations::integralForVarianceReducedNumberDensity(mfe
     for (int ispecies = 0; ispecies < current_state.numSpecies(); ++ispecies) {
       const LowFidelitySpeciesState& current_species_state = current_state.getSpeciesState(ispecies);
       Species current_species = current_species_state.getSpecies();
+      int species_id = current_species.id;
       const mfem::GridFunction& current_species_grid_function = current_species_state.getGridFunction();
       mfem::DenseMatrix fluid_state_at_integration_point_locations, integration_point_locations_in_physical_frame;
 
@@ -415,7 +418,7 @@ mfem::DenseMatrix DGEulerOperations::integralForVarianceReducedNumberDensity(mfe
             = primitive_state(euler::PrimitiveVariables::X_BULK_VELOCITY) *primitive_state(euler::PrimitiveVariables::X_BULK_VELOCITY)
             + primitive_state(euler::PrimitiveVariables::Y_BULK_VELOCITY) *primitive_state(euler::PrimitiveVariables::Y_BULK_VELOCITY)
             + primitive_state(euler::PrimitiveVariables::Z_BULK_VELOCITY) *primitive_state(euler::PrimitiveVariables::Z_BULK_VELOCITY);
-          temperature_integral(element,ispecies) += weight * primitive_state(euler::PrimitiveVariables::NUMBER_DENSITY) * (primitive_state(euler::PrimitiveVariables::TEMPERATURE) + current_species.mass/(3 * constants::boltzmann_constant) * bulk_velocity_mag_squared);
+          temperature_integral(element,species_id) += weight * primitive_state(euler::PrimitiveVariables::NUMBER_DENSITY) * (primitive_state(euler::PrimitiveVariables::TEMPERATURE) + current_species.mass/(3 * constants::boltzmann_constant) * bulk_velocity_mag_squared);
         }
       }
     }

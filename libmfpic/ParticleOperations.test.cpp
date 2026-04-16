@@ -1307,4 +1307,134 @@ TEST(ParticleOperations, VarianceReducedMomentsAreExactForMaxwellianIn3D) {
   }
 }
 
+
+TEST(ParticleOperations, VarianceReducedMomentsAndPICMomentsConvergeForKappa) {
+
+  Species species{.charge = -constants::elementary_charge, .mass = constants::electron_mass};
+  constexpr double number_density = 1e22;
+  constexpr double temperature = 300;
+  mfem::Vector bulk_velocity({1.0, 0.0, 0.0});
+
+  const std::vector<int> num_particles_list = {10,100,1000,10000,100000};
+
+  const int num_elems = 5;
+  constexpr int dg_order = 0;
+  constexpr int num_equations = 5;
+  std::shared_ptr<mfem::Mesh> mesh =
+      std::make_shared<mfem::Mesh>(mfem::Mesh::MakeCartesian1D(num_elems));
+  Discretization dg_discretization(mesh.get(), dg_order, FETypes::DG, num_equations);
+
+  constexpr int charge_order = 1;
+  Discretization charge_discretization(mesh.get(), charge_order, FETypes::HGRAD);
+
+  mfem::FiniteElementSpace finite_element_space = dg_discretization.getFeSpace();
+  std::shared_ptr<DGEulerAssembly> operator_ptr =
+      std::make_shared<DGEulerAssembly>(finite_element_space, species);
+  std::vector<std::shared_ptr<DGEulerAssembly>> dg_operators({operator_ptr});
+  DGEulerOperations dg_euler_operations(charge_discretization, dg_operators);
+
+  std::vector<std::unique_ptr<SourceParameters>> list_of_parameters;
+  list_of_parameters.push_back(std::make_unique<ConstantSourceParameters>(
+      species, number_density, temperature, bulk_velocity));
+
+  LowFidelityState low_fidelity_state = buildEulerState(dg_discretization, list_of_parameters);
+  IntegratedCharge low_fidelity_charge_state =
+      dg_euler_operations.assembleCharge(low_fidelity_state);
+  mfem::Vector integrated_charge_vector = low_fidelity_charge_state.getIntegratedCharge();
+
+  ParticleOperations particle_operations(
+      charge_discretization,
+      empty_particle_boundary_factory_list,
+      default_reflecting_particle_boundary_factory,
+      1
+    );
+
+
+  const SourceStateParameters source_state_parameters{
+    .number_density = number_density,
+    .bulk_velocity = bulk_velocity,
+    .temperature = temperature,
+    .kappa = 2.0
+  };
+  std::mt19937 gen_for_n(12345);
+
+  ParticleContainer particles_all = loadParticles(
+    ConstantSourceParameters(species, source_state_parameters, num_particles_list[4]),
+    gen_for_n,
+    mesh  
+  );
+
+  for (int num_particles : num_particles_list) {
+    ParticleContainer particles = takePrefix(particles_all, num_particles);
+
+    mfem::DenseMatrix variance_reduced_number_density = particle_operations.getVarianceReducedNumberDensity(particles,low_fidelity_state,dg_euler_operations);
+    mfem::DenseTensor variance_reduced_bulk_velocity = particle_operations.getVarianceReducedBulkVelocity(particles,low_fidelity_state,dg_euler_operations);
+    mfem::DenseMatrix variance_reduced_temperature = particle_operations.getVarianceReducedTemperature(particles,low_fidelity_state,dg_euler_operations);
+
+    mfem::DenseMatrix pic_number_density = particle_operations.getNumberDensity(particles);
+    mfem::DenseTensor pic_bulk_velocity = particle_operations.getBulkVelocity(particles);
+    mfem::DenseMatrix pic_temperature = particle_operations.getTemperature(particles);
+
+    double max_rel_error_number_density = 0.0;
+    double max_rel_error_x_bulk_velocity = 0.0;
+    double max_rel_error_y_bulk_velocity = 0.0;
+    double max_rel_error_z_bulk_velocity = 0.0;
+    double max_rel_error_temperature = 0.0;
+
+    double prev_max_rel_error_number_density = std::numeric_limits<double>::infinity();
+    double prev_max_rel_error_x_bulk_velocity = std::numeric_limits<double>::infinity();
+    double prev_max_rel_error_y_bulk_velocity = std::numeric_limits<double>::infinity();
+    double prev_max_rel_error_z_bulk_velocity = std::numeric_limits<double>::infinity();
+    double prev_max_rel_error_temperature = std::numeric_limits<double>::infinity();
+
+    for (int elem_id = 0; elem_id < num_elems; ++elem_id)
+    {
+      double vr = variance_reduced_number_density(elem_id,0);
+      double pic = pic_number_density(elem_id,0);
+      double denom = std::max(std::abs(pic), 1e-300);
+      double rel_error_number_density = std::abs(vr - pic) / denom;
+      max_rel_error_number_density = std::max(max_rel_error_number_density, rel_error_number_density);
+
+      vr = variance_reduced_bulk_velocity(0,elem_id,0);
+      pic = pic_bulk_velocity(0,elem_id,0);
+      denom = std::max(std::abs(pic), 1e-300);
+      double rel_error_x_bulk_velocity = std::abs(vr - pic) / denom;
+      max_rel_error_x_bulk_velocity = std::max(max_rel_error_x_bulk_velocity, rel_error_x_bulk_velocity);
+
+      vr = variance_reduced_bulk_velocity(1,elem_id,0);
+      pic = pic_bulk_velocity(1,elem_id,0);
+      denom = std::max(std::abs(pic), 1e-300);
+      double rel_error_y_bulk_velocity = std::abs(vr - pic) / denom;
+      max_rel_error_y_bulk_velocity = std::max(max_rel_error_y_bulk_velocity, rel_error_y_bulk_velocity);
+
+      vr = variance_reduced_bulk_velocity(2,elem_id,0);
+      pic = pic_bulk_velocity(2,elem_id,0);
+      denom = std::max(std::abs(pic), 1e-300);
+      double rel_error_z_bulk_velocity = std::abs(vr - pic) / denom;
+      max_rel_error_z_bulk_velocity = std::max(max_rel_error_z_bulk_velocity, rel_error_z_bulk_velocity);
+
+      vr = variance_reduced_temperature(elem_id,0);
+      pic = pic_temperature(elem_id,0);
+      denom = std::max(std::abs(pic), 1e-300);
+      double rel_error_temperature = std::abs(vr - pic) / denom;
+      max_rel_error_temperature = std::max(max_rel_error_temperature, rel_error_temperature);
+    }
+
+    EXPECT_LE(max_rel_error_number_density, prev_max_rel_error_number_density);
+    prev_max_rel_error_number_density = max_rel_error_number_density;
+
+    EXPECT_LE(max_rel_error_x_bulk_velocity, prev_max_rel_error_x_bulk_velocity);
+    prev_max_rel_error_x_bulk_velocity = max_rel_error_x_bulk_velocity;
+
+    EXPECT_LE(max_rel_error_y_bulk_velocity, prev_max_rel_error_y_bulk_velocity);
+    prev_max_rel_error_y_bulk_velocity = max_rel_error_y_bulk_velocity;
+
+    EXPECT_LE(max_rel_error_z_bulk_velocity, prev_max_rel_error_z_bulk_velocity);
+    prev_max_rel_error_z_bulk_velocity = max_rel_error_z_bulk_velocity;
+
+    EXPECT_LE(max_rel_error_temperature, prev_max_rel_error_temperature);
+    prev_max_rel_error_temperature = max_rel_error_temperature;
+  }
+}
+
 } // namespace
