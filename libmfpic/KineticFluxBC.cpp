@@ -4,10 +4,11 @@
 
 namespace mfpic {
 
-  double KineticFluxFluxFunction::ComputeFluxDotN(const mfem::Vector &conservative_state, 
-                                                  const mfem::Vector &normal,
-                                                  mfem::FaceElementTransformations &,
-                                                  mfem::Vector &flux_dot_n) const
+  double KineticFluxNumericalFlux::Eval(const mfem::Vector &conservative_state, 
+                                        const mfem::Vector &, 
+                                        const mfem::Vector &normal,
+                                        mfem::FaceElementTransformations &,
+                                        mfem::Vector &flux_dot_n) const
   {
     using namespace euler;
     const double pressure = getPressureFromConservativeState(conservative_state, species_);
@@ -26,7 +27,7 @@ namespace mfpic {
     MFEM_ASSERT(conservative_state[ConservativeVariables::TOTAL_ENERGY_DENSITY] >= 0, "Negative Total Energy Density");
 
     double normal_velocity(0.);
-    for (int d = 0; d < dim; d++)
+    for (int d = 0; d < fluxFunction.dim; d++)
       normal_velocity += velocity(d) * unit_normal(d);
     const double most_probable_speed = std::sqrt(2. * constants::boltzmann_constant * temperature / species_.mass);
     const double reduced_velocity = normal_velocity / most_probable_speed;
@@ -59,7 +60,7 @@ namespace mfpic {
     flux_dot_n(ConservativeVariables::Z_MOMENTUM_DENSITY) = 
       flux_dot_n(ConservativeVariables::MASS_DENSITY) * velocity(2);
 
-    switch (dim) {
+    switch (fluxFunction.dim) {
     case 3:
       flux_dot_n(ConservativeVariables::Z_MOMENTUM_DENSITY) += pressure * unit_normal(2) * a_plus;
       [[fallthrough]];

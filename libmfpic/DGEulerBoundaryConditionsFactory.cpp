@@ -2,6 +2,7 @@
 #include <libmfpic/DGEulerBoundaryConditionsFactory.hpp>
 #include <libmfpic/DGGhostBC.hpp>
 #include <libmfpic/Errors.hpp>
+#include <libmfpic/KineticFluxBC.hpp>
 #include <libmfpic/MeshUtilities.hpp>
 
 #include <memory>
@@ -34,6 +35,8 @@ std::unordered_map<int, DGEulerBCType> buildBoundaryAttributeToBCTypeFromYAML(
     const std::string bc_type_string = fluid_bc["Type"].as<std::string>();
     if (bc_type_string == "Reflecting") {
       boundary_attribute_to_bc_type[boundary_attribute] = DGEulerBCType::REFLECTING;
+    } else if (bc_type_string == "Absorbing") {
+      boundary_attribute_to_bc_type[boundary_attribute] = DGEulerBCType::ABSORBING;
     } else {
       errorWithUserMessage(formatParseMessage(fluid_bc["Type"], "This boundary condition type is invalid."));
     }
@@ -53,10 +56,17 @@ std::vector<std::vector<std::unique_ptr<DGBC>>> buildDGEulerBoundaryConditions(
     std::vector<std::unique_ptr<DGBC>> species_bcs;
     for (const auto& [boundary_attribute, bc_type] : boundary_attribute_to_bc_type) {
       switch (bc_type) {
-        case DGEulerBCType::REFLECTING:
+        case DGEulerBCType::REFLECTING: 
+        {
           auto dof_setter = std::make_unique<DGEulerReflectingBC>();
           species_bcs.push_back(std::make_unique<DGGhostBC>(boundary_attribute, mesh, species, std::move(dof_setter)));
           break;
+        }
+        case DGEulerBCType::ABSORBING: 
+        {
+          species_bcs.push_back(std::make_unique<KineticFluxBC>(boundary_attribute, mesh, species));
+          break;
+        }
       }
     }
     dg_euler_bcs.push_back(std::move(species_bcs));

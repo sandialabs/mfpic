@@ -5,12 +5,35 @@
 #include <libmfpic/Euler.hpp>
 #include <libmfpic/Species.hpp>
 #include <memory>
+#include <mfem/fem/hyperbolic.hpp>
 #include <mfem/mfem.hpp>
 
 namespace mfpic {
 
 /**
- * @brief A mfem::FluxFunction that implements an absorbing (wall) 
+ * @brief A dummy class that will error out if any functions are called. 
+ * This is needed because we are creating a mfem::NumericalFlux that is only 
+ * used for boundary terms. mfem::NumericalFlux requires a FluxFunction even if we don't
+ * use it.
+ */
+
+class DummyFluxFunction : public mfem::FluxFunction {
+  
+  public:
+
+  DummyFluxFunction(const int num_equations, const int dim)
+    : mfem::FluxFunction(num_equations, dim) {};
+
+  double ComputeFlux(const mfem::Vector &, mfem::ElementTransformation &, mfem::DenseMatrix &) const override
+  {
+    errorWithDeveloperMessage("Evaluation routines should never be called!");
+    return -1;
+  }
+
+};
+
+/**
+ * @brief A mfem::NumericalFlux that implements an absorbing (wall) 
  * boundary condition with a kinetic flux vector splitting approach.
  * See II.D in Phys. Plasmas 27, 113505 (2020)
  *
@@ -18,34 +41,27 @@ namespace mfpic {
  *
  * @note A mfem::NumericalFlux function is needed to pass to the
  * mfem::HyperbolicForm integrator. During boundary integration,
- * by default mfem will only call FluxFunction::ComputeFluxDotN 
- * via the NumericalFlux. \ref KineticFluxBCNumericalFlux should be used, which
- * will throw an error if other functions are called. 
+ * mfem will call Eval and we ignore the right data. 
+ * \ref DummyFluxFunction should be used with this, 
+ * which will throw an error if any functions are called. 
  *
  * @todo Assumes 5-moment fluid
  */
 
-class KineticFluxFluxFunction : public mfem::FluxFunction {
+class KineticFluxNumericalFlux : public mfem::NumericalFlux {
 
   public:
 
   /**
-   * @brief Construct a new KineticFluxBC with given spatial
-   * dimension for a \ref Species
+   * @brief Construct a new KineticFlux with given spatial dimension for a \ref Species
    *
-   * @param spatial_dim spatial dimension
+   * @param flux_function 
    * @param species Species type
    */
 
-  KineticFluxFluxFunction(const int spatial_dim, const Species species)
-    : mfem::FluxFunction(euler::PrimitiveVariables::NUM_VARS, spatial_dim),
+  KineticFluxNumericalFlux(const mfem::FluxFunction & flux_function, const Species species)
+    : mfem::NumericalFlux(flux_function),
       species_(species) {}
-  /// Errors out if called
-  double ComputeFlux (const mfem::Vector &, mfem::ElementTransformation &, mfem::DenseMatrix &) const override 
-  { 
-    errorWithDeveloperMessage("ComputeFlux cannot be called!");
-    return -1;
-  };
 
   /**
    * @brief Compute normal flux
@@ -54,42 +70,19 @@ class KineticFluxFluxFunction : public mfem::FluxFunction {
    *
    * @todo Not sure if the characteristic speed makes sense
    *
-   * @param conservative_state state at current integration point
+   * @param conservative_state state at integration point
+   * @param not_used right state is not meaningful
    * @param normal normal vector, usually not a unit vector
-   * @param transformation current element transformation with the integration point
+   * @param transformation element transformation with the integration point
    * @param flux_dot_n [out] storage for normal flux output 
    * @return maximum characteristic speed, fluid velocity plus speed of sound
    */
-  double ComputeFluxDotN(const mfem::Vector &conservative_state, const mfem::Vector &normal,
-                         mfem::FaceElementTransformations &transformation,
-                         mfem::Vector &flux_dot_n) const override;
+  double Eval(const mfem::Vector &conservative_state, const mfem::Vector &, const mfem::Vector &normal,
+              mfem::FaceElementTransformations &transformation,
+              mfem::Vector &flux_dot_n) const override;
 
   private:
     const Species species_;
-};
-
-/**
- * @brief A dummy class that will error out if anything other than
- * GetFluxFunction() is called. This is needed because mfem::HyperbolicIntegrator
- * requires a mfem::NumericalFlux and we only want to use the FluxFunction for
- * boundary assembly. The mfem::NumericalFlux is the only way to supply the FluxFunction
- * in the assembly routines.
- */
-
-class DummyNumericalFlux : public mfem::NumericalFlux {
-  
-  public:
-
-  DummyNumericalFlux(const mfem::FluxFunction & flux)
-    : mfem::NumericalFlux(flux) {};
-
-  double Eval(const mfem::Vector &, const mfem::Vector &, const mfem::Vector &,
-              mfem::FaceElementTransformations &, mfem::Vector &) const override
-  {
-    errorWithDeveloperMessage("Evaluation routines should never be called!");
-    return -1;
-  }
-
 };
 
 /**
@@ -105,15 +98,15 @@ struct KineticFluxBC : public DGBC {
   virtual ~KineticFluxBC() = default;
 
   std::unique_ptr<mfem::NonlinearFormIntegrator> makeIntegrator(const mfem::NumericalFlux & dg_assembly_numerical_flux) override {
-    flux_function_ = std::make_unique<KineticFluxFluxFunction>(dg_assembly_numerical_flux.GetFluxFunction().dim, species);
-    numerical_flux_ = std::make_unique<DummyNumericalFlux>(*flux_function_);
+    flux_function_ = std::make_unique<DummyFluxFunction>(euler::ConservativeVariables::NUM_VARS, dg_assembly_numerical_flux.GetFluxFunction().dim);
+    numerical_flux_ = std::make_unique<KineticFluxNumericalFlux>(*flux_function_, species);
 
     return std::make_unique<mfem::HyperbolicFormIntegrator>(*numerical_flux_);
   }
 
   private:
-    std::unique_ptr<KineticFluxFluxFunction> flux_function_;
-    std::unique_ptr<DummyNumericalFlux> numerical_flux_;
+    std::unique_ptr<DummyFluxFunction> flux_function_;
+    std::unique_ptr<KineticFluxNumericalFlux> numerical_flux_;
 
 };
 
