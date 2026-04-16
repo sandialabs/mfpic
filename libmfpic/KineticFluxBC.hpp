@@ -25,7 +25,7 @@ class DummyFluxFunction : public mfem::FluxFunction {
 
   double ComputeFlux(const mfem::Vector &, mfem::ElementTransformation &, mfem::DenseMatrix &) const override
   {
-    errorWithDeveloperMessage("Evaluation routines should never be called!");
+    errorWithDeveloperMessage("ComputeFlux cannot be called!");
     return -1;
   }
 
