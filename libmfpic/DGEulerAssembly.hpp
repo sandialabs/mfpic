@@ -76,6 +76,7 @@ private:
     auto numerical_euler_flux = std::make_shared<mfem::RusanovFlux>(*euler_flux);
     return DGEulerAssembly(finite_element_space, euler_flux, numerical_euler_flux);
   }
+
 };
   
 } // namespace mfpic

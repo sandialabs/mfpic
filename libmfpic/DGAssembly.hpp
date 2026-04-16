@@ -1,6 +1,7 @@
 #pragma once
 
-#include <libmfpic/DGGhostBoundaryIntegrator.hpp>
+#include <libmfpic/DGBC.hpp>
+#include <libmfpic/DGGhostBC.hpp>
 #include <libmfpic/ElectromagneticFieldsEvaluator.hpp>
 #include <memory>
 #include <mfem.hpp>
@@ -26,9 +27,12 @@ class LowFidelitySpeciesState;
  * where \f$F(U)\f$ is the hyperbolic flux function and \f$S(U)\f$ is the source term.
  *
  */
-class DGAssembly{
+class DGAssembly {
 
 public:
+
+  DGAssembly() = delete;
+  DGAssembly(DGAssembly&& other) noexcept = default;
  /**
   * @brief Construct a new DGAssembly.
   *
@@ -114,19 +118,30 @@ public:
   mfem::FiniteElementSpace & getFiniteElementSpace() const { return finite_element_space_;}
 
   /**
-   * @brief Add a ghost cell boundary condition to the nonlinear form
+   * @brief Add a boundary condition to the nonlinear form
    *
-   * @param boundary_condition \ref DGGhostBC that sets the ghost cell state
+   * @param boundary_condition \ref DGBC
+   * @param species \ref Species
    */
-  void addGhostBoundaryCondition(std::unique_ptr<DGGhostBC> && boundary_condition)
+  void addBoundaryCondition(std::unique_ptr<DGBC> && boundary_condition)
   {
+    bcs_.push_back(std::move(boundary_condition));
+    const auto & current_bc = bcs_.back();
+    auto integrator = current_bc->makeIntegrator(*numerical_flux_function_);
+    addBoundaryIntegrator(std::move(integrator), current_bc->boundary_attribute_has_boundary_condition);
+  }
+
+  /**
+   * @brief Add a boundary face integrator to the nonlinear form and store reference so it stays in scope for mfem
+   *
+   * @param integrator mfem::NonlinearFormIntegrator
+   * @param boundary_attribute_has_boundary_condition mfem::Array of flags
+   */
+
+  void addBoundaryIntegrator(std::unique_ptr<mfem::NonlinearFormIntegrator> && integrator, mfem::Array<int> & boundary_attribute_has_boundary_condition) {
     nonlinear_form_->UseExternalIntegrators();
-    ghost_bcs_.push_back(std::move(boundary_condition));
-    const auto & current_bc = ghost_bcs_.back();
-    ghost_bc_integrators_.push_back(
-      std::make_unique<DGGhostBoundaryIntegrator>(*numerical_flux_function_, *current_bc));
-    nonlinear_form_->AddBdrFaceIntegrator(
-      (ghost_bc_integrators_.back()).get(), current_bc->boundary_attribute_has_boundary_condition);
+    bc_integrators_.push_back(std::move(integrator));
+    nonlinear_form_->AddBdrFaceIntegrator((bc_integrators_.back()).get(), boundary_attribute_has_boundary_condition);
   }
 
   /// get global maximum characteristic speed to be used in CFL condition
@@ -157,10 +172,10 @@ private:
   std::shared_ptr<mfem::HyperbolicFormIntegrator> hyperbolic_form_integrator_;
   /// Number of equations
   int num_equations_;
-  /// ghost boundary condition setters
-  std::vector<std::shared_ptr<DGGhostBC>> ghost_bcs_;
-  /// ghost boundary condition integrators
-  std::vector<std::shared_ptr<mfem::NonlinearFormIntegrator>> ghost_bc_integrators_;
+  /// boundary conditions
+  std::vector<std::unique_ptr<DGBC>> bcs_;
+  /// boundary condition integrators
+  std::vector<std::unique_ptr<mfem::NonlinearFormIntegrator>> bc_integrators_;
 
   /// Compute element-wise inverse mass matrix
   void computeInvMass_();

@@ -1,46 +1,28 @@
 #pragma once
 
-#include <memory.h>
+#include <libmfpic/DGBC.hpp>
+#include <libmfpic/DGGhostBoundaryIntegrator.hpp>
+#include <memory>
 #include <mfem.hpp>
 
 namespace mfpic {
 
- /**
- * @brief Parent struct for DG boundary conditions implemented with
- * a ghost cell approach. Children's sole purpose is to override \ref 
- * setDOFsInGhost and provide a clone.
+/**
+ * @brief A DG BC that uses the ghost cell approach.
  */
-struct DGGhostBC {
+struct DGGhostBC : public DGBC {
 
   DGGhostBC() = delete;
-  DGGhostBC(const int boundary_attribute, const mfem::Mesh& mesh) 
-  : boundary_attribute_has_boundary_condition(mesh.bdr_attributes.Max())
-  {
-    boundary_attribute_has_boundary_condition = false;
-    boundary_attribute_has_boundary_condition[boundary_attribute - 1] = true;
-  };
+  DGGhostBC(const int boundary_attribute, const mfem::Mesh& mesh, const Species species, std::unique_ptr<GhostDOFSetter> && dof_setter) 
+  : DGBC(boundary_attribute, mesh, species), ghost_dof_setter(std::move(dof_setter)) {};
 
   virtual ~DGGhostBC() = default;
 
-  /**
-   * @brief Sets the DOFs in the ghost cell, preparing them for the
-   * Riemann solver.
-   *
-   * @param interior_dofs The DOFs in the real, interior boundary cell
-   * @param unit_normal Outward unit normal to the boundary
-   * @param[out] ghost_dofs Storage for the ghost DOFs this function must fill in
-   *
-   * @note The DOFs are arranged (num_dofs, num_equations).
-   */
-  virtual void setDOFsInGhost(const mfem::DenseMatrix & interior_dofs,
-                              const mfem::Vector & unit_normal,
-                              mfem::DenseMatrix & ghost_dofs) const = 0;
+  std::unique_ptr<mfem::NonlinearFormIntegrator> makeIntegrator(const mfem::NumericalFlux & numerical_flux) override {
+    return std::make_unique<DGGhostBoundaryIntegrator>(numerical_flux, *ghost_dof_setter);
+  }
 
-  /// Clone method allows for derived class to deep copy itself but return as base
-  virtual std::unique_ptr<DGGhostBC> clone() const = 0;
-
-  /// Boundary attribute numbers defining the boundaries to apply the BC
-  mfem::Array<int> boundary_attribute_has_boundary_condition;
+  std::unique_ptr<GhostDOFSetter> ghost_dof_setter;
 
 };
 
