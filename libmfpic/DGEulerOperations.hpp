@@ -70,6 +70,8 @@ public:
   */
   virtual double estimateCFL(const double & dt, const double & smallest_cell_lengthscale) const override;
 
+  virtual double computeTotalEnergy(const LowFidelityState& state) const override;
+
   /**
   * @brief Evaluates the particle distribution function for the low fidelity state at a given position and velocity.
   *
