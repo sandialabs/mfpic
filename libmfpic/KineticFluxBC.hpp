@@ -5,7 +5,6 @@
 #include <libmfpic/Euler.hpp>
 #include <libmfpic/Species.hpp>
 #include <memory>
-#include <mfem/fem/hyperbolic.hpp>
 #include <mfem/mfem.hpp>
 
 namespace mfpic {
@@ -53,7 +52,7 @@ class KineticFluxNumericalFlux : public mfem::NumericalFlux {
   public:
 
   /**
-   * @brief Construct a new KineticFlux with given spatial dimension for a \ref Species
+   * @brief Construct a new KineticFluxNumericalFlux with given spatial dimension for a \ref Species
    *
    * @param flux_function 
    * @param species Species type
