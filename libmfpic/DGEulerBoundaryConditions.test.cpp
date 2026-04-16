@@ -2,10 +2,10 @@
 #include <libmfpic/DGGhostBoundaryIntegrator.hpp>
 #include <libmfpic/DGEulerBoundaryConditions.hpp>
 #include <libmfpic/Discretization.hpp>
-
-#include <gtest/gtest.h>
 #include <libmfpic/Euler.hpp>
 #include <libmfpic/KineticFluxBC.hpp>
+
+#include <gtest/gtest.h>
 #include <mfem/fem/eltrans.hpp>
 #include <mfem/fem/hyperbolic.hpp>
 #include <mfem/fem/lininteg.hpp>
@@ -126,7 +126,7 @@ TEST(DGEulerBoundaryConditions, DGEulerReflectingBCCheckGhostBoundaryIntegrator)
   mfem::NonlinearForm form(&finite_element_space);
   constexpr int boundary_attribute = 3; // this should be the right face (x = 1)
 
-DGGhostBC bc(boundary_attribute, mesh, Species(), std::make_unique<DGEulerReflectingBC>());
+  DGGhostBC bc(boundary_attribute, mesh, Species(), std::make_unique<DGEulerReflectingBC>());
   auto integrator = bc.makeIntegrator(numerical_flux);
   form.AddBdrFaceIntegrator(integrator.release(), bc.boundary_attribute_has_boundary_condition);
 
