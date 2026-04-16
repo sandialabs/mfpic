@@ -190,6 +190,9 @@ void runSimulation(int argc, char* argv[]) {
     }
 
     if (i_timestep % output_parameters.output_stride == 0) {
+      const std::string prefix = "particle_moments";
+      particle_operations.writeMomentsCSVsPerSpecies(particle_container, prefix, i_timestep, end_time);
+
       dumpParticles(particle_container, end_time, output_parameters.particle_dump_filename);
       mesh_data_writer.output(particle_electrostatic_field_state, low_fidelity_field_states, low_fidelity_states, i_timestep, end_time);
       csv_file << i_timestep << " " << end_time << " " << electrostatic_field_operations->fieldEnergy(particle_electrostatic_field_state) << std::endl;
