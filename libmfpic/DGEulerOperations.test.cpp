@@ -343,7 +343,6 @@ TEST(DGEulerOperations, evaluateParticleDistributionFunctionCorrectIn1D) {
 }
 
 TEST(DGEulerOperations, computeTotalEnergy_dg_order_0) {
-  auto& message = std::cout;
   constexpr int num_elems = 10;
   constexpr double length = 2.0;
   mfem::Mesh mesh = mfem::Mesh::MakeCartesian1D(num_elems, length);
@@ -373,12 +372,9 @@ TEST(DGEulerOperations, computeTotalEnergy_dg_order_0) {
   constexpr int es_order = 1;
   Discretization charge_discretization(&mesh, es_order, FETypes::HGRAD);
   const std::vector<Species> species_list = low_fidelity_state.getSpeciesList();
-  message << "empty_bcs" << std::endl;
-  std::vector<std::vector<std::unique_ptr<DGBC>>> empty_bcs;
-  message << "buildDGEulerOperations" << std::endl;
+  std::vector<std::vector<std::unique_ptr<DGBC>>> empty_bcs(species_list.size());
   std::unique_ptr<LowFidelityOperations> dg_euler_operations = buildDGEulerOperations(
     vector_dg_discretization, charge_discretization, species_list, empty_bcs);
-  message << "after" << std::endl;
 
   const mfem::Vector primitive_state_e = euler::constructPrimitiveState(number_density_e, bulk_velocity_e, temperature_e);
   const mfem::Vector conservative_state_e = euler::convertFromPrimitiveToConservative(primitive_state_e, electron_species);
