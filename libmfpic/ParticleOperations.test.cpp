@@ -1328,17 +1328,17 @@ TEST(ParticleOperationsCSV, CSVCorrectForOneSpecies)
       for (int e = 0; e < num_elems; ++e) {
         const std::string& line = lines[1 + step*num_elems + e];
         auto toks = splitCsv(line);
-        ASSERT_EQ(toks.size(), static_cast<size_t>(8));
+        ASSERT_EQ(toks.size(), static_cast<size_t>(11));
 
         EXPECT_EQ(stringToInt(toks[0]), step);
         EXPECT_DOUBLE_EQ(stringToDouble(toks[1]), dt*step);
         EXPECT_EQ(stringToInt(toks[2]), e);
 
-        const double csv_number_density = stringToDouble(toks[3]);
-        const double csv_temperature = stringToDouble(toks[4]);
-        const double csv_bulk_velocity_0 = stringToDouble(toks[5]);
-        const double csv_bulk_velocity_1 = stringToDouble(toks[6]);
-        const double csv_bulk_velocity_2 = stringToDouble(toks[7]);
+        const double csv_number_density = stringToDouble(toks[6]);
+        const double csv_temperature = stringToDouble(toks[7]);
+        const double csv_bulk_velocity_0 = stringToDouble(toks[8]);
+        const double csv_bulk_velocity_1 = stringToDouble(toks[9]);
+        const double csv_bulk_velocity_2 = stringToDouble(toks[10]);
 
         EXPECT_NEAR(csv_number_density, computed_number_density(e, s), 1e-12);
         EXPECT_NEAR(csv_temperature,  computed_temperature(e, s),  1e-12);
@@ -1424,17 +1424,17 @@ TEST(ParticleOperationsCSV, CSVCorrectForTwoSpecies)
       for (int e = 0; e < num_elems; ++e) {
         const std::string& line = lines[1 + step*num_elems + e];
         auto toks = splitCsv(line);
-        ASSERT_EQ(toks.size(), static_cast<size_t>(8));
+        ASSERT_EQ(toks.size(), static_cast<size_t>(11));
 
         EXPECT_EQ(stringToInt(toks[0]), step);
         EXPECT_DOUBLE_EQ(stringToDouble(toks[1]), dt*step);
         EXPECT_EQ(stringToInt(toks[2]), e);
 
-        const double csv_number_density = stringToDouble(toks[3]);
-        const double csv_temperature = stringToDouble(toks[4]);
-        const double csv_bulk_velocity_0 = stringToDouble(toks[5]);
-        const double csv_bulk_velocity_1 = stringToDouble(toks[6]);
-        const double csv_bulk_velocity_2 = stringToDouble(toks[7]);
+        const double csv_number_density = stringToDouble(toks[6]);
+        const double csv_temperature = stringToDouble(toks[7]);
+        const double csv_bulk_velocity_0 = stringToDouble(toks[8]);
+        const double csv_bulk_velocity_1 = stringToDouble(toks[9]);
+        const double csv_bulk_velocity_2 = stringToDouble(toks[10]);
 
         EXPECT_NEAR(csv_number_density, computed_number_density(e, s), 1e-12);
         EXPECT_NEAR(csv_temperature,  computed_temperature(e, s),  1e-12);
