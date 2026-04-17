@@ -1,5 +1,3 @@
-import read_txt_data
-
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.integrate
@@ -113,8 +111,8 @@ def plot_errors_and_expected_convergence_rate(refinement_quantities, errors, exp
 
 
 def check_total_fluid_energy_positive_and_constant():
-    txt_data = read_txt_data.read_txt_data("output_lf_0.csv")
-    total_fluid_energy = txt_data["Total_Fluid_Energy"]
+    txt_data = np.genfromtxt('output_lf_0.csv', names=True)
+    total_fluid_energy = txt_data['Total_Fluid_Energy']
 
     assert(np.min(total_fluid_energy) >= 0)
 
