@@ -1,3 +1,5 @@
+import read_txt_data
+
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.integrate
@@ -108,3 +110,20 @@ def plot_errors_and_expected_convergence_rate(refinement_quantities, errors, exp
     ax.set_ylabel("Error")
     fig.savefig(figname, bbox_inches='tight')
     plt.close(fig)
+
+
+def check_total_fluid_energy_positive_and_constant():
+    txt_data = read_txt_data.read_txt_data("output_lf_0.csv")
+    total_fluid_energy = txt_data["Total_Fluid_Energy"]
+
+    assert(np.min(total_fluid_energy) >= 0)
+
+    change_in_total_fluid_energy = np.max(total_fluid_energy) - np.min(total_fluid_energy)
+
+    if (np.max(total_fluid_energy) > 0):
+        relative_change_in_total_fluid_energy = change_in_total_fluid_energy / np.max(total_fluid_energy)
+    else:
+        relative_change_in_total_fluid_energy = 0
+
+    relative_tolerance = 1e-14
+    assert(relative_change_in_total_fluid_energy < relative_tolerance)

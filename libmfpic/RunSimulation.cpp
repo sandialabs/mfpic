@@ -155,7 +155,7 @@ void runSimulation(int argc, char* argv[]) {
     0 << " " <<
     0.0 << " " <<
     electrostatic_field_operations->fieldEnergy(low_fidelity_field_states[i]) << " " <<
-    low_fidelity_operations std::endl;
+    low_fidelity_operations[i]->computeTotalEnergy(low_fidelity_states[i]) << std::endl;
   }
 
   TimeSteppingParameters time_stepping_parameters = buildTimeSteppingParametersFromYAML(main["Time Stepping"]);
@@ -214,7 +214,8 @@ void runSimulation(int argc, char* argv[]) {
         lf_csv_files[i] <<
         i_timestep << " " <<
         end_time << " " <<
-        electrostatic_field_operations->fieldEnergy(low_fidelity_field_states[i]) << std::endl;
+        electrostatic_field_operations->fieldEnergy(low_fidelity_field_states[i]) << " " <<
+        low_fidelity_operations[i]->computeTotalEnergy(low_fidelity_states[i]) << std::endl;
       }
     }
   }
