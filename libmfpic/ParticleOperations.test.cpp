@@ -1289,12 +1289,10 @@ TEST(ParticleOperationsCSV, CSVCorrectForOneSpecies)
 
   std::mt19937 generator;
 
-  ParticleContainer particles = loadUniformParticles(
-    default_species,
-    source_state_parameters,
-    num_particles,
+  ParticleContainer particles = loadParticles(
+    ConstantSourceParameters(default_species, source_state_parameters, num_particles),
     generator,
-    mesh
+    mesh  
   );
 
   ParticleOperations particle_operations(
@@ -1377,18 +1375,14 @@ TEST(ParticleOperationsCSV, CSVCorrectForTwoSpecies)
 
   std::mt19937 generator;
 
-  ParticleContainer particles = loadUniformParticles(
-    species_1,
-    source_state_parameters,
-    num_particles,
+  ParticleContainer particles = loadParticles(
+    ConstantSourceParameters(species_1, source_state_parameters, num_particles),
     generator,
-    mesh
+    mesh  
   );
 
-  particles.addParticles(loadUniformParticles(
-    species_2,
-    source_state_parameters,
-    num_particles,
+  particles.addParticles(loadParticles(
+    ConstantSourceParameters(species_2, source_state_parameters, num_particles),
     generator,
     mesh
   ));
