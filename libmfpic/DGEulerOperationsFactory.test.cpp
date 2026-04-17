@@ -3,6 +3,7 @@
 #include <libmfpic/DGGhostBoundaryIntegrator.hpp>
 #include <libmfpic/Discretization.hpp>
 #include <libmfpic/DGEulerOperationsFactory.hpp>
+#include <libmfpic/KineticFluxBC.hpp>
 #include <libmfpic/LowFidelityOperations.hpp>
 #include <libmfpic/LowFidelityState.hpp>
 #include <libmfpic/SourcesFactory.hpp>
@@ -58,13 +59,15 @@ TEST(DGEulerOperationsFactory, BasicChecksOnOperationsAndState) {
   }
   LowFidelityState dg_euler_state = buildEulerState(discretization, list_of_parameters);
 
-  constexpr int boundary_attribute = 3;
+  constexpr int boundary_attribute_ghost = 3;
+  constexpr int boundary_attribute_kfvs = 1;
   std::vector<std::vector<std::unique_ptr<DGBC>>> bcs;
 
   for (const auto & [i_species, species] : std::views::enumerate(species_list)) {
     std::vector<std::unique_ptr<DGBC>> species_bcs;
     auto dof_setter = std::make_unique<DGEulerReflectingBC>();
-    species_bcs.push_back(std::make_unique<DGGhostBC>(boundary_attribute, mesh, species, std::move(dof_setter)));
+    species_bcs.push_back(std::make_unique<DGGhostBC>(boundary_attribute_ghost, mesh, species, std::move(dof_setter)));
+    species_bcs.push_back(std::make_unique<KineticFluxBC>(boundary_attribute_kfvs, mesh, species));
     bcs.push_back(std::move(species_bcs));
   }
 

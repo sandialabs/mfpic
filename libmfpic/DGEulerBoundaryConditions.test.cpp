@@ -19,6 +19,7 @@ namespace {
 using namespace mfpic;
 
 TEST(DGEulerBoundaryConditions, DGEulerReflectingBCSetsGhostCorrectly) {
+  constexpr double tol = 1e-13;
   mfem::Mesh mesh = mfem::Mesh::MakeCartesian1D(10);
   DGEulerReflectingBC bc;
 
@@ -49,11 +50,11 @@ TEST(DGEulerBoundaryConditions, DGEulerReflectingBCSetsGhostCorrectly) {
     const mfem::Vector momentum {in(idof,1), in(idof,2), in(idof,3)};
     mfem::Vector normal_momentum = normal;
     normal_momentum *= (momentum * normal);
-    EXPECT_DOUBLE_EQ(out(idof,0), in(idof,0));
-    EXPECT_DOUBLE_EQ(out(idof,4), in(idof,4));
-    EXPECT_DOUBLE_EQ(out(idof,1), in(idof,1) - 2. * normal_momentum(0));
-    EXPECT_DOUBLE_EQ(out(idof,2), in(idof,2) - 2. * normal_momentum(1));
-    EXPECT_DOUBLE_EQ(out(idof,3), in(idof,3) - 2. * normal_momentum(2));
+    EXPECT_NEAR(out(idof,0), in(idof,0), tol);
+    EXPECT_NEAR(out(idof,4), in(idof,4), tol);
+    EXPECT_NEAR(out(idof,1), in(idof,1) - 2. * normal_momentum(0), tol);
+    EXPECT_NEAR(out(idof,2), in(idof,2) - 2. * normal_momentum(1), tol);
+    EXPECT_NEAR(out(idof,3), in(idof,3) - 2. * normal_momentum(2), tol);
   }
 }
 

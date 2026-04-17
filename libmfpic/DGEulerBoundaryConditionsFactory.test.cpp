@@ -59,7 +59,7 @@ TEST(DGEulerBoundaryConditionsFactory, SpecifyingBCsWithSideNamesGivesCorrectBou
     "  - Side: top\n"
     "    Type: Reflecting\n"
     "  - Side: left\n"
-    "    Type: Reflecting\n"
+    "    Type: Absorbing\n"
   );
 
   YAML::Node fluids = YAML::Load(fluids_string);
@@ -79,7 +79,7 @@ TEST(DGEulerBoundaryConditionsFactory, SpecifyingBCsWithSideNamesGivesCorrectBou
 
   const int left_boundary_attribute = side_name_to_boundary_attribute["left"];
   EXPECT_TRUE(boundary_attribute_to_bc_type.contains(left_boundary_attribute));
-  EXPECT_EQ(boundary_attribute_to_bc_type[left_boundary_attribute], DGEulerBCType::REFLECTING);
+  EXPECT_EQ(boundary_attribute_to_bc_type[left_boundary_attribute], DGEulerBCType::ABSORBING);
 }
 
 TEST(DGEulerBoundaryConditionsFactory, SpecifyingBCsWithBoundaryAttributesGivesCorrectBoundaryAttributeToBCTypeMap) {
@@ -89,7 +89,7 @@ TEST(DGEulerBoundaryConditionsFactory, SpecifyingBCsWithBoundaryAttributesGivesC
     "  - Side: 1\n"
     "    Type: Reflecting\n"
     "  - Side: 2\n"
-    "    Type: Reflecting\n"
+    "    Type: Absorbing\n"
   );
 
   YAML::Node fluids = YAML::Load(fluids_string);
@@ -104,7 +104,7 @@ TEST(DGEulerBoundaryConditionsFactory, SpecifyingBCsWithBoundaryAttributesGivesC
   EXPECT_EQ(boundary_attribute_to_bc_type[1], DGEulerBCType::REFLECTING);
 
   EXPECT_TRUE(boundary_attribute_to_bc_type.contains(2));
-  EXPECT_EQ(boundary_attribute_to_bc_type[2], DGEulerBCType::REFLECTING);
+  EXPECT_EQ(boundary_attribute_to_bc_type[2], DGEulerBCType::ABSORBING);
 }
 
 TEST(DGEulerBoundaryConditionsFactory, EmptyBoundaryAttributeToBCTypeGivesEmptyBoundaryConditions) {
