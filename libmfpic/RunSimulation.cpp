@@ -85,6 +85,8 @@ void runSimulation(int argc, char* argv[]) {
     generator,
     mesh
   );
+  const std::string prefix = "particle_moments";
+  particle_operations.writeMomentsCSVsPerSpecies(particle_container, prefix, 0, 0.0);
   dumpParticles(particle_container, 0.0);
 
   std::vector<LowFidelityState> low_fidelity_states;
