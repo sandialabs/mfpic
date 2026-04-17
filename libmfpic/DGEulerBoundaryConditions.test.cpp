@@ -6,6 +6,8 @@
 #include <libmfpic/KineticFluxBC.hpp>
 
 #include <gtest/gtest.h>
+#include <libmfpic/Euler.hpp>
+#include <libmfpic/KineticFluxBC.hpp>
 #include <mfem/fem/eltrans.hpp>
 #include <mfem/fem/hyperbolic.hpp>
 #include <mfem/fem/lininteg.hpp>
@@ -17,6 +19,7 @@ namespace {
 using namespace mfpic;
 
 TEST(DGEulerBoundaryConditions, DGEulerReflectingBCSetsGhostCorrectly) {
+  constexpr double tol = 1e-13;
   mfem::Mesh mesh = mfem::Mesh::MakeCartesian1D(10);
   DGEulerReflectingBC bc;
 
@@ -47,11 +50,11 @@ TEST(DGEulerBoundaryConditions, DGEulerReflectingBCSetsGhostCorrectly) {
     const mfem::Vector momentum {in(idof,1), in(idof,2), in(idof,3)};
     mfem::Vector normal_momentum = normal;
     normal_momentum *= (momentum * normal);
-    EXPECT_DOUBLE_EQ(out(idof,0), in(idof,0));
-    EXPECT_DOUBLE_EQ(out(idof,4), in(idof,4));
-    EXPECT_DOUBLE_EQ(out(idof,1), in(idof,1) - 2. * normal_momentum(0));
-    EXPECT_DOUBLE_EQ(out(idof,2), in(idof,2) - 2. * normal_momentum(1));
-    EXPECT_DOUBLE_EQ(out(idof,3), in(idof,3) - 2. * normal_momentum(2));
+    EXPECT_NEAR(out(idof,0), in(idof,0), tol);
+    EXPECT_NEAR(out(idof,4), in(idof,4), tol);
+    EXPECT_NEAR(out(idof,1), in(idof,1) - 2. * normal_momentum(0), tol);
+    EXPECT_NEAR(out(idof,2), in(idof,2) - 2. * normal_momentum(1), tol);
+    EXPECT_NEAR(out(idof,3), in(idof,3) - 2. * normal_momentum(2), tol);
   }
 }
 
@@ -180,14 +183,13 @@ TEST(DGEulerBoundaryConditions, DGEulerReflectingBCCheckGhostBoundaryIntegrator)
 
 }
 
-constexpr Species test_species {.mass = 1.2345, .specific_heat_ratio = 5./3.};
 constexpr Species electron_species{.charge = -constants::elementary_charge, .mass = constants::electron_mass, .specific_heat_ratio = 5./3.};
 
-TEST(DGEulerBoundaryConditions, KineticFluxFluxFunctionHasNoComputeFlux) {
-  KineticFluxFluxFunction flux(3, test_species);
+TEST(DGEulerBoundaryConditions, DummyFluxFunctionHasNoComputeFlux) {
+  auto dummy_flux = DummyFluxFunction(5, 3);
   auto dummy_transform = mfem::IsoparametricTransformation();
   auto dummy_matrix = mfem::DenseMatrix(); 
-  EXPECT_DEATH(flux.ComputeFlux(mfem::Vector(), dummy_transform, dummy_matrix),
+  EXPECT_DEATH(dummy_flux.ComputeFlux(mfem::Vector(), dummy_transform, dummy_matrix),
                "ComputeFlux cannot be called!");
 }
 
@@ -249,7 +251,8 @@ TEST(DGEulerBoundaryConditions, KineticFluxFluxFunctionComputesCorrectFluxIn1D) 
 
   constexpr double tol = 1e-12;
   constexpr int spatial_dim = 1;
-  KineticFluxFluxFunction flux(spatial_dim, electron_species);
+  auto dummy_flux = DummyFluxFunction(5, spatial_dim);
+  KineticFluxNumericalFlux flux(dummy_flux, electron_species);
   auto dummy_transform = mfem::FaceElementTransformations();
 
   const mfem::Vector normal {2.567, 0., 0.}; // mfem's normals are not necessarily unit vectors
@@ -265,7 +268,7 @@ TEST(DGEulerBoundaryConditions, KineticFluxFluxFunctionComputesCorrectFluxIn1D) 
   const mfem::Vector f_dot_n_expected = expectedFDotN(conservative_state, unit_normal, electron_species);
   mfem::Vector f_dot_n(5);
 
-  flux.ComputeFluxDotN(conservative_state, normal, dummy_transform, f_dot_n);
+  flux.Eval(conservative_state, conservative_state, normal, dummy_transform, f_dot_n);
 
   for (int i = 0; i < 5; ++i)
     EXPECT_NEAR(f_dot_n(i), f_dot_n_expected(i) * normal.Norml2(), tol);
@@ -276,7 +279,8 @@ TEST(DGEulerBoundaryConditions, KineticFluxFluxFunctionComputesCorrectFluxIn2D) 
 
   constexpr double tol = 1e-7;
   constexpr int spatial_dim = 2;
-  KineticFluxFluxFunction flux(spatial_dim, electron_species);
+  auto dummy_flux = DummyFluxFunction(5, spatial_dim);
+  KineticFluxNumericalFlux flux(dummy_flux, electron_species);
   auto dummy_transform = mfem::FaceElementTransformations();
 
   const mfem::Vector normal {2.567, -1.234, 0.}; // mfem's normals are not necessarily unit vectors
@@ -292,7 +296,7 @@ TEST(DGEulerBoundaryConditions, KineticFluxFluxFunctionComputesCorrectFluxIn2D) 
   const mfem::Vector f_dot_n_expected = expectedFDotN(conservative_state, unit_normal, electron_species);
   mfem::Vector f_dot_n(5);
 
-  flux.ComputeFluxDotN(conservative_state, normal, dummy_transform, f_dot_n);
+  flux.Eval(conservative_state, conservative_state, normal, dummy_transform, f_dot_n);
 
   for (int i = 0; i < 5; ++i)
     EXPECT_NEAR(f_dot_n(i), f_dot_n_expected(i) * normal.Norml2(), tol);
@@ -303,7 +307,8 @@ TEST(DGEulerBoundaryConditions, KineticFluxFluxFunctionComputesCorrectFluxIn3D) 
 
   constexpr double tol = 1e-7;
   constexpr int spatial_dim = 3;
-  KineticFluxFluxFunction flux(spatial_dim, electron_species);
+  auto dummy_flux = DummyFluxFunction(5, spatial_dim);
+  KineticFluxNumericalFlux flux(dummy_flux, electron_species);
   auto dummy_transform = mfem::FaceElementTransformations();
 
   const mfem::Vector normal {2.567, -1.234, 3.571}; // mfem's normals are not necessarily unit vectors
@@ -319,7 +324,7 @@ TEST(DGEulerBoundaryConditions, KineticFluxFluxFunctionComputesCorrectFluxIn3D) 
   const mfem::Vector f_dot_n_expected = expectedFDotN(conservative_state, unit_normal, electron_species);
   mfem::Vector f_dot_n(5);
 
-  flux.ComputeFluxDotN(conservative_state, normal, dummy_transform, f_dot_n);
+  flux.Eval(conservative_state, conservative_state, normal, dummy_transform, f_dot_n);
 
   for (int i = 0; i < 5; ++i)
     EXPECT_NEAR(f_dot_n(i), f_dot_n_expected(i) * normal.Norml2(), tol) << i;
@@ -330,7 +335,8 @@ TEST(DGEulerBoundaryConditions, KineticFluxFluxFunctionCorrectHighMachBehavior) 
 
   constexpr double tol = 1e-12;
   constexpr int spatial_dim = 1;
-  KineticFluxFluxFunction flux(spatial_dim, electron_species);
+  auto dummy_flux = DummyFluxFunction(5, spatial_dim);
+  KineticFluxNumericalFlux flux(dummy_flux, electron_species);  
   auto dummy_transform = mfem::FaceElementTransformations();
 
   const mfem::Vector normal {2.567, 0., 0.}; // mfem's normals are not necessarily unit vectors
@@ -355,7 +361,7 @@ TEST(DGEulerBoundaryConditions, KineticFluxFluxFunctionCorrectHighMachBehavior) 
   f_dot_n_expected(4) = primitive_state[euler::PrimitiveVariables::X_BULK_VELOCITY] * (pressure + conservative_state[euler::ConservativeVariables::TOTAL_ENERGY_DENSITY]);
   mfem::Vector f_dot_n(5);
 
-  flux.ComputeFluxDotN(conservative_state, normal, dummy_transform, f_dot_n);
+  flux.Eval(conservative_state, conservative_state, normal, dummy_transform, f_dot_n);
 
   for (int i = 0; i < 5; ++i)
     EXPECT_NEAR(f_dot_n(i), f_dot_n_expected(i) * normal.Norml2(), tol);
@@ -365,7 +371,8 @@ TEST(DGEulerBoundaryConditions, KineticFluxFluxFunctionCorrectLeftGoingExtreme) 
 
   constexpr double tol = 1e-12;
   constexpr int spatial_dim = 1;
-  KineticFluxFluxFunction flux(spatial_dim, electron_species);
+  auto dummy_flux = DummyFluxFunction(5, spatial_dim);
+  KineticFluxNumericalFlux flux(dummy_flux, electron_species);
   auto dummy_transform = mfem::FaceElementTransformations();
 
   const mfem::Vector normal {2.567, 0., 0.}; // mfem's normals are not necessarily unit vectors
@@ -385,7 +392,7 @@ TEST(DGEulerBoundaryConditions, KineticFluxFluxFunctionCorrectLeftGoingExtreme) 
   f_dot_n_expected = 0.;
   mfem::Vector f_dot_n(5);
 
-  flux.ComputeFluxDotN(conservative_state, normal, dummy_transform, f_dot_n);
+  flux.Eval(conservative_state, conservative_state, normal, dummy_transform, f_dot_n);
 
   for (int i = 0; i < 5; ++i)
     EXPECT_NEAR(f_dot_n(i), f_dot_n_expected(i) * normal.Norml2(), tol);
@@ -395,7 +402,8 @@ TEST(DGEulerBoundaryConditions, KineticFluxFluxFunctionCorrectNoBulk) {
 
   constexpr double tol = 1e-12;
   constexpr int spatial_dim = 1;
-  KineticFluxFluxFunction flux(spatial_dim, electron_species);
+  auto dummy_flux = DummyFluxFunction(5, spatial_dim);
+  KineticFluxNumericalFlux flux(dummy_flux, electron_species);
   auto dummy_transform = mfem::FaceElementTransformations();
 
   const mfem::Vector normal {2.567, 0., 0.}; // mfem's normals are not necessarily unit vectors
@@ -421,7 +429,7 @@ TEST(DGEulerBoundaryConditions, KineticFluxFluxFunctionCorrectNoBulk) {
   f_dot_n_expected(4) = thermal_speed * pressure; 
   mfem::Vector f_dot_n(5);
 
-  flux.ComputeFluxDotN(conservative_state, normal, dummy_transform, f_dot_n);
+  flux.Eval(conservative_state, conservative_state, normal, dummy_transform, f_dot_n);
 
   for (int i = 0; i < 5; ++i)
     EXPECT_NEAR(f_dot_n(i), f_dot_n_expected(i) * normal.Norml2(), tol) << i;

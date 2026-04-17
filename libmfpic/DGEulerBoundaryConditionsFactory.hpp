@@ -17,7 +17,8 @@ namespace mfpic {
 struct DGBC;
 struct Species;
 
-enum class DGEulerBCType { REFLECTING };
+enum class DGEulerBCType { REFLECTING,
+                           ABSORBING };
 
 std::unordered_map<int, DGEulerBCType> buildBoundaryAttributeToBCTypeFromYAML(
   const YAML::Node& euler_fluids_bcs,

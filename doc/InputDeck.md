@@ -517,9 +517,10 @@ The available sides are "left", "right", "top", "bottom", "front", and "back".
 For meshes loaded from files the side should be a positive integer.
 The integer is a mesh "attribute" in MFEM parlance or the index of the sideset in Cubit terminology.
 
-**``Type``**: The type of particle boundary.
+**``Type``**: The type of fluid boundary.
 The options are:
 - **``Reflecting``**: Reflects incident fluid.
+- **``Absorbing``**: The portion of the fluid VDF leaving the domain is fluxed out.
 
 Periodic boundaries are specified under ```Mesh``` and are handled automatically without any additional input here.
 
@@ -531,7 +532,7 @@ Euler Fluids:
         - Side: left
           Type: Reflecting
         - Side: right
-          Type: Reflecting
+          Type: Absorbing
 ```
 
 ## Output
