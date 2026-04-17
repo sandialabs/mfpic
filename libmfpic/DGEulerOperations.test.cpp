@@ -372,7 +372,7 @@ TEST(DGEulerOperations, computeTotalEnergy_dg_order_0) {
   constexpr int es_order = 1;
   Discretization charge_discretization(&mesh, es_order, FETypes::HGRAD);
   const std::vector<Species> species_list = low_fidelity_state.getSpeciesList();
-  const std::vector<std::unique_ptr<DGGhostBC>> empty_bcs;
+  std::vector<std::vector<std::unique_ptr<DGBC>>> empty_bcs;
   std::unique_ptr<LowFidelityOperations> dg_euler_operations = buildDGEulerOperations(
     vector_dg_discretization, charge_discretization, species_list, empty_bcs);
 
