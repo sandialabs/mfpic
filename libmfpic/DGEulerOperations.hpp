@@ -70,6 +70,15 @@ public:
   */
   virtual double estimateCFL(const double & dt, const double & smallest_cell_lengthscale) const override;
 
+/**
+* @brief Return the fluid total energy over the whole domain
+*
+* @param state Fluid state
+*
+* @return Total energy
+*/
+  virtual double computeTotalEnergy(const LowFidelityState& state) const override;
+
   /**
   * @brief Evaluates the particle distribution function for the low fidelity state at a given position and velocity.
   *

@@ -3,6 +3,7 @@
 #include <libmfpic/DGAssembly.hpp>
 #include <libmfpic/DGEulerInitialConditionsFactory.hpp>
 #include <libmfpic/DGEulerOperations.hpp>
+#include <libmfpic/DGEulerOperationsFactory.hpp>
 #include <libmfpic/ElectrostaticFieldState.hpp>
 #include <libmfpic/Euler.hpp>
 #include <libmfpic/LowFidelityState.hpp>
@@ -341,6 +342,53 @@ TEST(DGEulerOperations, evaluateParticleDistributionFunctionCorrectIn1D) {
 
 }
 
+TEST(DGEulerOperations, computeTotalEnergy_dg_order_0) {
+  constexpr int num_elems = 10;
+  constexpr double length = 2.0;
+  mfem::Mesh mesh = mfem::Mesh::MakeCartesian1D(num_elems, length);
+
+  constexpr int dg_order = 0;
+  constexpr int num_equations = euler::ConservativeVariables::NUM_VARS;
+  Discretization vector_dg_discretization(&mesh, dg_order, FETypes::DG, num_equations);
+
+  Species electron_species{.charge = -constants::elementary_charge, .mass = constants::electron_mass};
+  constexpr double number_density_e = 2.e17;
+  const mfem::Vector bulk_velocity_e{1.2, 3.4, 5.6};
+  constexpr double temperature_e = 287;
+
+  Species proton_species{.charge = constants::elementary_charge, .mass = constants::proton_mass};
+  constexpr double number_density_p = 3.e18;
+  const mfem::Vector bulk_velocity_p{7.8, 9.1, 1.9};
+  constexpr double temperature_p = 320;
+
+  std::vector<std::unique_ptr<SourceParameters>> list_of_parameters;
+  list_of_parameters.push_back(
+    std::make_unique<ConstantSourceParameters>(electron_species, number_density_e, temperature_e, bulk_velocity_e));
+  list_of_parameters.push_back(
+    std::make_unique<ConstantSourceParameters>(proton_species, number_density_p, temperature_p, bulk_velocity_p));
+
+  LowFidelityState low_fidelity_state = buildEulerState(vector_dg_discretization, list_of_parameters);
+
+  constexpr int es_order = 1;
+  Discretization charge_discretization(&mesh, es_order, FETypes::HGRAD);
+  const std::vector<Species> species_list = low_fidelity_state.getSpeciesList();
+  std::vector<std::vector<std::unique_ptr<DGBC>>> empty_bcs(species_list.size());
+  std::unique_ptr<LowFidelityOperations> dg_euler_operations = buildDGEulerOperations(
+    vector_dg_discretization, charge_discretization, species_list, empty_bcs);
+
+  const mfem::Vector primitive_state_e = euler::constructPrimitiveState(number_density_e, bulk_velocity_e, temperature_e);
+  const mfem::Vector conservative_state_e = euler::convertFromPrimitiveToConservative(primitive_state_e, electron_species);
+  const double total_energy_density_e = conservative_state_e[euler::ConservativeVariables::TOTAL_ENERGY_DENSITY];
+
+  const mfem::Vector primitive_state_p = euler::constructPrimitiveState(number_density_p, bulk_velocity_p, temperature_p);
+  const mfem::Vector conservative_state_p = euler::convertFromPrimitiveToConservative(primitive_state_p, proton_species);
+  const double total_energy_density_p = conservative_state_p[euler::ConservativeVariables::TOTAL_ENERGY_DENSITY];
+
+  const double expected_total_energy = (total_energy_density_e + total_energy_density_p) * length;
+
+  const double total_energy = dg_euler_operations->computeTotalEnergy(low_fidelity_state);
+  EXPECT_DOUBLE_EQ(expected_total_energy, total_energy);
+}
 
 
 } // namespace
