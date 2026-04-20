@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <libmfpic/ParticleOperations.hpp>
 
 namespace mfpic {
 
