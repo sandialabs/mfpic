@@ -111,7 +111,11 @@ void dumpParticleMoments(
 
     const bool need_header = fileIsEmpty(filename);
 
-    std::ofstream out(filename, std::ios::app);
+    std::ofstream out;
+    if (step > 0)
+      out.open(filename, std::ios::out | std::ios::app);
+    else
+      out.open(filename, std::ios::out | std::ios::trunc);  
     if (!out) throw std::runtime_error("Failed to open CSV file: " + filename);
 
     out.setf(std::ios::scientific);
