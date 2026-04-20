@@ -123,7 +123,10 @@ void dumpParticleMoments(
 
     for (int e = 0; e < nelem; ++e) {
       mfem::Vector element_point(3);
-      mesh.GetElementCenter(e, element_point);
+      element_point = 0.0;
+      const int dim = mesh.SpaceDimension();
+      mfem::Vector element_point_view(element_point.GetData(), dim);   
+      mesh.GetElementCenter(e, element_point_view);
 
       const mfem::Vector bulk_velocity_in_element = particle_operations.getSpeciesBulkVelocityInElement(e,s);
 
