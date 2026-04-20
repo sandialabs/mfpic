@@ -78,7 +78,7 @@ void runSimulation(int argc, char* argv[]) {
     species_map
   );
 
-  std::random_device rd; std::default_random_engine generator(rd());
+  std::default_random_engine generator;
   ParticleContainer particle_container = buildParticlesFromYaml(
     main["Particles"]["Initial Conditions"],
     species_map,
