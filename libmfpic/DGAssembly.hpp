@@ -148,6 +148,11 @@ public:
   /// where max_char_speed is updated during RHS evaluation
   mfem::real_t getMaxCharSpeed() const { return hyperbolic_form_integrator_->GetMaxCharSpeed(); }
 
+  /// TODO BWR FILL ME
+  void setVolumetricSourceCoefficient(std::shared_ptr<mfem::Coefficient> & coefficient);
+  std::shared_ptr<mfem::Coefficient> getVolumetricSource() const {return volumetric_source_;};
+  bool hasVolumetricSource() const {return has_volumetric_source_;};
+
   /// Dtor.
   virtual ~DGAssembly();
 
@@ -176,6 +181,10 @@ private:
   std::vector<std::unique_ptr<DGBC>> bcs_;
   /// boundary condition integrators
   std::vector<std::unique_ptr<mfem::NonlinearFormIntegrator>> bc_integrators_;
+  /// volumetric source
+  std::shared_ptr<mfem::Coefficient> volumetric_source_;
+  /// volumetric source flags
+  bool has_volumetric_source_ = false;
 
   /// Compute element-wise inverse mass matrix
   void computeInvMass_();

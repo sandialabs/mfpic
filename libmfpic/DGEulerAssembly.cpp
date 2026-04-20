@@ -9,6 +9,7 @@
 #include <mfem/fem/fespace.hpp>
 #include <mfem/fem/gridfunc.hpp>
 #include <mfem/fem/hyperbolic.hpp>
+#include <mfem/fem/lininteg.hpp>
 #include <mfem/linalg/densemat.hpp>
 
 namespace mfpic {
@@ -31,6 +32,10 @@ namespace mfpic {
     mfem::LinearForm source_form(&getFiniteElementSpace());
     source_form.AddDomainIntegrator(
       new EulerMaxwellSourceIntegrator(state_evaluator, field_evaluator, charge_over_mass, include_energy_source));
+    // TODO BWR put this at the end of the step? ala particles 
+    if (getVolumetricSource().get() != nullptr) {
+      source_form.AddDomainIntegrator(new mfem::DomainLFIntegrator(*getVolumetricSource()));
+    }
     source_form.Assemble();
 
     rhs += source_form;

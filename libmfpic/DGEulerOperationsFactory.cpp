@@ -30,6 +30,8 @@ std::unique_ptr<LowFidelityOperations> buildDGEulerOperations(
     for (size_t ibc = 0; ibc < species_bcs.size(); ++ibc) {
       dg_assemblers.back()->addBoundaryCondition(std::move(species_bcs[ibc]));
     }
+    // if i have a source
+      dg_assemblers.back()->setVolumetricSourceCoefficient(std::shared_ptr<mfem::Coefficient> &coefficient);
   }
 
   auto dg_operations = std::make_unique<DGEulerOperations>(charge_discretization, dg_assemblers);
