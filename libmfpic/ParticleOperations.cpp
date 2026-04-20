@@ -78,7 +78,7 @@ ParticleContainer ParticleOperations::accelerate(
 ) const {
   ParticleContainer accelerated_particles = current_particles;
 
-  #pragma omp parallel for
+  //#pragma omp parallel for
   for (Particle& particle : accelerated_particles) {
     if (not particle.is_alive) continue;
 
@@ -100,7 +100,7 @@ ParticleContainer ParticleOperations::move(
   ParticleContainer moved_particles = current_particles;
 
   const ElementFaceContainer<mfem::Vector>& element_face_unit_normal = *element_face_unit_normal_;
-  #pragma omp parallel for
+  //#pragma omp parallel for
   for (Particle& particle : moved_particles) {
     if (not particle.is_alive) continue;
 
@@ -308,62 +308,6 @@ void ParticleOperations::sumParticleWeights_(
       const int species_id = particle.species.id;
       sum_of_weights_(elem_id, species_id) += particle.weight;
     }
-}
-
-static bool fileIsEmpty(const std::string& filename)
-{
-  std::ifstream in(filename, std::ios::binary | std::ios::ate);
-  return (!in) || (in.tellg() == 0);
-}
-
-void ParticleOperations::writeMomentsCSVsPerSpecies(const ParticleContainer& particles,
-                                                   const std::string& file_prefix,
-                                                   const int step,
-                                                   const double time)
-{
-  this->getNumberDensity(particles);
-  this->getBulkVelocity(particles,true);
-  this->getTemperature(particles,false,false);
-
-  mfem::Mesh& mesh = *discretization_.getFeSpace().GetMesh();
-  const int nelem = mesh.GetNE();
-
-  for (int s = 0; s < num_species_; ++s) {
-    std::string filename = file_prefix + "_species_" + std::to_string(s) + ".csv";
-
-    const bool need_header = fileIsEmpty(filename);
-
-    std::ofstream out(filename, std::ios::app);
-    if (!out) throw std::runtime_error("Failed to open CSV file: " + filename);
-
-    out.setf(std::ios::scientific);
-    out << std::setprecision(17);
-
-    if (need_header) {
-      out << "step,time,elem,x,y,z,number_density,temperature,bulk_velocity_0,bulk_velocity_1,bulk_velocity_2\n";
-    }
-
-    for (int e = 0; e < nelem; ++e) {
-      mfem::ElementTransformation *element_transform = mesh.GetElementTransformation(e);
-      mfem::IntegrationPoint ip = mfem::IntRules.Get(mesh.GetElementBaseGeometry(e), 1).IntPoint(0);
-      element_transform->SetIntPoint(&ip);
-      mfem::Vector element_point(3);
-      element_point = 0.0;
-      const int dim = mesh.SpaceDimension();
-      mfem::Vector element_point_view(element_point.GetData(), dim);   
-      element_transform->Transform(ip, element_point_view);
-
-      const mfem::Vector bulk_velocity_in_element(particle_bulk_velocity_(s).GetColumn(e), 3);
-
-      out << step << ","
-          << time << ","
-          << e << ","
-          << element_point(0) << "," << element_point(1) << "," << element_point(2) << ","
-          << particle_number_density_(e, s) << ","
-          << particle_temperature_(e, s) << ","
-          << bulk_velocity_in_element(0) << "," << bulk_velocity_in_element(1) << "," << bulk_velocity_in_element(2) << "\n";
-    }
-  }
 }
 
 } // namespace mfpic

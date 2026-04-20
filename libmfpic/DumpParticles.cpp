@@ -4,6 +4,7 @@
 #include <H5Tpublic.h>
 #include <libmfpic/DumpParticles.hpp>
 #include <libmfpic/ParticleContainer.hpp>
+#include <libmfpic/ParticleOperations.hpp>
 
 #include <hdf5.h>
 
@@ -83,6 +84,64 @@ void dumpParticles(const ParticleContainer& particles, double simulation_time, c
   H5Sclose(dataspace);
   H5Gclose(step_group);
   H5Fclose(file);
+}
+
+static bool fileIsEmpty(const std::string& filename)
+{
+  std::ifstream in(filename, std::ios::binary | std::ios::ate);
+  return (!in) || (in.tellg() == 0);
+}
+
+void dumpParticleMoments(
+  ParticleOperations& particle_operations,
+  const ParticleContainer& particles,
+  const std::string& file_prefix,
+  const int step,
+  const double time) 
+{
+  particle_operations.getNumberDensity(particles);
+  particle_operations.getBulkVelocity(particles,true);
+  particle_operations.getTemperature(particles,false,false);
+
+  mfem::Mesh& mesh = particle_operations.getMesh();
+  const int nelem = mesh.GetNE();
+
+  for (int s = 0; s < particle_operations.getNumSpecies(); ++s) {
+    std::string filename = file_prefix + "_species_" + std::to_string(s) + ".csv";
+
+    const bool need_header = fileIsEmpty(filename);
+
+    std::ofstream out(filename, std::ios::app);
+    if (!out) throw std::runtime_error("Failed to open CSV file: " + filename);
+
+    out.setf(std::ios::scientific);
+    out << std::setprecision(17);
+
+    if (need_header) {
+      out << "step,time,elem,x,y,z,number_density,temperature,bulk_velocity_0,bulk_velocity_1,bulk_velocity_2\n";
+    }
+
+    for (int e = 0; e < nelem; ++e) {
+      mfem::ElementTransformation *element_transform = mesh.GetElementTransformation(e);
+      mfem::IntegrationPoint ip = mfem::IntRules.Get(mesh.GetElementBaseGeometry(e), 1).IntPoint(0);
+      element_transform->SetIntPoint(&ip);
+      mfem::Vector element_point(3);
+      element_point = 0.0;
+      const int dim = mesh.SpaceDimension();
+      mfem::Vector element_point_view(element_point.GetData(), dim);   
+      element_transform->Transform(ip, element_point_view);
+
+      const mfem::Vector bulk_velocity_in_element = particle_operations.getSpeciesBulkVelocityInElement(e,s);
+
+      out << step << ","
+          << time << ","
+          << e << ","
+          << element_point(0) << "," << element_point(1) << "," << element_point(2) << ","
+          << particle_operations.getSpeciesNumberDensityInElement(e, s) << ","
+          << particle_operations.getSpeciesTemperatureInElement(e, s) << ","
+          << bulk_velocity_in_element(0) << "," << bulk_velocity_in_element(1) << "," << bulk_velocity_in_element(2) << "\n";
+    }
+  }
 }
 
 } // namespace mfpic

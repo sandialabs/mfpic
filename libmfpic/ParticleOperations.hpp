@@ -104,10 +104,53 @@ public:
    */
   mfem::DenseMatrix& getTemperature(const ParticleContainer& particles, const bool sum_weights = true, const bool compute_bulk_velocity = true);
 
-  void writeMomentsCSVsPerSpecies(const ParticleContainer& particles,
-                                                   const std::string& file_prefix,
-                                                   const int step,
-                                                   const double time);
+  /**
+   * @brief Get number of species in the particle container
+   *
+   * @return int of number of species 
+   */
+  int getNumSpecies() const {return num_species_;};
+
+  /**
+   * @brief Get mfem mesh associated with the discretization
+   *
+   * @return mfem::Mesh 
+   */
+  mfem::Mesh& getMesh() const {return *discretization_.getFeSpace().GetMesh();};
+
+  /**
+   * @brief Get number density for a given species and element
+   *
+   * @param[in] ielem                 element index
+   * @param[in] ispecies              species index
+   *
+   * @return double of number density 
+   */
+  double getSpeciesNumberDensityInElement(const int ielem, const int ispecies) const {return particle_number_density_(ielem,ispecies);};
+
+  /**
+   * @brief Get temperature for a given species and element
+   *
+   * @param[in] ielem                 element index
+   * @param[in] ispecies              species index
+   *
+   * @return double of temperature
+   */
+  double getSpeciesTemperatureInElement(const int ielem, const int ispecies) const {return particle_temperature_(ielem,ispecies);};
+
+  /**
+   * @brief Get bulk velocity for a given species and element
+   *
+   * @param[in] ielem                 element index
+   * @param[in] ispecies              species index
+   *
+   * @return mfem::Vector of bulk velocity
+   */
+  mfem::Vector getSpeciesBulkVelocityInElement(const int ielem, const int ispecies) const {
+      const double *col = particle_bulk_velocity_(ispecies).GetColumn(ielem); 
+      mfem::Vector velocity({col[0],col[1],col[2]});
+      return velocity;
+  }
 
 private: 
 
