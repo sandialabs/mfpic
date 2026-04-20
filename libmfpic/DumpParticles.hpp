@@ -1,11 +1,11 @@
 #pragma once
 
 #include <string>
-#include <libmfpic/ParticleOperations.hpp>
 
 namespace mfpic {
 
 class ParticleContainer;
+class ParticleOperations;
 
 void dumpParticles(const ParticleContainer& particles, double simulation_time, const std::string filename = "particles.h5part");
 

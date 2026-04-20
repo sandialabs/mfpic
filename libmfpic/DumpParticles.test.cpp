@@ -164,7 +164,7 @@ const std::shared_ptr<ParticleBoundaryFactory> default_reflecting_particle_bound
   = std::make_shared<ReflectingParticleBoundaryFactory>();
 constexpr int one_species = 1, two_species = 2;
 
-TEST(ParticleOperationsCSV, CSVCorrectForOneSpecies)
+TEST(DumpParticles, CSVCorrectForOneSpecies)
 {
   const int num_elems = 5;
   std::shared_ptr<mfem::Mesh> mesh = std::make_shared<mfem::Mesh>(mfem::Mesh::MakeCartesian1D(num_elems, .234));
@@ -245,7 +245,7 @@ TEST(ParticleOperationsCSV, CSVCorrectForOneSpecies)
   }
 };
 
-TEST(ParticleOperationsCSV, CSVCorrectForTwoSpecies)
+TEST(DumpParticles, CSVCorrectForTwoSpecies)
 {
 
   constexpr Species species_1{.charge = 1.0, .mass = 1.0, .id = 0};
