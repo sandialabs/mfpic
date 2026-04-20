@@ -139,6 +139,30 @@ namespace mfpic {
     return max_speed * dt / smallest_cell_lengthscale;
   }
 
+double DGEulerOperations::computeTotalEnergy(const LowFidelityState& state) const {
+  mfem::FiniteElementSpace& charge_finite_element_space = charge_discretization_.getFeSpace();
+  mfem::Mesh* mesh = charge_finite_element_space.GetMesh();
+  constexpr int test_function_order = 0;
+  Discretization constant_test_function_discretization(mesh, test_function_order, FETypes::DG);
+
+  double total_energy = 0;
+  for (int i_species = 0; i_species < state.numSpecies(); ++i_species) {
+    const LowFidelitySpeciesState& species_state = state.getSpeciesState(i_species);
+    const mfem::GridFunction& grid_function = species_state.getGridFunction();
+
+    // GridFunctionCoefficient component is 1 based not 0 based indexing
+    constexpr int component = euler::ConservativeVariables::TOTAL_ENERGY_DENSITY + 1;
+    mfem::GridFunctionCoefficient species_total_energy_density_coefficient(&grid_function, component);
+
+    mfem::LinearForm species_total_energy_by_cell(&constant_test_function_discretization.getFeSpace());
+    species_total_energy_by_cell.AddDomainIntegrator(new mfem::DomainLFIntegrator(species_total_energy_density_coefficient));
+    species_total_energy_by_cell.Assemble();
+    total_energy += species_total_energy_by_cell.Sum();
+  }
+
+  return total_energy;
+}
+
   double DGEulerOperations::evaluateParticleDistributionFunction(const LowFidelityState& current_state, const mfem::Vector position, const mfem::Vector velocity, const int element, const Species& species) const
   {
     mfem::FiniteElementSpace & finite_element_space = charge_discretization_.getFeSpace();
