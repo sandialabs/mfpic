@@ -83,7 +83,7 @@ ParticleContainer ParticleOperations::accelerate(
 ) const {
   ParticleContainer accelerated_particles = current_particles;
 
-  //#pragma omp parallel for
+  #pragma omp parallel for
   for (Particle& particle : accelerated_particles) {
     if (not particle.is_alive) continue;
 
@@ -105,7 +105,7 @@ ParticleContainer ParticleOperations::move(
   ParticleContainer moved_particles = current_particles;
 
   const ElementFaceContainer<mfem::Vector>& element_face_unit_normal = *element_face_unit_normal_;
-  //#pragma omp parallel for
+  #pragma omp parallel for
   for (Particle& particle : moved_particles) {
     if (not particle.is_alive) continue;
 
