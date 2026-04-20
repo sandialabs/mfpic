@@ -122,14 +122,8 @@ void dumpParticleMoments(
     }
 
     for (int e = 0; e < nelem; ++e) {
-      mfem::ElementTransformation *element_transform = mesh.GetElementTransformation(e);
-      mfem::IntegrationPoint ip = mfem::IntRules.Get(mesh.GetElementBaseGeometry(e), 1).IntPoint(0);
-      element_transform->SetIntPoint(&ip);
       mfem::Vector element_point(3);
-      element_point = 0.0;
-      const int dim = mesh.SpaceDimension();
-      mfem::Vector element_point_view(element_point.GetData(), dim);   
-      element_transform->Transform(ip, element_point_view);
+      mesh.GetElementCenter(e, element_point);
 
       const mfem::Vector bulk_velocity_in_element = particle_operations.getSpeciesBulkVelocityInElement(e,s);
 
