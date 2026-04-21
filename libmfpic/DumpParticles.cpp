@@ -99,9 +99,9 @@ void dumpParticleMoments(
   const int step,
   const double time) 
 {
-  particle_operations.getNumberDensity(particles);
-  particle_operations.getBulkVelocity(particles,true);
-  particle_operations.getTemperature(particles,false,false);
+  mfem::DenseMatrix number_density = particle_operations.getNumberDensity(particles);
+  mfem::DenseTensor bulk_velocity = particle_operations.getBulkVelocity(particles,true);
+  mfem::DenseMatrix temperature = particle_operations.getTemperature(particles,false,false);
 
   mfem::Mesh& mesh = particle_operations.getMesh();
   const int nelem = mesh.GetNE();
@@ -132,14 +132,14 @@ void dumpParticleMoments(
       mfem::Vector element_point_view(element_point.GetData(), dim);   
       mesh.GetElementCenter(e, element_point_view);
 
-      const mfem::Vector bulk_velocity_in_element = particle_operations.getSpeciesBulkVelocityInElement(e,s);
+      const mfem::Vector bulk_velocity_in_element(bulk_velocity(s).GetColumn(e), 3);
 
       out << step << ","
           << time << ","
           << e << ","
           << element_point(0) << "," << element_point(1) << "," << element_point(2) << ","
-          << particle_operations.getSpeciesNumberDensityInElement(e, s) << ","
-          << particle_operations.getSpeciesTemperatureInElement(e, s) << ","
+          << number_density(e, s) << ","
+          << temperature(e, s) << ","
           << bulk_velocity_in_element(0) << "," << bulk_velocity_in_element(1) << "," << bulk_velocity_in_element(2) << "\n";
     }
   }
