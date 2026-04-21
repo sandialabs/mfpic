@@ -35,6 +35,7 @@ add_library(libmfpic
   ReflectingParticleBoundary.cpp
   RunSimulation.cpp
   SourcesFactory.cpp
+  TextDataWriter.cpp
   TimeSteppingFactory.cpp
   VerletTimeIntegrator.cpp
 )
@@ -87,4 +88,5 @@ mfpic_unit_test(ParticleOperations)
 mfpic_unit_test(Pinning)
 mfpic_unit_test(ReflectingParticleBoundary)
 mfpic_unit_test(SourcesFactory)
+mfpic_unit_test(TextDataWriter)
 mfpic_unit_test(TimeSteppingFactory)
