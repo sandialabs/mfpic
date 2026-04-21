@@ -1,8 +1,14 @@
 #pragma once
 
+#include <fstream>
+#include <memory>
+#include <vector>
+
 namespace mfpic {
 
+class ElectrostaticFieldOperations;
 class ElectrostaticFieldState;
+class LowFidelityOperations;
 class LowFidelityState;
 
 class TextDataWriter {
@@ -10,7 +16,7 @@ public:
   /**
    * @brief Construct a new Text Data Writer object
    */
-  TextDataWriter();
+  TextDataWriter(const int num_low_fidelity_models);
 
   /**
    * @brief Output data to the text files
@@ -22,9 +28,11 @@ public:
    * @param time - the time for the output
    */
   void output(
-    ElectrostaticFieldState& electrostatic_field_state,
-    std::vector<ElectrostaticFieldState>& low_fidelity_field_states,
-    std::vector<LowFidelityState>& low_fidelity_states,
+    const ElectrostaticFieldState& electrostatic_field_state,
+    const std::vector<ElectrostaticFieldState>& low_fidelity_field_states,
+    const ElectrostaticFieldOperations& electrostatic_field_operations,
+    const std::vector<LowFidelityState>& low_fidelity_states,
+    const std::vector<std::unique_ptr<LowFidelityOperations>>& low_fidelity_operations,
     const int i_time_step,
     const double time);
 
