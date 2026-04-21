@@ -130,6 +130,13 @@ void runSimulation(int argc, char* argv[]) {
     low_fidelity_field_states.emplace_back(electrostatic_discretization);
   }
 
+  for (int i = 0; i < std::ssize(low_fidelity_field_states); ++i) {
+    auto* ops = dynamic_cast<DGEulerOperations*>(low_fidelity_operations[i].get());
+    if (!ops) throw std::runtime_error("Cannot compute variance reduced moments for low_fidelity_operations[i] that is not DGEulerOperations.");
+    const std::string variance_reduced_prefix = "variance_reduced_particle_moments";
+    dumpVarianceReducedParticleMoments(particle_operations,particle_container,low_fidelity_states[i],*ops,variance_reduced_prefix, 0, 0.0);
+  }
+
   OutputParameters output_parameters;
   if (main["Output"].IsDefined())
     output_parameters = buildOutputParametersFromYAML(main["Output"]);
@@ -203,6 +210,13 @@ void runSimulation(int argc, char* argv[]) {
       const std::string prefix = "particle_moments";
       dumpParticleMoments(particle_operations,particle_container, prefix, i_timestep, end_time);
       dumpParticles(particle_container, end_time, output_parameters.particle_dump_filename);
+      for (int i = 0; i < std::ssize(low_fidelity_field_states); ++i) {
+        auto* ops = dynamic_cast<DGEulerOperations*>(low_fidelity_operations[i].get());
+        if (!ops) throw std::runtime_error("Cannot compute variance reduced moments for low_fidelity_operations[i] that is not DGEulerOperations.");
+        const std::string variance_reduced_prefix = "variance_reduced_particle_moments";
+        dumpVarianceReducedParticleMoments(particle_operations,particle_container,low_fidelity_states[i],*ops,variance_reduced_prefix, i_timestep, end_time);
+      }
+
       mesh_data_writer.output(
         particle_electrostatic_field_state,
         low_fidelity_field_states,
