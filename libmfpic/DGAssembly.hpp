@@ -86,18 +86,16 @@ public:
   void computeHyperbolicFluxes(const mfem::Vector &dofs, mfem::Vector &rhs) const;
 
  /**
-  * @brief Compute the electromagnetic source terms for the residual.
+  * @brief Compute the volumetric source terms for the residual.
   * Adds \f$(S(U),v)\f$ to the vector \p rhs .
   *
   * @note Does not apply \f$M^{-1}\f$.
   *
   * @param species_state - current solution for a given species
-  * @param field_evaluator electromagnetic field evaluator
   * @param[inout] rhs rhs storage
   */
-  virtual void computeSources(
+  virtual void computeVolumetricSources(
     const LowFidelitySpeciesState& species_state,
-    const ElectromagneticFieldsEvaluator& field_evaluator,
     mfem::Vector& rhs) const = 0;
 
   /**
@@ -149,9 +147,10 @@ public:
   mfem::real_t getMaxCharSpeed() const { return hyperbolic_form_integrator_->GetMaxCharSpeed(); }
 
   /// TODO BWR FILL ME
-  void setVolumetricSourceCoefficient(std::shared_ptr<mfem::Coefficient> & coefficient);
-  std::shared_ptr<mfem::Coefficient> getVolumetricSource() const {return volumetric_source_;};
+  void setVolumetricSourceCoefficient(std::unique_ptr<mfem::VectorCoefficient> && coefficient);
   bool hasVolumetricSource() const {return has_volumetric_source_;};
+  // TODO BWR there has to be a better way?
+  mfem::VectorDomainLFIntegrator * createVolumetricSourceIntegrator() const {return new mfem::VectorDomainLFIntegrator(*volumetric_source_);}
 
   /// Dtor.
   virtual ~DGAssembly();
@@ -182,7 +181,7 @@ private:
   /// boundary condition integrators
   std::vector<std::unique_ptr<mfem::NonlinearFormIntegrator>> bc_integrators_;
   /// volumetric source
-  std::shared_ptr<mfem::Coefficient> volumetric_source_;
+  std::unique_ptr<mfem::VectorCoefficient> volumetric_source_;
   /// volumetric source flags
   bool has_volumetric_source_ = false;
 

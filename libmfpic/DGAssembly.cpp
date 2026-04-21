@@ -163,11 +163,11 @@ namespace mfpic {
     }
   }
 
-  void DGAssembly::setVolumetricSourceCoefficient(std::shared_ptr<mfem::Coefficient> & coefficient) {
+  void DGAssembly::setVolumetricSourceCoefficient(std::unique_ptr<mfem::VectorCoefficient> && coefficient) {
     if (hasVolumetricSource()) {
       errorWithDeveloperMessage("Volumetric source already set! Currently only support a single volumetric source.");
     }
-    volumetric_source_ = coefficient;
+    volumetric_source_ = std::move(coefficient);
     has_volumetric_source_ = true;
   }
 

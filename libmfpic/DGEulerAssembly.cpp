@@ -19,7 +19,7 @@ namespace mfpic {
     const Species& species) :
       DGEulerAssembly(CreateDGEulerAssembly_(finite_element_space, species)) {}
 
-  void DGEulerAssembly::computeSources(
+  void DGEulerAssembly::computeElectromagneticSources(
     const LowFidelitySpeciesState& species_state,
     const ElectromagneticFieldsEvaluator &field_evaluator,
     mfem::Vector &rhs) const {
@@ -32,10 +32,17 @@ namespace mfpic {
     mfem::LinearForm source_form(&getFiniteElementSpace());
     source_form.AddDomainIntegrator(
       new EulerMaxwellSourceIntegrator(state_evaluator, field_evaluator, charge_over_mass, include_energy_source));
-    // TODO BWR put this at the end of the step? ala particles 
-    if (getVolumetricSource().get() != nullptr) {
-      source_form.AddDomainIntegrator(new mfem::DomainLFIntegrator(*getVolumetricSource()));
-    }
+    source_form.Assemble();
+
+    rhs += source_form;
+  }
+
+  void DGEulerAssembly::computeVolumetricSources(
+    const LowFidelitySpeciesState& ,
+    mfem::Vector &rhs) const {
+
+    mfem::LinearForm source_form(&getFiniteElementSpace());
+    source_form.AddDomainIntegrator(createVolumetricSourceIntegrator());
     source_form.Assemble();
 
     rhs += source_form;

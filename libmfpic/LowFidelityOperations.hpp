@@ -19,6 +19,11 @@ public:
     const LowFidelityState& current_state
   ) const = 0;
 
+  virtual LowFidelityState addVolumetricSource(
+    double dt,
+    const LowFidelityState& current_state
+  ) const = 0;
+
   virtual IntegratedCharge assembleCharge(
     const LowFidelityState& current_state
   ) const = 0;

@@ -557,7 +557,7 @@ TEST(DGEulerAssembly, electrostaticSourceTermOrder1) {
 
 }
 
-TEST(DGEulerAssembly, computeSourcesElectrostatic) {
+TEST(DGEulerAssembly, computeElectromagneticSourcesElectrostatic) {
   constexpr double tolerance = 1e-13;
   constexpr int nx = 5;
   constexpr mfem::real_t length = 1.0;
@@ -605,7 +605,7 @@ TEST(DGEulerAssembly, computeSourcesElectrostatic) {
   rhs = rhs_offset;
 
   EXPECT_TRUE(rhs.Size() == fluid_grid_function.Size());
-  op.computeSources(fluid_state, es_field_state, rhs);
+  op.computeElectromagneticSources(fluid_state, es_field_state, rhs);
 
   auto source_exact_vec = [&](const mfem::Vector &x, mfem::Vector &y) {
     linear_vec(x,y);

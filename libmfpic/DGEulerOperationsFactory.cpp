@@ -7,6 +7,7 @@
 #include <libmfpic/LowFidelityOperations.hpp>
 #include <libmfpic/LowFidelityState.hpp>
 #include <memory>
+#include <mfem/fem/coefficient.hpp>
 #include <mfem/fem/hyperbolic.hpp>
 #include <ranges>
 
@@ -16,7 +17,8 @@ std::unique_ptr<LowFidelityOperations> buildDGEulerOperations(
   Discretization & dg_discretization,
   Discretization & charge_discretization,
   const std::vector<Species>& species_list,
-  std::vector<std::vector<std::unique_ptr<DGBC>>> & bcs)
+  std::vector<std::vector<std::unique_ptr<DGBC>>> & bcs,
+  std::vector<std::pair<Species, std::unique_ptr<mfem::VectorCoefficient>>> & sources)
 {
   if (dg_discretization.getElementType() != FETypes::DG) {
     std::string error_message = "Fluid discretization must be DG.";
@@ -30,8 +32,13 @@ std::unique_ptr<LowFidelityOperations> buildDGEulerOperations(
     for (size_t ibc = 0; ibc < species_bcs.size(); ++ibc) {
       dg_assemblers.back()->addBoundaryCondition(std::move(species_bcs[ibc]));
     }
-    // if i have a source
-      dg_assemblers.back()->setVolumetricSourceCoefficient(std::shared_ptr<mfem::Coefficient> &coefficient);
+    if (not sources.empty()) {
+      for (auto & [source_species, coefficient] : sources) {
+        if (source_species.id == species.id) {
+          dg_assemblers.back()->setVolumetricSourceCoefficient(std::move(coefficient));
+        }
+      }
+    }
   }
 
   auto dg_operations = std::make_unique<DGEulerOperations>(charge_discretization, dg_assemblers);

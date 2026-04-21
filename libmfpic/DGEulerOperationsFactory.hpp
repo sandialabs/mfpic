@@ -28,6 +28,8 @@ buildDGEulerOperations(
   Discretization & dg_discretization,
   Discretization & charge_discretization,
   const std::vector<Species>& species_list,
-  std::vector<std::vector<std::unique_ptr<DGBC>>> & bcs);
+  std::vector<std::vector<std::unique_ptr<DGBC>>> & bcs,
+  std::vector<std::pair<Species, std::unique_ptr<mfem::VectorCoefficient>>> & sources)
+  ;
 
 } // namespace

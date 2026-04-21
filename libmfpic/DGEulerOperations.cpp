@@ -31,7 +31,7 @@ namespace mfpic {
       LowFidelitySpeciesState& updated_species_state = updated_state.getSpeciesState(ispecies);
 
       temp_vector_ = 0.;
-      dg_assemblers_[ispecies]->computeSources(current_species_state, field_evaluator, temp_vector_);
+      dg_assemblers_[ispecies]->computeElectromagneticSources(current_species_state, field_evaluator, temp_vector_);
       dg_assemblers_[ispecies]->applyInverseMass(temp_vector_, rhs_);
 
       temp_vector_ = 0.;
@@ -64,6 +64,27 @@ namespace mfpic {
 
       temp_vector_ = 0.;
       dg_assemblers_[ispecies]->computeHyperbolicFluxes(current_species_grid_function, temp_vector_);
+      dg_assemblers_[ispecies]->applyInverseMass(temp_vector_, rhs_);
+
+      mfem::GridFunction& updated_species_grid_function = updated_species_state.getGridFunction();
+      updated_species_grid_function.Add(dt, rhs_);
+    }
+
+    return updated_state;
+  }
+
+  LowFidelityState DGEulerOperations::addVolumetricSource(
+    double dt,
+    const LowFidelityState& current_state) const
+  {
+    LowFidelityState updated_state(current_state);
+
+    for (int ispecies = 0; ispecies < current_state.numSpecies(); ++ispecies) {
+      const LowFidelitySpeciesState& current_species_state = current_state.getSpeciesState(ispecies);
+      LowFidelitySpeciesState& updated_species_state = updated_state.getSpeciesState(ispecies);
+
+      temp_vector_ = 0.;
+      dg_assemblers_[ispecies]->computeVolumetricSources(current_species_state, temp_vector_);
       dg_assemblers_[ispecies]->applyInverseMass(temp_vector_, rhs_);
 
       mfem::GridFunction& updated_species_grid_function = updated_species_state.getGridFunction();
