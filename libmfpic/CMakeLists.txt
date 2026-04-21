@@ -13,6 +13,7 @@ add_library(libmfpic
   DGEulerOperations.cpp
   DirichletBoundaryConditionsConstant.cpp
   DirichletBoundaryConditionsFactory.cpp
+  Discretization.cpp
   DumpParticles.cpp
   ElectrostaticFieldOperations.cpp
   ElectrostaticFieldOperationsWithBoltzmannElectrons.cpp
@@ -67,6 +68,7 @@ mfpic_unit_test(DGEulerOperations)
 mfpic_unit_test(DGEulerOperationsFactory)
 mfpic_unit_test(DirichletBoundaryConditionsConstant)
 mfpic_unit_test(DirichletBoundaryConditionsFactory)
+mfpic_unit_test(Discretization)
 mfpic_unit_test(DumpParticles)
 mfpic_unit_test(ElectrostaticFieldOperations)
 mfpic_unit_test(ElectrostaticFieldOperationsWithBoltzmannElectrons)
