@@ -109,8 +109,6 @@ void dumpParticleMoments(
   for (int s = 0; s < particle_operations.getNumSpecies(); ++s) {
     std::string filename = file_prefix + "_species_" + std::to_string(s) + ".csv";
 
-    const bool need_header = fileIsEmpty(filename);
-
     std::ofstream out;
     if (step > 0)
       out.open(filename, std::ios::out | std::ios::app);
@@ -121,6 +119,7 @@ void dumpParticleMoments(
     out.setf(std::ios::scientific);
     out << std::setprecision(17);
 
+    const bool need_header = fileIsEmpty(filename);
     if (need_header) {
       out << "step,time,elem,x,y,z,number_density,temperature,bulk_velocity_0,bulk_velocity_1,bulk_velocity_2\n";
     }
