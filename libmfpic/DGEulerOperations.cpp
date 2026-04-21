@@ -162,6 +162,15 @@ double DGEulerOperations::computeTotalEnergy(const LowFidelityState& state) cons
   return total_energy;
 }
 
+double DGEulerOperations::computeTotalKineticEnergy(const LowFidelityState& /*state*/) const {
+  // mfem::FiniteElementSpace& charge_finite_element_space = charge_discretization_.getFeSpace();
+  // mfem::Mesh* mesh = charge_finite_element_space.GetMesh();
+  // constexpr int test_function_order = 0;
+  // Discretization constant_test_function_discretization(mesh, test_function_order, FETypes::DG);
+
+  return 0.;
+}
+
 double DGEulerOperations::evaluateParticleDistributionFunction(
   const LowFidelityState& state,
   const mfem::Vector position,
