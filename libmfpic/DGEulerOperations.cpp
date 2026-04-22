@@ -4,6 +4,7 @@
 #include <libmfpic/ElectromagneticFieldsEvaluator.hpp>
 #include <libmfpic/Euler.hpp>
 #include <libmfpic/LowFidelityState.hpp>
+#include <libmfpic/MFEMHelpers.hpp>
 #include <libmfpic/Species.hpp>
 
 namespace mfpic {
@@ -159,13 +160,32 @@ double DGEulerOperations::computeTotalEnergy(const LowFidelityState& state) cons
   return total_energy;
 }
 
-double DGEulerOperations::computeTotalKineticEnergy(const LowFidelityState& /*state*/) const {
-  // mfem::FiniteElementSpace& charge_finite_element_space = charge_discretization_.getFeSpace();
-  // mfem::Mesh* mesh = charge_finite_element_space.GetMesh();
-  // constexpr int test_function_order = 0;
-  // Discretization constant_test_function_discretization(mesh, test_function_order, FETypes::DG);
+double DGEulerOperations::computeTotalKineticEnergy(const LowFidelityState& state) const {
+  Discretization identity_test_function_discretization = getIdentityTestFunctionDiscretization(charge_discretization_);
 
-  return 0.;
+  double total_kinetic_energy = 0.;
+  for (int i_species = 0; i_species < state.numSpecies(); ++i_species) {
+    const LowFidelitySpeciesState& species_state = state.getSpeciesState(i_species);
+    const mfem::GridFunction& grid_function = species_state.getGridFunction();
+
+    auto conservative_state_coefficient = std::make_unique<mfem::VectorGridFunctionCoefficient>(&grid_function);
+    // TODO: try just passing euler::getKineticEnergyDensityFromConservativeState into TransformedVectorCoefficient
+    auto kinetic_energy_density_function = [](const mfem::Vector& conservative_state){
+      return euler::getKineticEnergyDensityFromConservativeState(conservative_state);
+    };
+    TransformedVectorCoefficient kinetic_energy_density_coefficient(
+      std::move(conservative_state_coefficient),
+      kinetic_energy_density_function);
+
+    mfem::LinearForm species_kinetic_energy_by_cell(&identity_test_function_discretization.getFeSpace());
+    species_kinetic_energy_by_cell.AddDomainIntegrator(new mfem::DomainLFIntegrator(kinetic_energy_density_coefficient));
+    species_kinetic_energy_by_cell.Assemble();
+
+    const double species_total_kinetic_energy = species_kinetic_energy_by_cell.Sum();
+    total_kinetic_energy += species_total_kinetic_energy;
+  }
+
+  return total_kinetic_energy;
 }
 
 double DGEulerOperations::evaluateParticleDistributionFunction(
