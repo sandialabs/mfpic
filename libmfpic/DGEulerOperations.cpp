@@ -170,12 +170,12 @@ double DGEulerOperations::computeTotalKineticEnergy(const LowFidelityState& stat
 
     auto conservative_state_coefficient = std::make_unique<mfem::VectorGridFunctionCoefficient>(&grid_function);
     // TODO: try just passing euler::getKineticEnergyDensityFromConservativeState into TransformedVectorCoefficient
-    auto kinetic_energy_density_function = [](const mfem::Vector& conservative_state){
-      return euler::getKineticEnergyDensityFromConservativeState(conservative_state);
-    };
+    // auto kinetic_energy_density_function = [](const mfem::Vector& conservative_state){
+    //   return euler::getKineticEnergyDensityFromConservativeState(conservative_state);
+    // };
     TransformedVectorCoefficient kinetic_energy_density_coefficient(
       std::move(conservative_state_coefficient),
-      kinetic_energy_density_function);
+      euler::getKineticEnergyDensityFromConservativeState);
 
     mfem::LinearForm species_kinetic_energy_by_cell(&identity_test_function_discretization.getFeSpace());
     species_kinetic_energy_by_cell.AddDomainIntegrator(new mfem::DomainLFIntegrator(kinetic_energy_density_coefficient));
