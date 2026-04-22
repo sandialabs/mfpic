@@ -32,13 +32,15 @@ mfem::Vector generateMaxwellianVelocity(
   assert(mass > 0.0);
 
   const double thermal_speed = sqrt(constants::boltzmann_constant * temperature / mass);
-  mfem::Vector velocity = bulk_velocity;
+  mfem::Vector velocity(3);
   if (thermal_speed > 0.0) {
-    constexpr double peculiar_velocity_distribution_mean = 0.0;
-    std::normal_distribution<double> peculiar_velocity_distribution(peculiar_velocity_distribution_mean, thermal_speed);
     for (int dimension = 0; dimension < 3; dimension++) {
-      velocity[dimension] += peculiar_velocity_distribution(generator);
+      std::normal_distribution<double> velocity_component_distribution(bulk_velocity[dimension], thermal_speed);
+      velocity[dimension] = velocity_component_distribution(generator);
     }
+  }
+  else {
+    velocity = bulk_velocity;
   }
 
   return velocity;
