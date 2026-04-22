@@ -110,7 +110,7 @@ def run(mfpic_executable):
         result = subprocess.run([mfpic_executable, "-i", yaml])
         result.check_returncode()
 
-        verification.check_total_fluid_energy_positive_and_constant()
+        verification.check_fluid_energy_positive_and_constant('Total_Fluid_Energy')
 
 
 def compute_error(data, points, exact_solution):
