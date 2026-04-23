@@ -24,7 +24,7 @@ public:
   ) const = 0;
 
   virtual double evaluateParticleDistributionFunction(
-    const LowFidelityState& current_state,
+    const LowFidelityState& state,
     const mfem::Vector position,
     const mfem::Vector velocity,
     const int element,
