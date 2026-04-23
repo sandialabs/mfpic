@@ -95,6 +95,27 @@ TEST(LoadParticles, ParticleWeightSetCorrectly) {
   }
 }
 
+void checkParticlesAreUniformlyDistributed1D(const ParticleContainer& particles) {
+  constexpr int num_bins = 5;
+  const int num_elements = simple_mesh->GetNE();
+  const double dx = 1.0 / num_elements;
+  std::vector<int> bins(num_bins, 0);
+  for (const Particle& particle : particles) {
+    ASSERT_DOUBLE_EQ(particle.position[1], 0.0);
+    ASSERT_DOUBLE_EQ(particle.position[2], 0.0);
+    const int expected_element = particle.position[0] / dx;
+    ASSERT_EQ(particle.element, expected_element);
+
+    bins[particle.position[0] * num_bins] += 1;
+  }
+  const int num_particles = particles.numParticles();
+  const int expected_particles_generated_per_bin = num_particles / num_bins;
+  const double absolute_tolerance = 0.1 * expected_particles_generated_per_bin;
+  for (int num_particles_generated_in_bin : bins) {
+    EXPECT_NEAR(num_particles_generated_in_bin, expected_particles_generated_per_bin, absolute_tolerance);
+  }
+}
+
 TEST(LoadParticles, ParticlesAreUniformlyDistributedInSpace) {
   const SourceStateParameters source_state_parameters{
     .number_density = 1.0e18,
@@ -110,23 +131,7 @@ TEST(LoadParticles, ParticlesAreUniformlyDistributedInSpace) {
     simple_mesh
   );
 
-  constexpr int num_bins = 5;
-  const int num_elements = simple_mesh->GetNE();
-  const double dx = 1.0 / num_elements;
-  std::vector<int> bins(num_bins, 0);
-  for (const Particle& particle : particles) {
-    ASSERT_DOUBLE_EQ(particle.position[1], 0.0);
-    ASSERT_DOUBLE_EQ(particle.position[2], 0.0);
-    const int expected_element = particle.position[0] / dx;
-    ASSERT_EQ(particle.element, expected_element);
-
-    bins[particle.position[0] * num_bins] += 1;
-  }
-  constexpr int expected_particles_generated_per_bin = num_particles / num_bins;
-  const double absolute_tolerance = 0.1 * expected_particles_generated_per_bin;
-  for (int num_particles_generated_in_bin : bins) {
-    EXPECT_NEAR(num_particles_generated_in_bin, expected_particles_generated_per_bin, absolute_tolerance);
-  }
+  checkParticlesAreUniformlyDistributed1D(particles);
 }
 
 TEST(LoadParticles, ParticleVelocitiesAreMaxwellianWhenMaxwellianParticlesAreRequested) {
@@ -306,6 +311,35 @@ TEST(LoadParticles, LoadedParticlesRespectSodDiscontinuity) {
     EXPECT_DOUBLE_EQ(particle.weight, expected_particle_weight);
     EXPECT_LE(particle.position[0], discontinuity_location);
   }
+}
+
+TEST(LoadParticles, LoadedParticlesGaussianWithZeroOffsetsIsUniformInSpace) {
+  constexpr int num_particles = 20000;
+  const mfem::Vector center{0.45};
+  constexpr double standard_deviation = 0.1;
+  const SourceStateParameters offsets{.number_density = 1e16};
+  const SourceStateParameters heights{.number_density = 0.0};
+  constexpr double pressure_offset = 27613;
+  constexpr double pressure_height = 0.;
+  const GaussianSourceParameters gaussian_parameters(
+    default_species,
+    center,
+    standard_deviation,
+    offsets,
+    heights,
+    pressure_offset,
+    pressure_height,
+    num_particles
+  );
+  std::default_random_engine generator;
+
+  ParticleContainer particles = loadParticles(
+    gaussian_parameters,
+    generator,
+    simple_mesh
+  );
+
+  checkParticlesAreUniformlyDistributed1D(particles);
 }
 
 } // namespace
