@@ -155,7 +155,35 @@ def plot():
         fig.savefig(f"{figures_directory}/E{i:02}.png")
         plt.close(fig)
 
+    txt_data = np.genfromtxt('output_lf_0.csv', names=True)
+    time = txt_data['Time']
+    field_energy = txt_data['Field_Energy']
+    fluid_energy = txt_data['Total_Fluid_Energy']
+    total_energy = field_energy + fluid_energy
+    fluid_kinetic_energy = txt_data['Total_Fluid_Kinetic_Energy']
+    fluid_internal_energy = fluid_energy - fluid_kinetic_energy
 
+    fig, axes = plt.subplots()
+    axes.plot(time, total_energy, label="Total Energy")
+    axes.plot(time, field_energy, label="Field Energy")
+    axes.plot(time, fluid_energy, label="Fluid Energy")
+    axes.legend()
+    axes.set_title(f"Energies Over Time")
+    axes.set_xlabel("time")
+    axes.set_ylabel("Energy")
+    fig.savefig(f"{figures_directory}/Energies.png")
+    plt.close(fig)
+
+    fig, axes = plt.subplots()
+    axes.plot(time, fluid_energy, label="Total Fluid Energy")
+    axes.plot(time, fluid_kinetic_energy, label="Fluid Kinetic Energy")
+    axes.plot(time, fluid_internal_energy, label="Fluid Internal Energy")
+    axes.legend()
+    axes.set_title(f"Fluid Energies Over Time")
+    axes.set_xlabel("time")
+    axes.set_ylabel("Energy")
+    fig.savefig(f"{figures_directory}/FluidEnergies.png")
+    plt.close(fig)
 
 if __name__ == "__main__":
     import sys
