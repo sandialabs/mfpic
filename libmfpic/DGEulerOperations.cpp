@@ -73,62 +73,62 @@ namespace mfpic {
     return updated_state;
   }
 
-  IntegratedCharge DGEulerOperations::assembleCharge(const LowFidelityState& current_state) const
-  {
-    IntegratedCharge charge_state(charge_discretization_);
-    charge_state.setIntegratedChargeValue(0.0);
+IntegratedCharge DGEulerOperations::assembleCharge(const LowFidelityState& state) const {
+  IntegratedCharge charge_state(charge_discretization_);
+  charge_state.setIntegratedChargeValue(0.0);
 
-    mfem::FiniteElementSpace & finite_element_space = charge_discretization_.getFeSpace();
+  mfem::FiniteElementSpace & finite_element_space = charge_discretization_.getFeSpace();
 
-    for (int ispecies = 0; ispecies < current_state.numSpecies(); ++ispecies) {
-      const LowFidelitySpeciesState& current_species_state = current_state.getSpeciesState(ispecies);
+  for (int ispecies = 0; ispecies < state.numSpecies(); ++ispecies) {
+    const LowFidelitySpeciesState& species_state = state.getSpeciesState(ispecies);
 
-      Species current_species = current_species_state.getSpecies();
-      double species_charge_over_mass = current_species.charge / current_species.mass;
+    Species species = species_state.getSpecies();
+    // don't use species.charge_over_mass in order to support ghost species
+    double charge_over_mass = species.charge / species.mass;
 
-      const mfem::GridFunction& current_species_grid_function = current_species_state.getGridFunction();
+    const mfem::GridFunction& species_grid_function = species_state.getGridFunction();
 
-      mfem::DenseMatrix fluid_state_at_integration_point_locations, integration_point_locations_in_physical_frame;
-      mfem::Array<int> vector_dofs;
+    mfem::DenseMatrix fluid_state_at_integration_point_locations, integration_point_locations_in_physical_frame;
+    mfem::Array<int> vector_dofs;
 
-      for (int element=0; element<finite_element_space.GetNE(); element++)
+    for (int element=0; element<finite_element_space.GetNE(); element++)
+    {
+      finite_element_space.GetElementVDofs(element, vector_dofs);
+
+      const mfem::IntegrationRule &integration_rule = mfem::IntRules.Get(
+        finite_element_space.GetFE(element)->GetGeomType(),
+        2*finite_element_space.GetFE(element)->GetOrder());
+
+      mfem::ElementTransformation* element_transformation = finite_element_space.GetElementTransformation(element);
+      int num_element_dof = finite_element_space.GetFE(element)->GetDof();
+      element_transformation->Transform(integration_rule, integration_point_locations_in_physical_frame);
+      species_grid_function.GetVectorValues(
+        *element_transformation, integration_rule, fluid_state_at_integration_point_locations);
+
+      mfem::Vector basis_values(num_element_dof);
+      mfem::Vector position(integration_point_locations_in_physical_frame.NumRows());
+      mfem::Vector fluid_state(dg_assemblers_[ispecies]->getNumberOfEquations());
+
+      for (int ipoint = 0; ipoint < integration_rule.GetNPoints(); ++ipoint)
       {
-        finite_element_space.GetElementVDofs(element, vector_dofs);
-
-        const mfem::IntegrationRule &integration_rule = mfem::IntRules.Get(
-          finite_element_space.GetFE(element)->GetGeomType(),
-          2*finite_element_space.GetFE(element)->GetOrder());
-
-        mfem::ElementTransformation* element_transformation = finite_element_space.GetElementTransformation(element);
-        int num_element_dof = finite_element_space.GetFE(element)->GetDof();
-        element_transformation->Transform(integration_rule, integration_point_locations_in_physical_frame);
-        current_species_grid_function.GetVectorValues(
-          *element_transformation, integration_rule, fluid_state_at_integration_point_locations);
-
-        mfem::Vector basis_values(num_element_dof);
-        mfem::Vector position(integration_point_locations_in_physical_frame.NumRows());
-        mfem::Vector fluid_state(dg_assemblers_[ispecies]->getNumberOfEquations());
-
-        for (int ipoint = 0; ipoint < integration_rule.GetNPoints(); ++ipoint)
+        const mfem::IntegrationPoint &integration_point = integration_rule.IntPoint(ipoint);
+        element_transformation->SetIntPoint(&integration_point);
+        finite_element_space.GetFE(element)->CalcShape(integration_point, basis_values);
+        integration_point_locations_in_physical_frame.GetColumn(ipoint, position);
+        fluid_state_at_integration_point_locations.GetColumn(ipoint, fluid_state);
+        const double weight = integration_point.weight * element_transformation->Weight();
+        for (int jdof=0; jdof<num_element_dof; jdof++)
         {
-          const mfem::IntegrationPoint &integration_point = integration_rule.IntPoint(ipoint);
-          element_transformation->SetIntPoint(&integration_point);
-          finite_element_space.GetFE(element)->CalcShape(integration_point, basis_values);
-          integration_point_locations_in_physical_frame.GetColumn(ipoint, position);
-          fluid_state_at_integration_point_locations.GetColumn(ipoint, fluid_state);
-          const double weight = integration_point.weight * element_transformation->Weight();
-          for (int jdof=0; jdof<num_element_dof; jdof++)
-          {
-            charge_state.addIntegratedChargeValue(
-              vector_dofs[jdof],
-              weight * basis_values(jdof) * species_charge_over_mass * fluid_state(euler::ConservativeVariables::MASS_DENSITY));
-          }
+          charge_state.addIntegratedChargeValue(
+            vector_dofs[jdof],
+            weight * basis_values(jdof) * charge_over_mass * fluid_state(euler::ConservativeVariables::MASS_DENSITY));
         }
-
       }
+
     }
-    return charge_state;
   }
+  return charge_state;
+}
 
   double DGEulerOperations::estimateCFL(const double & dt, const double & smallest_cell_lengthscale) const {
     double max_speed = 0.;
