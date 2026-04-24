@@ -41,9 +41,9 @@ TEST(DGEulerOperations, EulerChargeAssemblyWorksForConstantDensityOrder0In3D) {
   std::vector<std::unique_ptr<SourceParameters>> list_of_parameters;
   list_of_parameters.push_back(std::make_unique<ConstantSourceParameters>(default_species, number_density, temperature));
 
-  LowFidelityState current_state = buildEulerState(dg_discretization, list_of_parameters);
+  LowFidelityState state = buildEulerState(dg_discretization, list_of_parameters);
 
-  IntegratedCharge charge_state = dg_euler_operations.assembleCharge(current_state);
+  IntegratedCharge charge_state = dg_euler_operations.assembleCharge(state);
   mfem::Vector integrated_charge_vector = charge_state.getIntegratedCharge();
 
   const int number_of_nodes = std::pow(nxyz + 1, 3);
@@ -97,9 +97,9 @@ TEST(DGEulerOperations,EulerChargeAssemblyWorksForMultipleSpeciesConstantDensiti
   std::vector<std::unique_ptr<SourceParameters>> list_of_parameters;
   list_of_parameters.push_back(std::make_unique<ConstantSourceParameters>(species_0, n_0, temperature_0));
   list_of_parameters.push_back(std::make_unique<ConstantSourceParameters>(species_1, n_1, temperature_1));
-  LowFidelityState current_state = buildEulerState(dg_discretization, list_of_parameters);
+  LowFidelityState state = buildEulerState(dg_discretization, list_of_parameters);
 
-  IntegratedCharge charge_state = dg_euler_operations.assembleCharge(current_state);
+  IntegratedCharge charge_state = dg_euler_operations.assembleCharge(state);
   mfem::Vector integrated_charge_vector = charge_state.getIntegratedCharge();
   EXPECT_EQ(num_nodes, integrated_charge_vector.Size());
 
@@ -149,7 +149,7 @@ TEST(DGEulerOperations,EulerChargeAssemblyWorksForLinearDensityOrder1In3D) {
 
   std::vector<std::pair<Species, std::unique_ptr<mfem::VectorCoefficient>>> list_of_species_and_coefficients;
   list_of_species_and_coefficients.push_back(std::make_pair(default_species, std::move(fluid_coeff)));
-  LowFidelityState current_state(dg_discretization, list_of_species_and_coefficients);
+  LowFidelityState state(dg_discretization, list_of_species_and_coefficients);
 
   mfem::FiniteElementSpace test_finite_element_space = charge_discretization.getFeSpace();
   mfem::FunctionCoefficient test_rho([&](const mfem::Vector &x){
@@ -159,7 +159,7 @@ TEST(DGEulerOperations,EulerChargeAssemblyWorksForLinearDensityOrder1In3D) {
   btest.AddDomainIntegrator(new mfem::DomainLFIntegrator(test_rho));
   btest.Assemble();
 
-  IntegratedCharge charge_state = dg_euler_operations.assembleCharge(current_state);
+  IntegratedCharge charge_state = dg_euler_operations.assembleCharge(state);
   mfem::Vector integrated_charge_vector = charge_state.getIntegratedCharge();
   integrated_charge_vector -= btest;
   constexpr double tolerance = 1e-12;
