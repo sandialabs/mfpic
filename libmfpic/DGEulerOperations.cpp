@@ -8,70 +8,69 @@
 
 namespace mfpic {
 
-  DGEulerOperations::DGEulerOperations(
-    Discretization &charge_discretization,
-    std::vector<std::shared_ptr<DGEulerAssembly>> &dg_assemblers
-    ) :
-    charge_discretization_(charge_discretization),
-    dg_assemblers_(dg_assemblers)
-  {
-    rhs_ = dg_assemblers[0]->getFEVector();
-    temp_vector_ = dg_assemblers[0]->getFEVector();
+DGEulerOperations::DGEulerOperations(
+  Discretization &charge_discretization,
+  std::vector<std::shared_ptr<DGEulerAssembly>> &dg_assemblers
+  ) :
+  charge_discretization_(charge_discretization),
+  dg_assemblers_(dg_assemblers)
+{
+  rhs_ = dg_assemblers[0]->getFEVector();
+  temp_vector_ = dg_assemblers[0]->getFEVector();
+}
+
+LowFidelityState DGEulerOperations::accelerate(
+  double dt,
+  const LowFidelityState& state,
+  const ElectromagneticFieldsEvaluator& field_evaluator) const
+{
+  LowFidelityState updated_state(state);
+
+  for (int ispecies = 0; ispecies < state.numSpecies(); ++ispecies) {
+    const LowFidelitySpeciesState& species_state = state.getSpeciesState(ispecies);
+    LowFidelitySpeciesState& updated_species_state = updated_state.getSpeciesState(ispecies);
+
+    temp_vector_ = 0.;
+    dg_assemblers_[ispecies]->computeSources(species_state, field_evaluator, temp_vector_);
+    dg_assemblers_[ispecies]->applyInverseMass(temp_vector_, rhs_);
+
+    temp_vector_ = 0.;
+    dg_assemblers_[ispecies]->computeIntegratedKineticEnergy(species_state, temp_vector_);
+    temp_vector_ *= -1.;
+
+    // TODO BWR at some point we may not want to deep copy updated_state so this is more safe
+
+    mfem::GridFunction& updated_species_grid_function = updated_species_state.getGridFunction();
+    updated_species_grid_function.Add(dt, rhs_);
+
+    dg_assemblers_[ispecies]->computeIntegratedKineticEnergy(updated_species_state, temp_vector_);
+    dg_assemblers_[ispecies]->applyInverseMass(temp_vector_, rhs_);
+
+    updated_species_grid_function.Add(1., rhs_);
   }
 
-  LowFidelityState DGEulerOperations::accelerate(
-    double dt,
-    const LowFidelityState& current_state,
-    const ElectromagneticFieldsEvaluator& field_evaluator) const
-  {
-    LowFidelityState updated_state(current_state);
+  return updated_state;
+}
 
-    for (int ispecies = 0; ispecies < current_state.numSpecies(); ++ispecies) {
-      const LowFidelitySpeciesState& current_species_state = current_state.getSpeciesState(ispecies);
-      LowFidelitySpeciesState& updated_species_state = updated_state.getSpeciesState(ispecies);
+LowFidelityState DGEulerOperations::move(double dt, const LowFidelityState& state) const {
+  LowFidelityState updated_state(state);
 
-      temp_vector_ = 0.;
-      dg_assemblers_[ispecies]->computeSources(current_species_state, field_evaluator, temp_vector_);
-      dg_assemblers_[ispecies]->applyInverseMass(temp_vector_, rhs_);
+  for (int ispecies = 0; ispecies < state.numSpecies(); ++ispecies) {
+    const LowFidelitySpeciesState& species_state = state.getSpeciesState(ispecies);
+    LowFidelitySpeciesState& updated_species_state = updated_state.getSpeciesState(ispecies);
 
-      temp_vector_ = 0.;
-      dg_assemblers_[ispecies]->computeIntegratedKineticEnergy(current_species_state, temp_vector_);
-      temp_vector_ *= -1.;
+    const mfem::GridFunction& species_grid_function = species_state.getGridFunction();
 
-      // TODO BWR at some point we may not want to deep copy updated_state so this is more safe
+    temp_vector_ = 0.;
+    dg_assemblers_[ispecies]->computeHyperbolicFluxes(species_grid_function, temp_vector_);
+    dg_assemblers_[ispecies]->applyInverseMass(temp_vector_, rhs_);
 
-      mfem::GridFunction& updated_species_grid_function = updated_species_state.getGridFunction();
-      updated_species_grid_function.Add(dt, rhs_);
-
-      dg_assemblers_[ispecies]->computeIntegratedKineticEnergy(updated_species_state, temp_vector_);
-      dg_assemblers_[ispecies]->applyInverseMass(temp_vector_, rhs_);
-
-      updated_species_grid_function.Add(1., rhs_);
-    }
-
-    return updated_state;
+    mfem::GridFunction& updated_species_grid_function = updated_species_state.getGridFunction();
+    updated_species_grid_function.Add(dt, rhs_);
   }
 
-  LowFidelityState DGEulerOperations::move(double dt, const LowFidelityState& current_state) const
-  {
-    LowFidelityState updated_state(current_state);
-
-    for (int ispecies = 0; ispecies < current_state.numSpecies(); ++ispecies) {
-      const LowFidelitySpeciesState& current_species_state = current_state.getSpeciesState(ispecies);
-      LowFidelitySpeciesState& updated_species_state = updated_state.getSpeciesState(ispecies);
-
-      const mfem::GridFunction& current_species_grid_function = current_species_state.getGridFunction();
-
-      temp_vector_ = 0.;
-      dg_assemblers_[ispecies]->computeHyperbolicFluxes(current_species_grid_function, temp_vector_);
-      dg_assemblers_[ispecies]->applyInverseMass(temp_vector_, rhs_);
-
-      mfem::GridFunction& updated_species_grid_function = updated_species_state.getGridFunction();
-      updated_species_grid_function.Add(dt, rhs_);
-    }
-
-    return updated_state;
-  }
+  return updated_state;
+}
 
 IntegratedCharge DGEulerOperations::assembleCharge(const LowFidelityState& state) const {
   IntegratedCharge charge_state(charge_discretization_);
@@ -130,14 +129,14 @@ IntegratedCharge DGEulerOperations::assembleCharge(const LowFidelityState& state
   return charge_state;
 }
 
-  double DGEulerOperations::estimateCFL(const double & dt, const double & smallest_cell_lengthscale) const {
-    double max_speed = 0.;
-    for (size_t ispecies = 0; ispecies < dg_assemblers_.size(); ++ispecies) {
-      max_speed = fmax(max_speed, dg_assemblers_[ispecies]->getMaxCharSpeed());
-    }
-
-    return max_speed * dt / smallest_cell_lengthscale;
+double DGEulerOperations::estimateCFL(const double & dt, const double & smallest_cell_lengthscale) const {
+  double max_speed = 0.;
+  for (size_t ispecies = 0; ispecies < dg_assemblers_.size(); ++ispecies) {
+    max_speed = fmax(max_speed, dg_assemblers_[ispecies]->getMaxCharSpeed());
   }
+
+  return max_speed * dt / smallest_cell_lengthscale;
+}
 
 double DGEulerOperations::computeTotalEnergy(const LowFidelityState& state) const {
   mfem::FiniteElementSpace& charge_finite_element_space = charge_discretization_.getFeSpace();

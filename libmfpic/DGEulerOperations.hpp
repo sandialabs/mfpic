@@ -31,13 +31,13 @@ public:
    * @brief Update the state by forcing only with the source terms
    *
    * @param dt Timestep
-   * @param current_state State including dofs and species list
+   * @param state State including dofs and species list
    * @param field_evaluator electromagnetic field evaluator
    */
 
   virtual LowFidelityState accelerate(
     double dt,
-    const LowFidelityState& current_state,
+    const LowFidelityState& state,
     const ElectromagneticFieldsEvaluator& field_evaluator
   ) const override;
 
@@ -45,22 +45,22 @@ public:
    * @brief Update the state due to flux terms
    *
    * @param dt Timestep
-   * @param current_state State including dofs and species list
+   * @param state State including dofs and species list
    */
 
   virtual LowFidelityState move(
     double dt,
-    const LowFidelityState& current_state
+    const LowFidelityState& state
   ) const override;
 
   /**
   * @brief Assemble charges from the fluids into the charge density
   *
-  * @param current_state State including dofs and species list
+  * @param state State including dofs and species list
   * @return IntegratedCharge - integrated charge state
   */
   virtual IntegratedCharge assembleCharge(
-    const LowFidelityState& current_state
+    const LowFidelityState& state
   ) const override;
 
   /**
@@ -82,7 +82,7 @@ public:
   /**
   * @brief Evaluates the particle distribution function for the low fidelity state at a given position and velocity.
   *
-  * @param current_state State including dofs and species list
+  * @param state State including dofs and species list
   * @param position Location in physical space to evaluate PDF
   * @param velocity Location in velocity space to evaluate PDF
   * @param element  Element containing position
