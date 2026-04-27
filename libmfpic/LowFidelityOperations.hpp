@@ -10,21 +10,21 @@ class LowFidelityOperations {
 public:
   virtual LowFidelityState accelerate(
     double dt,
-    const LowFidelityState& current_state,
+    const LowFidelityState& state,
     const ElectromagneticFieldsEvaluator& field_provider
   ) const = 0;
 
   virtual LowFidelityState move(
     double dt,
-    const LowFidelityState& current_state
+    const LowFidelityState& state
   ) const = 0;
 
   virtual IntegratedCharge assembleCharge(
-    const LowFidelityState& current_state
+    const LowFidelityState& state
   ) const = 0;
 
   virtual double evaluateParticleDistributionFunction(
-    const LowFidelityState& current_state,
+    const LowFidelityState& state,
     const mfem::Vector position,
     const mfem::Vector velocity,
     const int element,
