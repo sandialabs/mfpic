@@ -455,8 +455,6 @@ TEST(DGEulerOperations, computeTotalKineticEnergy_CorrectNonZeroKineticEnergyCom
   const mfem::Vector conservative_state_e = euler::convertFromPrimitiveToConservative(primitive_state_e, electron_species);
   const double kinetic_energy_density = euler::getKineticEnergyDensityFromConservativeState(conservative_state_e);
   const double expected_total_kinetic_energy = kinetic_energy_density * length;
-  auto& message = std::cout;
-  message << "expected_total_kinetic_energy = " << expected_total_kinetic_energy << std::endl;
   EXPECT_DOUBLE_EQ(expected_total_kinetic_energy, total_kinetic_energy);
 }
 
