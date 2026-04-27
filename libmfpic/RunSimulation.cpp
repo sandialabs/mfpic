@@ -21,6 +21,7 @@
 #include <libmfpic/ParticleOperations.hpp>
 #include <libmfpic/RunSimulation.hpp>
 #include <libmfpic/SourcesFactory.hpp>
+#include <libmfpic/TextDataWriter.hpp>
 #include <libmfpic/TimeSteppingFactory.hpp>
 #include <libmfpic/VerletTimeIntegrator.hpp>
 
@@ -139,26 +140,16 @@ void runSimulation(int argc, char* argv[]) {
   }
   mesh_data_writer.output(particle_electrostatic_field_state, low_fidelity_field_states, low_fidelity_states, 0, 0.);
 
-  std::ofstream csv_file("output.csv");
-  csv_file << std::setprecision(std::numeric_limits<double>::digits);
-  csv_file << "# Time_Step Time Field_Energy" << std::endl;
-  csv_file <<
-  0 << " " <<
-  0.0 << " " <<
-  electrostatic_field_operations->fieldEnergy(particle_electrostatic_field_state) << std::endl;
-
-  std::vector<std::ofstream> lf_csv_files;
-
-  for (int i = 0; i < std::ssize(low_fidelity_field_states); ++i) {
-    lf_csv_files.emplace_back("output_lf_"+std::to_string(i)+".csv");
-    lf_csv_files.back() << std::setprecision(std::numeric_limits<double>::digits);
-    lf_csv_files.back() << "# Time_Step Time Field_Energy Total_Fluid_Energy" << std::endl;
-    lf_csv_files.back() << 
-    0 << " " <<
-    0.0 << " " <<
-    electrostatic_field_operations->fieldEnergy(low_fidelity_field_states[i]) << " " <<
-    low_fidelity_operations[i]->computeTotalEnergy(low_fidelity_states[i]) << std::endl;
-  }
+  const int num_low_fidelity_models = std::ssize(low_fidelity_states);
+  TextDataWriter text_data_writer(num_low_fidelity_models);
+  text_data_writer.output(
+    particle_electrostatic_field_state,
+    low_fidelity_field_states,
+    *electrostatic_field_operations,
+    low_fidelity_states,
+    low_fidelity_operations,
+    0,
+    0.);
 
   TimeSteppingParameters time_stepping_parameters = buildTimeSteppingParametersFromYAML(main["Time Stepping"]);
   VerletTimeIntegrator verlet_time_integrator(electrostatic_discretization, push_low_fidelity_with_particle_fields);
@@ -209,18 +200,14 @@ void runSimulation(int argc, char* argv[]) {
         i_timestep,
         end_time);
 
-      csv_file <<
-      i_timestep << " " <<
-      end_time << " " <<
-      electrostatic_field_operations->fieldEnergy(particle_electrostatic_field_state) << std::endl;
-
-      for (int i = 0; i < std::ssize(low_fidelity_field_states); ++i) {
-        lf_csv_files[i] <<
-        i_timestep << " " <<
-        end_time << " " <<
-        electrostatic_field_operations->fieldEnergy(low_fidelity_field_states[i]) << " " <<
-        low_fidelity_operations[i]->computeTotalEnergy(low_fidelity_states[i]) << std::endl;
-      }
+      text_data_writer.output(
+        particle_electrostatic_field_state,
+        low_fidelity_field_states,
+        *electrostatic_field_operations,
+        low_fidelity_states,
+        low_fidelity_operations,
+        i_timestep,
+        end_time);
     }
   }
 
