@@ -73,6 +73,27 @@ LowFidelityState DGEulerOperations::move(double dt, const LowFidelityState& stat
   return updated_state;
 }
 
+LowFidelityState DGEulerOperations::moveAccelerate(
+  const double dt,
+  const LowFidelityState& state,
+  const ElectromagneticFieldsEvaluator& /*field_evaluator*/) const
+{
+  LowFidelityState updated_state(state);
+  for (int i_species = 0; i_species < state.numSpecies(); ++i_species) {
+    const LowFidelitySpeciesState& species_state = state.getSpeciesState(i_species);
+    const mfem::GridFunction& species_grid_function = species_state.getGridFunction();
+
+    temp_vector_ = 0.;
+    dg_assemblers_[i_species]->computeHyperbolicFluxes(species_grid_function, temp_vector_);
+    dg_assemblers_[i_species]->applyInverseMass(temp_vector_, rhs_);
+
+    LowFidelitySpeciesState& updated_species_state = updated_state.getSpeciesState(i_species);
+    mfem::GridFunction& updated_species_grid_function = updated_species_state.getGridFunction();
+    updated_species_grid_function.Add(dt, rhs_);
+  }
+  return updated_state;
+}
+
 IntegratedCharge DGEulerOperations::assembleCharge(const LowFidelityState& state) const {
   IntegratedCharge charge_state(charge_discretization_);
   charge_state.setIntegratedChargeValue(0.0);

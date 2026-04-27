@@ -19,6 +19,9 @@ namespace {
 
 using namespace mfpic;
 
+Species electron_species{.charge = -constants::elementary_charge, .mass = constants::electron_mass};
+Species proton_species{.charge = constants::elementary_charge, .mass = constants::proton_mass};
+
 TEST(DGEulerOperations, EulerChargeAssemblyWorksForConstantDensityOrder0In3D) {
   constexpr int dg_order = 0;
   constexpr int num_equations = 5;
@@ -277,7 +280,6 @@ TEST(DGEulerOperations, MoveConstant) {
 
   Discretization dg_discretization(&mesh, dg_order, FETypes::DG, num_equations);
 
-  Species electron_species{.charge = -constants::elementary_charge, .mass = constants::electron_mass};
   constexpr double number_density = 1e22;
   constexpr double temperature = 300;
   const mfem::Vector bulk_velocity{1., 2., 3.};
@@ -306,8 +308,51 @@ TEST(DGEulerOperations, MoveConstant) {
   EXPECT_LE(error, tolerance);
 }
 
+TEST(DGEulerOperations, MoveAccelerate_ZeroFieldsReproducesMove) {
+  constexpr double length = 1.5;
+  MeshParameters mesh_parameters{.mesh_type = "line", .lengths = {length}, .num_elements = {20}, .periodic_dims = {0}};
+  mfem::Mesh mesh = buildMesh(mesh_parameters);
+
+  constexpr int dg_order = 0;
+  const int num_equations = euler::ConservativeVariables::NUM_VARS;
+  Discretization dg_discretization(&mesh, dg_order, FETypes::DG, num_equations);
+
+  const mfem::Vector center{0.5 * length};
+  constexpr double standard_deviation = 0.1 * length;
+  const SourceStateParameters offsets{.number_density = 1.8e21, .bulk_velocity = mfem::Vector({10.2, 0., 0.})};
+  const SourceStateParameters heights{.number_density = 9.2e19, .bulk_velocity = mfem::Vector({4.8, 0., 0.})};
+  constexpr double pressure_offset = 29713.;
+  constexpr double pressure_height = 3479.;
+  std::vector<std::unique_ptr<SourceParameters>> list_of_ic_parameters;
+  list_of_ic_parameters.push_back(
+    std::make_unique<GaussianSourceParameters>(
+      electron_species, center, standard_deviation, offsets, heights, pressure_offset, pressure_height));
+
+  const LowFidelityState initial_state = buildEulerState(dg_discretization, list_of_ic_parameters);
+
+  constexpr int es_order = 1;
+  Discretization es_discretization(&mesh, es_order, FETypes::HGRAD);
+  const std::vector<Species> species_list = initial_state.getSpeciesList();
+  std::vector<std::vector<std::unique_ptr<DGBC>>> empty_bcs(species_list.size());
+  std::unique_ptr<LowFidelityOperations> dg_euler_operations = buildDGEulerOperations(
+    dg_discretization, es_discretization, species_list, empty_bcs);
+
+  ElectrostaticFieldState es_field_state_zero(es_discretization);
+  constexpr double dt = 1e-8;
+
+  const LowFidelityState state_moved = dg_euler_operations->move(dt, initial_state);
+  const LowFidelityState state_moved_accelerated = dg_euler_operations->moveAccelerate(dt, initial_state, es_field_state_zero);
+
+  const LowFidelitySpeciesState& species_state_moved = state_moved.getSpeciesState(0);
+  const LowFidelitySpeciesState& species_state_moved_accelerated = state_moved_accelerated.getSpeciesState(0);
+  const mfem::GridFunction& grid_function_moved = species_state_moved.getGridFunction();
+  const mfem::GridFunction& grid_function_moved_acclerated = species_state_moved_accelerated.getGridFunction();
+  for (int i = 0; i < grid_function_moved.Size(); ++i) {
+    EXPECT_DOUBLE_EQ(grid_function_moved[i], grid_function_moved_acclerated[i]);
+  }
+}
+
 TEST(DGEulerOperations, evaluateParticleDistributionFunctionCorrectIn1D) {
-  Species default_species{.charge = -constants::elementary_charge, .mass = constants::electron_mass};
   constexpr double number_density = 1e22;
   constexpr double temperature = 300;
 
@@ -320,21 +365,21 @@ TEST(DGEulerOperations, evaluateParticleDistributionFunctionCorrectIn1D) {
   Discretization charge_discretization(mesh.get(), dg_order, FETypes::DG, num_equations);
 
   mfem::FiniteElementSpace finite_element_space = dg_discretization.getFeSpace();
-  std::shared_ptr<DGEulerAssembly> operator_ptr = std::make_shared<DGEulerAssembly>(finite_element_space, default_species);
+  std::shared_ptr<DGEulerAssembly> operator_ptr = std::make_shared<DGEulerAssembly>(finite_element_space, electron_species);
   std::vector<std::shared_ptr<DGEulerAssembly>> dg_operators({operator_ptr});
   DGEulerOperations dg_euler_operations(charge_discretization, dg_operators);
 
   std::vector<std::unique_ptr<SourceParameters>> list_of_parameters;
-  list_of_parameters.push_back(std::make_unique<ConstantSourceParameters>(default_species, number_density, temperature, bulk_velocity));
+  list_of_parameters.push_back(std::make_unique<ConstantSourceParameters>(electron_species, number_density, temperature, bulk_velocity));
   LowFidelityState low_fidelity_state = buildEulerState(dg_discretization, list_of_parameters);
 
   const mfem::Vector position({0.5,0.0,0.0});
   const mfem::Vector particle_position(position.GetData(), 1); 
   const mfem::Vector velocity({bulk_velocity(0),0.0,0.0});
-  double particle_distribution_value = dg_euler_operations.evaluateParticleDistributionFunction(low_fidelity_state,particle_position,velocity,0,default_species);
+  double particle_distribution_value = dg_euler_operations.evaluateParticleDistributionFunction(low_fidelity_state,particle_position,velocity,0,electron_species);
 
   mfem::Vector prim = euler::constructPrimitiveState(number_density, bulk_velocity, temperature);
-  const double sigma = std::sqrt(constants::boltzmann_constant * temperature / default_species.mass);
+  const double sigma = std::sqrt(constants::boltzmann_constant * temperature / electron_species.mass);
 
   const double expected_at_mean =
       number_density / std::pow(std::sqrt(2.0 * M_PI) * sigma,3);
@@ -351,12 +396,10 @@ TEST(DGEulerOperations, computeTotalEnergy_dg_order_0) {
   constexpr int num_equations = euler::ConservativeVariables::NUM_VARS;
   Discretization vector_dg_discretization(&mesh, dg_order, FETypes::DG, num_equations);
 
-  Species electron_species{.charge = -constants::elementary_charge, .mass = constants::electron_mass};
   constexpr double number_density_e = 2.e17;
   const mfem::Vector bulk_velocity_e{1.2, 3.4, 5.6};
   constexpr double temperature_e = 287;
 
-  Species proton_species{.charge = constants::elementary_charge, .mass = constants::proton_mass};
   constexpr double number_density_p = 3.e18;
   const mfem::Vector bulk_velocity_p{7.8, 9.1, 1.9};
   constexpr double temperature_p = 320;
@@ -399,7 +442,6 @@ TEST(DGEulerOperations, computeTotalKineticEnergy_ZeroVelocityGivesZeroEnergy) {
   constexpr int num_equations = euler::ConservativeVariables::NUM_VARS;
   Discretization vector_dg_discretization(&mesh, dg_order, FETypes::DG, num_equations);
 
-  Species electron_species{.charge = -constants::elementary_charge, .mass = constants::electron_mass};
   constexpr double number_density_e = 3.e18;
   const mfem::Vector bulk_velocity_e{0., 0., 0.};
   constexpr double temperature_e = 301;
@@ -431,7 +473,6 @@ TEST(DGEulerOperations, computeTotalKineticEnergy_CorrectNonZeroKineticEnergyCom
   constexpr int num_equations = euler::ConservativeVariables::NUM_VARS;
   Discretization vector_dg_discretization(&mesh, dg_order, FETypes::DG, num_equations);
 
-  Species electron_species{.charge = -constants::elementary_charge, .mass = constants::electron_mass};
   constexpr double number_density_e = 3.e23;
   const mfem::Vector bulk_velocity_e{90.2, 170.1, 315.9};
   constexpr double temperature_e = 301;

@@ -54,6 +54,20 @@ public:
   ) const override;
 
   /**
+   * @brief Update the state with fluxes and field source terms simultaneously
+   *
+   * @param dt Timestep
+   * @param state State including dofs and species list
+   * @param field_evaluator electromagnetic field evaluator
+   */
+
+  virtual LowFidelityState moveAccelerate(
+    double dt,
+    const LowFidelityState& state,
+    const ElectromagneticFieldsEvaluator& field_evaluator
+  ) const override;
+
+  /**
   * @brief Assemble charges from the fluids into the charge density
   *
   * @param state State including dofs and species list
