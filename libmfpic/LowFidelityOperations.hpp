@@ -10,21 +10,21 @@ class LowFidelityOperations {
 public:
   virtual LowFidelityState accelerate(
     double dt,
-    const LowFidelityState& current_state,
+    const LowFidelityState& state,
     const ElectromagneticFieldsEvaluator& field_provider
   ) const = 0;
 
   virtual LowFidelityState move(
     double dt,
-    const LowFidelityState& current_state
+    const LowFidelityState& state
   ) const = 0;
 
   virtual IntegratedCharge assembleCharge(
-    const LowFidelityState& current_state
+    const LowFidelityState& state
   ) const = 0;
 
   virtual double evaluateParticleDistributionFunction(
-    const LowFidelityState& current_state,
+    const LowFidelityState& state,
     const mfem::Vector position,
     const mfem::Vector velocity,
     const int element,
@@ -33,6 +33,7 @@ public:
   virtual double estimateCFL(const double & dt, const double & smallest_cell_lengthscale) const = 0;
 
   virtual double computeTotalEnergy(const LowFidelityState& state) const = 0;
+  virtual double computeTotalKineticEnergy(const LowFidelityState& state) const = 0;
 
   virtual ~LowFidelityOperations() = default;
 };

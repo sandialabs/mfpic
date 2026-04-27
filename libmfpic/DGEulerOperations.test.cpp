@@ -41,9 +41,9 @@ TEST(DGEulerOperations, EulerChargeAssemblyWorksForConstantDensityOrder0In3D) {
   std::vector<std::unique_ptr<SourceParameters>> list_of_parameters;
   list_of_parameters.push_back(std::make_unique<ConstantSourceParameters>(default_species, number_density, temperature));
 
-  LowFidelityState current_state = buildEulerState(dg_discretization, list_of_parameters);
+  LowFidelityState state = buildEulerState(dg_discretization, list_of_parameters);
 
-  IntegratedCharge charge_state = dg_euler_operations.assembleCharge(current_state);
+  IntegratedCharge charge_state = dg_euler_operations.assembleCharge(state);
   mfem::Vector integrated_charge_vector = charge_state.getIntegratedCharge();
 
   const int number_of_nodes = std::pow(nxyz + 1, 3);
@@ -97,9 +97,9 @@ TEST(DGEulerOperations,EulerChargeAssemblyWorksForMultipleSpeciesConstantDensiti
   std::vector<std::unique_ptr<SourceParameters>> list_of_parameters;
   list_of_parameters.push_back(std::make_unique<ConstantSourceParameters>(species_0, n_0, temperature_0));
   list_of_parameters.push_back(std::make_unique<ConstantSourceParameters>(species_1, n_1, temperature_1));
-  LowFidelityState current_state = buildEulerState(dg_discretization, list_of_parameters);
+  LowFidelityState state = buildEulerState(dg_discretization, list_of_parameters);
 
-  IntegratedCharge charge_state = dg_euler_operations.assembleCharge(current_state);
+  IntegratedCharge charge_state = dg_euler_operations.assembleCharge(state);
   mfem::Vector integrated_charge_vector = charge_state.getIntegratedCharge();
   EXPECT_EQ(num_nodes, integrated_charge_vector.Size());
 
@@ -149,7 +149,7 @@ TEST(DGEulerOperations,EulerChargeAssemblyWorksForLinearDensityOrder1In3D) {
 
   std::vector<std::pair<Species, std::unique_ptr<mfem::VectorCoefficient>>> list_of_species_and_coefficients;
   list_of_species_and_coefficients.push_back(std::make_pair(default_species, std::move(fluid_coeff)));
-  LowFidelityState current_state(dg_discretization, list_of_species_and_coefficients);
+  LowFidelityState state(dg_discretization, list_of_species_and_coefficients);
 
   mfem::FiniteElementSpace test_finite_element_space = charge_discretization.getFeSpace();
   mfem::FunctionCoefficient test_rho([&](const mfem::Vector &x){
@@ -159,7 +159,7 @@ TEST(DGEulerOperations,EulerChargeAssemblyWorksForLinearDensityOrder1In3D) {
   btest.AddDomainIntegrator(new mfem::DomainLFIntegrator(test_rho));
   btest.Assemble();
 
-  IntegratedCharge charge_state = dg_euler_operations.assembleCharge(current_state);
+  IntegratedCharge charge_state = dg_euler_operations.assembleCharge(state);
   mfem::Vector integrated_charge_vector = charge_state.getIntegratedCharge();
   integrated_charge_vector -= btest;
   constexpr double tolerance = 1e-12;
@@ -388,6 +388,74 @@ TEST(DGEulerOperations, computeTotalEnergy_dg_order_0) {
 
   const double total_energy = dg_euler_operations->computeTotalEnergy(low_fidelity_state);
   EXPECT_DOUBLE_EQ(expected_total_energy, total_energy);
+}
+
+TEST(DGEulerOperations, computeTotalKineticEnergy_ZeroVelocityGivesZeroEnergy) {
+  constexpr int num_elems = 10;
+  constexpr double length = 2.0;
+  mfem::Mesh mesh = mfem::Mesh::MakeCartesian1D(num_elems, length);
+
+  constexpr int dg_order = 0;
+  constexpr int num_equations = euler::ConservativeVariables::NUM_VARS;
+  Discretization vector_dg_discretization(&mesh, dg_order, FETypes::DG, num_equations);
+
+  Species electron_species{.charge = -constants::elementary_charge, .mass = constants::electron_mass};
+  constexpr double number_density_e = 3.e18;
+  const mfem::Vector bulk_velocity_e{0., 0., 0.};
+  constexpr double temperature_e = 301;
+
+  std::vector<std::unique_ptr<SourceParameters>> list_of_parameters;
+  list_of_parameters.push_back(
+    std::make_unique<ConstantSourceParameters>(electron_species, number_density_e, temperature_e, bulk_velocity_e));
+
+  LowFidelityState low_fidelity_state = buildEulerState(vector_dg_discretization, list_of_parameters);
+
+  constexpr int es_order = 1;
+  Discretization charge_discretization(&mesh, es_order, FETypes::HGRAD);
+  const std::vector<Species> species_list = low_fidelity_state.getSpeciesList();
+  std::vector<std::vector<std::unique_ptr<DGBC>>> empty_bcs(species_list.size());
+  std::unique_ptr<LowFidelityOperations> dg_euler_operations = buildDGEulerOperations(
+    vector_dg_discretization, charge_discretization, species_list, empty_bcs);
+
+  const double total_kinetic_energy = dg_euler_operations->computeTotalKineticEnergy(low_fidelity_state);
+  constexpr double expected_total_kinetic_energy = 0.;
+  EXPECT_DOUBLE_EQ(expected_total_kinetic_energy, total_kinetic_energy);
+}
+
+TEST(DGEulerOperations, computeTotalKineticEnergy_CorrectNonZeroKineticEnergyComputed) {
+  constexpr int num_elems = 10;
+  constexpr double length = 2.0;
+  mfem::Mesh mesh = mfem::Mesh::MakeCartesian1D(num_elems, length);
+
+  constexpr int dg_order = 0;
+  constexpr int num_equations = euler::ConservativeVariables::NUM_VARS;
+  Discretization vector_dg_discretization(&mesh, dg_order, FETypes::DG, num_equations);
+
+  Species electron_species{.charge = -constants::elementary_charge, .mass = constants::electron_mass};
+  constexpr double number_density_e = 3.e23;
+  const mfem::Vector bulk_velocity_e{90.2, 170.1, 315.9};
+  constexpr double temperature_e = 301;
+
+  std::vector<std::unique_ptr<SourceParameters>> list_of_parameters;
+  list_of_parameters.push_back(
+    std::make_unique<ConstantSourceParameters>(electron_species, number_density_e, temperature_e, bulk_velocity_e));
+
+  LowFidelityState low_fidelity_state = buildEulerState(vector_dg_discretization, list_of_parameters);
+
+  constexpr int es_order = 1;
+  Discretization charge_discretization(&mesh, es_order, FETypes::HGRAD);
+  const std::vector<Species> species_list = low_fidelity_state.getSpeciesList();
+  std::vector<std::vector<std::unique_ptr<DGBC>>> empty_bcs(species_list.size());
+  std::unique_ptr<LowFidelityOperations> dg_euler_operations = buildDGEulerOperations(
+    vector_dg_discretization, charge_discretization, species_list, empty_bcs);
+
+  const double total_kinetic_energy = dg_euler_operations->computeTotalKineticEnergy(low_fidelity_state);
+
+  const mfem::Vector primitive_state_e = euler::constructPrimitiveState(number_density_e, bulk_velocity_e, temperature_e);
+  const mfem::Vector conservative_state_e = euler::convertFromPrimitiveToConservative(primitive_state_e, electron_species);
+  const double kinetic_energy_density = euler::getKineticEnergyDensityFromConservativeState(conservative_state_e);
+  const double expected_total_kinetic_energy = kinetic_energy_density * length;
+  EXPECT_DOUBLE_EQ(expected_total_kinetic_energy, total_kinetic_energy);
 }
 
 

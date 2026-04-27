@@ -109,19 +109,22 @@ def plot_errors_and_expected_convergence_rate(refinement_quantities, errors, exp
     fig.savefig(figname, bbox_inches='tight')
     plt.close(fig)
 
+def check_data_positive_and_constant(data):
+    assert(np.min(data) >= 0)
 
-def check_total_fluid_energy_positive_and_constant():
-    txt_data = np.genfromtxt('output_lf_0.csv', names=True)
-    total_fluid_energy = txt_data['Total_Fluid_Energy']
+    change_in_data = np.max(data) - np.min(data)
 
-    assert(np.min(total_fluid_energy) >= 0)
-
-    change_in_total_fluid_energy = np.max(total_fluid_energy) - np.min(total_fluid_energy)
-
-    if (np.max(total_fluid_energy) > 0):
-        relative_change_in_total_fluid_energy = change_in_total_fluid_energy / np.max(total_fluid_energy)
+    if (np.max(data) > 0):
+        relative_change_in_data = change_in_data / np.max(data)
     else:
-        relative_change_in_total_fluid_energy = 0
+        relative_change_in_data = 0
 
     relative_tolerance = 1e-14
-    assert(relative_change_in_total_fluid_energy < relative_tolerance)
+    print(f"relative_change_in_data = {relative_change_in_data}")
+    assert(relative_change_in_data < relative_tolerance)
+
+def check_fluid_energy_positive_and_constant(key):
+    txt_data = np.genfromtxt('output_lf_0.csv', names=True)
+    fluid_energy = txt_data[key]
+
+    check_data_positive_and_constant(fluid_energy)
