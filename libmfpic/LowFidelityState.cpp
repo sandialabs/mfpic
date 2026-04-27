@@ -36,7 +36,7 @@ LowFidelityState::LowFidelityState(
   }
 }
 
-std::vector<Species> LowFidelityState::getSpeciesList() {
+std::vector<Species> LowFidelityState::getSpeciesList() const {
   std::vector<Species> species_list;
   for (const LowFidelitySpeciesState& species_state : species_states_) {
     species_list.push_back(species_state.getSpecies());
