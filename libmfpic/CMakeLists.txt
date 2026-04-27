@@ -13,6 +13,7 @@ add_library(libmfpic
   DGEulerOperations.cpp
   DirichletBoundaryConditionsConstant.cpp
   DirichletBoundaryConditionsFactory.cpp
+  Discretization.cpp
   DumpParticles.cpp
   ElectrostaticFieldOperations.cpp
   ElectrostaticFieldOperationsWithBoltzmannElectrons.cpp
@@ -27,6 +28,7 @@ add_library(libmfpic
   MeshDistribution.cpp
   MeshFactory.cpp
   MeshUtilities.cpp
+  MFEMHelpers.cpp
   ParticleBoundary.cpp
   ParticleContainer.cpp
   ParticleOperations.cpp
@@ -67,6 +69,7 @@ mfpic_unit_test(DGEulerOperations)
 mfpic_unit_test(DGEulerOperationsFactory)
 mfpic_unit_test(DirichletBoundaryConditionsConstant)
 mfpic_unit_test(DirichletBoundaryConditionsFactory)
+mfpic_unit_test(Discretization)
 mfpic_unit_test(DumpParticles)
 mfpic_unit_test(ElectrostaticFieldOperations)
 mfpic_unit_test(ElectrostaticFieldOperationsWithBoltzmannElectrons)
@@ -83,6 +86,7 @@ mfpic_unit_test(MeshDataWriter)
 mfpic_unit_test(MeshDistribution)
 mfpic_unit_test(MeshFactory)
 mfpic_unit_test(MeshUtilities)
+mfpic_unit_test(MFEMHelpers)
 mfpic_unit_test(ParticleContainer)
 mfpic_unit_test(ParticleOperations)
 mfpic_unit_test(Pinning)

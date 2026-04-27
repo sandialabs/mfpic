@@ -118,6 +118,8 @@ TEST(TextDataWriter, constructorAndOutput) {
     constexpr double min_fluid_energy = 0.;
     EXPECT_TRUE(header_to_value.at("Total_Fluid_Energy") < max_fluid_energy);
     EXPECT_TRUE(header_to_value.at("Total_Fluid_Energy") >= min_fluid_energy);
+    constexpr double expected_total_fluid_kinetic_energy = 0.;
+    EXPECT_EQ(expected_total_fluid_kinetic_energy, header_to_value.at("Total_Fluid_Kinetic_Energy"));
 
     std::string line_2;
     EXPECT_FALSE(std::getline(csv_file, line_2));

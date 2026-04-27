@@ -33,6 +33,7 @@ public:
   virtual double estimateCFL(const double & dt, const double & smallest_cell_lengthscale) const = 0;
 
   virtual double computeTotalEnergy(const LowFidelityState& state) const = 0;
+  virtual double computeTotalKineticEnergy(const LowFidelityState& state) const = 0;
 
   virtual ~LowFidelityOperations() = default;
 };

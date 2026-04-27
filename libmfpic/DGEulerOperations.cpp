@@ -4,6 +4,7 @@
 #include <libmfpic/ElectromagneticFieldsEvaluator.hpp>
 #include <libmfpic/Euler.hpp>
 #include <libmfpic/LowFidelityState.hpp>
+#include <libmfpic/MFEMHelpers.hpp>
 #include <libmfpic/Species.hpp>
 
 namespace mfpic {
@@ -139,10 +140,7 @@ double DGEulerOperations::estimateCFL(const double & dt, const double & smallest
 }
 
 double DGEulerOperations::computeTotalEnergy(const LowFidelityState& state) const {
-  mfem::FiniteElementSpace& charge_finite_element_space = charge_discretization_.getFeSpace();
-  mfem::Mesh* mesh = charge_finite_element_space.GetMesh();
-  constexpr int test_function_order = 0;
-  Discretization constant_test_function_discretization(mesh, test_function_order, FETypes::DG);
+  Discretization identity_test_function_discretization = getIdentityTestFunctionDiscretization(charge_discretization_);
 
   double total_energy = 0;
   for (int i_species = 0; i_species < state.numSpecies(); ++i_species) {
@@ -153,13 +151,37 @@ double DGEulerOperations::computeTotalEnergy(const LowFidelityState& state) cons
     constexpr int component = euler::ConservativeVariables::TOTAL_ENERGY_DENSITY + 1;
     mfem::GridFunctionCoefficient species_total_energy_density_coefficient(&grid_function, component);
 
-    mfem::LinearForm species_total_energy_by_cell(&constant_test_function_discretization.getFeSpace());
+    mfem::LinearForm species_total_energy_by_cell(&identity_test_function_discretization.getFeSpace());
     species_total_energy_by_cell.AddDomainIntegrator(new mfem::DomainLFIntegrator(species_total_energy_density_coefficient));
     species_total_energy_by_cell.Assemble();
     total_energy += species_total_energy_by_cell.Sum();
   }
 
   return total_energy;
+}
+
+double DGEulerOperations::computeTotalKineticEnergy(const LowFidelityState& state) const {
+  Discretization identity_test_function_discretization = getIdentityTestFunctionDiscretization(charge_discretization_);
+
+  double total_kinetic_energy = 0.;
+  for (int i_species = 0; i_species < state.numSpecies(); ++i_species) {
+    const LowFidelitySpeciesState& species_state = state.getSpeciesState(i_species);
+    const mfem::GridFunction& grid_function = species_state.getGridFunction();
+
+    auto conservative_state_coefficient = std::make_unique<mfem::VectorGridFunctionCoefficient>(&grid_function);
+    TransformedVectorCoefficient kinetic_energy_density_coefficient(
+      std::move(conservative_state_coefficient),
+      euler::getKineticEnergyDensityFromConservativeState);
+
+    mfem::LinearForm species_kinetic_energy_by_cell(&identity_test_function_discretization.getFeSpace());
+    species_kinetic_energy_by_cell.AddDomainIntegrator(new mfem::DomainLFIntegrator(kinetic_energy_density_coefficient));
+    species_kinetic_energy_by_cell.Assemble();
+
+    const double species_total_kinetic_energy = species_kinetic_energy_by_cell.Sum();
+    total_kinetic_energy += species_total_kinetic_energy;
+  }
+
+  return total_kinetic_energy;
 }
 
 double DGEulerOperations::evaluateParticleDistributionFunction(

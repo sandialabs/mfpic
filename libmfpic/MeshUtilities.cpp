@@ -174,9 +174,7 @@ mfem::Vector elementwiseIntegral(
   std::function<double(const mfem::Vector&)> function,
   int integrand_order
 ) {
-  constexpr int finite_element_order = 0;
-  constexpr FETypes element_type = FETypes::DG;
-  Discretization integrals_discretization(&mesh, finite_element_order, element_type);
+  Discretization integrals_discretization = getIdentityTestFunctionDiscretization(mesh);
 
   mfem::FunctionCoefficient function_coefficient(function);
 
