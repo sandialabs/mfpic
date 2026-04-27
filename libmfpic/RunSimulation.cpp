@@ -85,6 +85,8 @@ void runSimulation(int argc, char* argv[]) {
     generator,
     mesh
   );
+  const std::string prefix = "particle_moments";
+  dumpParticleMoments(particle_operations,particle_container, prefix, 0, 0.0);
   dumpParticles(particle_container, 0.0);
 
   std::vector<LowFidelityState> low_fidelity_states;
@@ -188,6 +190,8 @@ void runSimulation(int argc, char* argv[]) {
     }
 
     if (i_timestep % output_parameters.output_stride == 0) {
+      const std::string prefix = "particle_moments";
+      dumpParticleMoments(particle_operations,particle_container, prefix, i_timestep, end_time);
       dumpParticles(particle_container, end_time, output_parameters.particle_dump_filename);
       mesh_data_writer.output(
         particle_electrostatic_field_state,
