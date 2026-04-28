@@ -1,12 +1,9 @@
 #pragma once
 
-#include <libmfpic/TimeIntegrator.hpp>
-
-#include <vector>
-#include <memory>
 
 namespace mfpic {
 
+// Forward declarations
 class ElectrostaticFieldOperations;
 class ElectrostaticFieldState;
 class LowFidelityOperations;
@@ -15,13 +12,8 @@ class ParticleContainer;
 class ParticleOperations;
 class Discretization;
 
-class VerletTimeIntegrator : public TimeIntegrator {
+class TimeIntegrator {
 public:
-
-  VerletTimeIntegrator(Discretization &discretization, const bool &push_low_fidelity_with_particle_fields = false)
-  : discretization_(discretization), push_lf_with_particle_fields_(push_low_fidelity_with_particle_fields)
-  {}
-
   /**
    * @brief Advance the particle and low fidelity states one timestep using the Verlet algorithm
    *
@@ -43,11 +35,7 @@ public:
     const ParticleOperations& particle_operations,
     ElectrostaticFieldState& field_state,
     ElectrostaticFieldOperations& field_operations,
-    double dt) const override;
-
-private:
-  Discretization & discretization_;
-  const bool & push_lf_with_particle_fields_;
+    double dt) const = 0;
 };
 
-} // namespace mfpic
+}
