@@ -352,6 +352,80 @@ TEST(DGEulerOperations, MoveAccelerate_ZeroFieldsReproducesMove) {
   }
 }
 
+class AppliedElectricField : public ElectromagneticFieldsEvaluator {
+public:
+  AppliedElectricField(const mfem::Vector e_field) : e_field_(e_field) {}
+
+  virtual mfem::Vector getEFieldAt(const mfem::Vector& /*position*/, const int /*element_index*/) const override {
+    return e_field_;
+  }
+
+  virtual mfem::Vector getBFieldAt(const mfem::Vector& /*position*/, const int /*element_index*/) const override {
+    mfem::Vector b_field(3);
+    b_field = 0.;
+    return b_field;
+  }
+private:
+  mfem::Vector e_field_;
+};
+
+TEST(DGEulerOperations, MoveAccelerate_ConstantEFieldAcceleratesConstantFluidCorrectly) {
+  constexpr double length = 1.5;
+  MeshParameters mesh_parameters{.mesh_type = "line", .lengths = {length}, .num_elements = {20}, .periodic_dims = {0}};
+  mfem::Mesh mesh = buildMesh(mesh_parameters);
+
+  constexpr int dg_order = 0;
+  const int num_equations = euler::ConservativeVariables::NUM_VARS;
+  Discretization dg_discretization(&mesh, dg_order, FETypes::DG, num_equations);
+
+  constexpr double number_density = 3.4e23;
+  constexpr double temperature = 321;
+  const mfem::Vector bulk_velocity{8.4e2, 1.9e3, -5.7e4};
+  std::vector<std::unique_ptr<SourceParameters>> list_of_ic_parameters;
+  list_of_ic_parameters.push_back(
+    std::make_unique<ConstantSourceParameters>(electron_species, number_density, temperature, bulk_velocity));
+
+  const LowFidelityState initial_state = buildEulerState(dg_discretization, list_of_ic_parameters);
+
+  constexpr int es_order = 1;
+  Discretization es_discretization(&mesh, es_order, FETypes::HGRAD);
+  const std::vector<Species> species_list = initial_state.getSpeciesList();
+  std::vector<std::vector<std::unique_ptr<DGBC>>> empty_bcs(species_list.size());
+  std::unique_ptr<LowFidelityOperations> dg_euler_operations = buildDGEulerOperations(
+    dg_discretization, es_discretization, species_list, empty_bcs);
+
+  const double plasma_frequency = sqrt(
+    (number_density * electron_species.charge * electron_species.charge) / (electron_species.mass * constants::permittivity));
+  const double plasma_period = 2.0 * M_PI / plasma_frequency;
+  const double dt = 0.1 * plasma_period;
+
+  const mfem::Vector e_field{2.3e3, 4.5e4, 6.7e4};
+  const AppliedElectricField applied_e_field(e_field);
+  const LowFidelityState state_moved_accelerated = dg_euler_operations->moveAccelerate(dt, initial_state, applied_e_field);
+
+  const LowFidelitySpeciesState& species_state_moved_accelerated = state_moved_accelerated.getSpeciesState(0);
+  const mfem::GridFunction& grid_function_moved_acclerated = species_state_moved_accelerated.getGridFunction();
+
+  mfem::Vector primitive_state = euler::constructPrimitiveState(number_density, bulk_velocity, temperature);
+  mfem::Vector conservative_state = euler::convertFromPrimitiveToConservative(primitive_state, electron_species);
+  const mfem::Vector initial_momentum_density = euler::getMomentumDensityFromConservativeState(conservative_state);
+  const double initial_total_energy_density = conservative_state[euler::ConservativeVariables::TOTAL_ENERGY_DENSITY];
+
+  const double expected_mass_density = conservative_state[euler::ConservativeVariables::MASS_DENSITY];
+  mfem::Vector expected_momentum_density = initial_momentum_density;
+  expected_momentum_density.Add(dt * electron_species.charge * number_density, e_field);
+  const double charge_to_mass = electron_species.charge / electron_species.mass;
+  const double total_energy_density_increment = dt * charge_to_mass * (initial_momentum_density * e_field);
+  const double expected_total_energy_density = initial_total_energy_density + total_energy_density_increment;
+
+  const mfem::Vector expected_conservative_state = euler::constructConservativeState(
+    expected_mass_density, expected_momentum_density, expected_total_energy_density);
+  mfem::VectorConstantCoefficient expected_coefficient(expected_conservative_state);
+  const double error = grid_function_moved_acclerated.ComputeL2Error(expected_coefficient);
+  constexpr double tolerance = 1e-16;
+  EXPECT_LT(error, tolerance);
+}
+
 TEST(DGEulerOperations, evaluateParticleDistributionFunctionCorrectIn1D) {
   constexpr double number_density = 1e22;
   constexpr double temperature = 300;

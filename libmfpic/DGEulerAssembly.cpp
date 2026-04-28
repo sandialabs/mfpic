@@ -18,23 +18,22 @@ namespace mfpic {
     const Species& species) :
       DGEulerAssembly(CreateDGEulerAssembly_(finite_element_space, species)) {}
 
-  void DGEulerAssembly::computeSources(
-    const LowFidelitySpeciesState& species_state,
-    const ElectromagneticFieldsEvaluator &field_evaluator,
-    mfem::Vector &rhs) const {
+void DGEulerAssembly::computeSources(
+  const LowFidelitySpeciesState& species_state,
+  const ElectromagneticFieldsEvaluator &field_evaluator,
+  mfem::Vector &rhs,
+  const bool include_energy_source) const
+{
+  const mfem::GridFunction& state_evaluator = species_state.getGridFunction();
+  const double charge_over_mass = species_state.getSpecies().charge_over_mass;
 
-    constexpr bool include_energy_source = false;
+  mfem::LinearForm source_form(&getFiniteElementSpace());
+  source_form.AddDomainIntegrator(
+    new EulerMaxwellSourceIntegrator(state_evaluator, field_evaluator, charge_over_mass, include_energy_source));
+  source_form.Assemble();
 
-    const mfem::GridFunction& state_evaluator = species_state.getGridFunction();
-    const double charge_over_mass = species_state.getSpecies().charge_over_mass;
-
-    mfem::LinearForm source_form(&getFiniteElementSpace());
-    source_form.AddDomainIntegrator(
-      new EulerMaxwellSourceIntegrator(state_evaluator, field_evaluator, charge_over_mass, include_energy_source));
-    source_form.Assemble();
-
-    rhs += source_form;
-  }
+  rhs += source_form;
+}
 
   void DGEulerAssembly::computeIntegratedKineticEnergy(const LowFidelitySpeciesState& species_state, mfem::Vector& rhs) const {
     const mfem::GridFunction& state_evaluator = species_state.getGridFunction();

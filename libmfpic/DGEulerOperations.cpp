@@ -32,7 +32,8 @@ LowFidelityState DGEulerOperations::accelerate(
     LowFidelitySpeciesState& updated_species_state = updated_state.getSpeciesState(ispecies);
 
     temp_vector_ = 0.;
-    dg_assemblers_[ispecies]->computeSources(species_state, field_evaluator, temp_vector_);
+    constexpr bool include_energy_source = false;
+    dg_assemblers_[ispecies]->computeSources(species_state, field_evaluator, temp_vector_, include_energy_source);
     dg_assemblers_[ispecies]->applyInverseMass(temp_vector_, rhs_);
 
     temp_vector_ = 0.;
@@ -76,7 +77,7 @@ LowFidelityState DGEulerOperations::move(double dt, const LowFidelityState& stat
 LowFidelityState DGEulerOperations::moveAccelerate(
   const double dt,
   const LowFidelityState& state,
-  const ElectromagneticFieldsEvaluator& /*field_evaluator*/) const
+  const ElectromagneticFieldsEvaluator& field_evaluator) const
 {
   LowFidelityState updated_state(state);
   for (int i_species = 0; i_species < state.numSpecies(); ++i_species) {
@@ -85,6 +86,8 @@ LowFidelityState DGEulerOperations::moveAccelerate(
 
     temp_vector_ = 0.;
     dg_assemblers_[i_species]->computeHyperbolicFluxes(species_grid_function, temp_vector_);
+    constexpr bool include_energy_source = true;
+    dg_assemblers_[i_species]->computeSources(species_state, field_evaluator, temp_vector_, include_energy_source);
     dg_assemblers_[i_species]->applyInverseMass(temp_vector_, rhs_);
 
     LowFidelitySpeciesState& updated_species_state = updated_state.getSpeciesState(i_species);

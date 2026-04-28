@@ -605,7 +605,8 @@ TEST(DGEulerAssembly, computeSourcesElectrostatic) {
   rhs = rhs_offset;
 
   EXPECT_TRUE(rhs.Size() == fluid_grid_function.Size());
-  op.computeSources(fluid_state, es_field_state, rhs);
+  constexpr bool include_energy_source = false;
+  op.computeSources(fluid_state, es_field_state, rhs, include_energy_source);
 
   auto source_exact_vec = [&](const mfem::Vector &x, mfem::Vector &y) {
     linear_vec(x,y);

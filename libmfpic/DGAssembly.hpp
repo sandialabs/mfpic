@@ -94,11 +94,15 @@ public:
   * @param species_state - current solution for a given species
   * @param field_evaluator electromagnetic field evaluator
   * @param[inout] rhs rhs storage
+  * @param include_energy_source - flag to determine if source should be applied to total energy,
+  *  if false, then total energy needs to be postprocessed to be correct,
+  *  if true, source will be applied to total energy but may cause errors in internal energy
   */
   virtual void computeSources(
     const LowFidelitySpeciesState& species_state,
     const ElectromagneticFieldsEvaluator& field_evaluator,
-    mfem::Vector& rhs) const = 0;
+    mfem::Vector& rhs,
+    const bool include_energy_source) const = 0;
 
   /**
   * @brief Apply the local inverse mass matrices and store in \p dofs
