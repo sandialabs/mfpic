@@ -25,7 +25,7 @@ Species proton_species{.charge = constants::elementary_charge, .mass = constants
 TEST(DGEulerOperations, EulerChargeAssemblyWorksForConstantDensityOrder0In3D) {
   constexpr int dg_order = 0;
   constexpr int num_equations = 5;
-  constexpr Species default_species{.charge = 2.0, .mass = 10.0, .specific_heat_ratio = 1.4};
+  const Species default_species{.charge = 2.0, .mass = 10.0, .specific_heat_ratio = 1.4};
   int nxyz = 3;
 
   mfem::Mesh mesh = mfem::Mesh::MakeCartesian3D(nxyz, nxyz, nxyz, mfem::Element::HEXAHEDRON, 1, 1, 1);
@@ -73,8 +73,8 @@ TEST(DGEulerOperations, EulerChargeAssemblyWorksForConstantDensityOrder0In3D) {
 TEST(DGEulerOperations,EulerChargeAssemblyWorksForMultipleSpeciesConstantDensitiesOrder0In3D) {
   constexpr int dg_order = 0;
   constexpr int num_equations = 5;
-  constexpr Species species_0{.charge = 2.0, .mass = 10.0};
-  constexpr Species species_1{.charge = 532.0, .mass = 1920.0};
+  const Species species_0{.charge = 2.0, .mass = 10.0};
+  const Species species_1{.charge = 532.0, .mass = 1920.0};
   constexpr int nxyz = 3;
   constexpr double length = 1.;
   constexpr double dx = length / nxyz;
@@ -127,7 +127,7 @@ TEST(DGEulerOperations,EulerChargeAssemblyWorksForLinearDensityOrder1In3D) {
   constexpr int dg_order = 1;
   constexpr int num_equations = 5;
   constexpr double specific_heat_ratio = 1.4;
-  constexpr Species default_species{.charge = 1094.0, .mass = 9502.0, .specific_heat_ratio = specific_heat_ratio};
+  const Species default_species{.charge = 1094.0, .mass = 9502.0, .specific_heat_ratio = specific_heat_ratio};
 
   constexpr int nxyz = 3;
   mfem::Mesh mesh = mfem::Mesh::MakeCartesian3D(nxyz, nxyz, nxyz, mfem::Element::HEXAHEDRON, 1, 1, 1);
@@ -175,7 +175,7 @@ TEST(DGEulerOperations,AccelerateDoesNotModifyInternalEnergy) {
 
   constexpr int dg_order = 1;
   constexpr int num_equations = 5;
-  constexpr Species default_species{.charge = 2.0, .mass = 10.0};
+  const Species default_species{.charge = 2.0, .mass = 10.0};
   constexpr int nxyz = 3;
 
   mfem::Mesh mesh = mfem::Mesh::MakeCartesian3D(nxyz, nxyz, nxyz, mfem::Element::HEXAHEDRON, 1, 1, 1);

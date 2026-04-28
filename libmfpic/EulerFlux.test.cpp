@@ -13,7 +13,7 @@ using namespace mfpic;
 auto run_flux_test = [] (const int spatial_dim) {
 
   constexpr double specific_heat_ratio = 1.4;
-  constexpr Species species{.mass = constants::electron_mass, .specific_heat_ratio = specific_heat_ratio};
+  const Species species{.mass = constants::electron_mass, .specific_heat_ratio = specific_heat_ratio};
 
   constexpr double mass_density = 8.1e-10;
   const double number_density = mass_density / species.mass;
@@ -70,7 +70,7 @@ auto run_flux_dot_n_test = [] (const int spatial_dim, const mfem::Vector normal)
   ASSERT_TRUE(normal.Size() == spatial_dim) << "To run this test, normal must match spatial dimension!";
 
   constexpr double specific_heat_ratio = 1.4;
-  constexpr Species species{.mass = constants::electron_mass, .specific_heat_ratio = specific_heat_ratio};
+  const Species species{.mass = constants::electron_mass, .specific_heat_ratio = specific_heat_ratio};
 
   constexpr double mass_density = 8.1e-10;
   const double number_density = mass_density / species.mass;

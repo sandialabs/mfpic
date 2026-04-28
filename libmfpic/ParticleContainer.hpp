@@ -22,10 +22,14 @@ public:
 
   void addParticles(const ParticleContainer& particles);
 
+  int getParticleSpeciesIndex(const Particle& particle) const;
+
   void cleanOutDeadParticles();
 
 private:
   std::vector<Particle> particle_list_;
+
+  std::vector<Species> species_represented_by_these_particles_;
 };
 
 } // namespace mfpic

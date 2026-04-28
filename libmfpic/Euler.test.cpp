@@ -9,7 +9,7 @@ namespace {
 using namespace mfpic;
 
 TEST(Euler, getTemperatureFromConservativeState) {
-  constexpr Species species{.mass = constants::electron_mass};
+  const Species species{.mass = constants::electron_mass};
 
   constexpr double mass_density = 8.1e-10;
   const mfem::Vector momentum_density{2.5, 3.2, 5.6};
@@ -41,7 +41,7 @@ TEST(Euler, getPressureFromPrimitiveState) {
 }
 
 TEST(Euler, getInternalEnergyDensityFromPrimitiveState) {
-  constexpr Species species{.mass = constants::electron_mass};
+  const Species species{.mass = constants::electron_mass};
 
   constexpr double number_density = 1.2e16;
   const mfem::Vector bulk_velocity{5.4, 4.7, 8.3};
@@ -57,7 +57,7 @@ TEST(Euler, getInternalEnergyDensityFromPrimitiveState) {
 }
 
 TEST(Euler, convertFromPrimitiveToConservativeInvertsConvertConservativeToPrimitive) {
-  constexpr Species species{.mass = constants::electron_mass};
+  const Species species{.mass = constants::electron_mass};
 
   constexpr double mass_density = 8.1;
   const mfem::Vector momentum_density{2.5, 3.2, 5.6};
@@ -73,7 +73,7 @@ TEST(Euler, convertFromPrimitiveToConservativeInvertsConvertConservativeToPrimit
 }
 
 TEST(Euler, convertFromConservativeToPrimitiveInvertsConvertPrimitiveToConservative) {
-  constexpr Species species{.mass = constants::electron_mass};
+  const Species species{.mass = constants::electron_mass};
 
   constexpr double number_density = 1.2e16;
   const mfem::Vector bulk_velocity{5.4, 4.7, 8.3};
@@ -89,7 +89,7 @@ TEST(Euler, convertFromConservativeToPrimitiveInvertsConvertPrimitiveToConservat
 }
 
 TEST(Euler, getPressureFromConservativeState) {
-  constexpr Species species{.mass = constants::electron_mass};
+  const Species species{.mass = constants::electron_mass};
 
   constexpr double mass_density = 8.1e-10;
   const mfem::Vector momentum_density{2.5, 3.2, 5.6};
@@ -110,7 +110,7 @@ TEST(Maxwellian, MaxwellianValueAtMean)
   constexpr double number_density = 1.2e16;
   const mfem::Vector bulk_velocity{5.4, 4.7, 8.3};
   constexpr double temperature = 305.1;
-  constexpr Species species{.mass = constants::electron_mass};
+  const Species species{.mass = constants::electron_mass};
   mfem::Vector prim(5);
   prim(euler::PrimitiveVariables::NUMBER_DENSITY) = number_density;
   prim(euler::PrimitiveVariables::X_BULK_VELOCITY) = bulk_velocity(0);
@@ -131,7 +131,7 @@ TEST(Maxwellian, MaxwellianShiftInV)
   constexpr double number_density = 1.2e16;
   const mfem::Vector bulk_velocity{5.4, 4.7, 8.3};
   constexpr double temperature = 305.1;
-  constexpr Species species{.mass = constants::electron_mass};
+  const Species species{.mass = constants::electron_mass};
   mfem::Vector prim(5);
   prim(euler::PrimitiveVariables::NUMBER_DENSITY) = number_density;
   prim(euler::PrimitiveVariables::X_BULK_VELOCITY) = bulk_velocity(0);
@@ -157,7 +157,7 @@ TEST(Maxwellian, MaxwellianIntegratesToOnein3D)
   constexpr double number_density = 1.0;
   const mfem::Vector bulk_velocity{5.4, 4.7, 8.3};
   constexpr double temperature = 305.1;
-  constexpr Species species{.mass = constants::electron_mass};
+  const Species species{.mass = constants::electron_mass};
   mfem::Vector prim(5);
   prim(euler::PrimitiveVariables::NUMBER_DENSITY) = number_density;
   prim(euler::PrimitiveVariables::X_BULK_VELOCITY) = bulk_velocity(0);
