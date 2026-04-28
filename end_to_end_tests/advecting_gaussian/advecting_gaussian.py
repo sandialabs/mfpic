@@ -111,6 +111,9 @@ def run(mfpic_executable):
         result = subprocess.run([mfpic_executable, "-i", yaml])
         result.check_returncode()
 
+        verification.check_fluid_energy_positive_and_constant('Total_Fluid_Energy')
+        verification.check_fluid_energy_positive_and_constant('Total_Fluid_Kinetic_Energy')
+
 
 def compute_error(data, points, exact_solution):
     numerical_solution = verification.create_1D_interpolater(data, points)

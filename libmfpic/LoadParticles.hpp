@@ -55,7 +55,7 @@ ParticleContainer loadParticles(
       position[i] = random_mesh_position[i];
     }
 
-    SourceStateParameters source_state_parameters = source_parameters.sourceStateParametersAtPoint(position);
+    SourceStateParameters source_state_parameters = source_parameters.sourceStateParametersAtPoint(random_mesh_position);
 
     const double kappa = source_state_parameters.kappa;
     mfem::Vector velocity;

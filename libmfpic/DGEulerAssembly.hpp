@@ -44,11 +44,15 @@ public:
   * @param species_state - current solution vector
   * @param field_evaluator electromagnetic field evaluator
   * @param[inout] rhs rhs storage
+  * @param include_energy_source - flag to determine if source should be applied to total energy,
+  *  if false, then total energy needs to be postprocessed to be correct,
+  *  if true, source will be applied to total energy but may cause errors in internal energy
   */
   void computeElectromagneticSources(
     const LowFidelitySpeciesState& species_state,
     const ElectromagneticFieldsEvaluator& field_evaluator,
-    mfem::Vector& rhs) const;
+    mfem::Vector& rhs,
+    const bool include_energy_source) const;
 
   /**
   * @brief Compute the volumetric source terms for the residual.

@@ -104,6 +104,20 @@ public:
    */
   mfem::DenseMatrix& getTemperature(const ParticleContainer& particles, const bool sum_weights = true, const bool compute_bulk_velocity = true);
 
+  /**
+   * @brief Get number of species in the particle container
+   *
+   * @return int of number of species 
+   */
+  int getNumSpecies() const {return num_species_;};
+
+  /**
+   * @brief Get mfem mesh associated with the discretization
+   *
+   * @return mfem::Mesh 
+   */
+  mfem::Mesh& getMesh() const {return *discretization_.getFeSpace().GetMesh();};
+
 private: 
 
   void sumParticleWeights_(

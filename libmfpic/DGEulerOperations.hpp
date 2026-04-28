@@ -31,13 +31,13 @@ public:
    * @brief Update the state by forcing only with the electromagnetic coupling terms
    *
    * @param dt Timestep
-   * @param current_state State including dofs and species list 
+   * @param state State including dofs and species list
    * @param field_evaluator electromagnetic field evaluator
    */
 
   virtual LowFidelityState accelerate(
     double dt,
-    const LowFidelityState& current_state,
+    const LowFidelityState& state,
     const ElectromagneticFieldsEvaluator& field_evaluator
   ) const override;
 
@@ -45,35 +45,49 @@ public:
    * @brief Update the state due to flux terms
    *
    * @param dt Timestep
-   * @param current_state State including dofs and species list 
+   * @param state State including dofs and species list
    */
 
   virtual LowFidelityState move(
     double dt,
-    const LowFidelityState& current_state
+    const LowFidelityState& state
+  ) const override;
+
+  /**
+   * @brief Update the state with fluxes and field source terms simultaneously
+   *
+   * @param dt Timestep
+   * @param state State including dofs and species list
+   * @param field_evaluator electromagnetic field evaluator
+   */
+
+  virtual LowFidelityState moveAccelerate(
+    double dt,
+    const LowFidelityState& state,
+    const ElectromagneticFieldsEvaluator& field_evaluator
   ) const override;
 
   /**
    * @brief Update the state due to volumetric sources
    *
    * @param dt Timestep
-   * @param current_state State including dofs and species list 
+   * @param state State including dofs and species list 
    */
 
   virtual LowFidelityState addVolumetricSource(
     double dt,
-    const LowFidelityState& current_state
+    const LowFidelityState& state
   ) const override;
 
   /**
   * @brief Assemble charges from the fluids into the charge density
   *
-  * @param current_state State including dofs and species list 
+  * @param state State including dofs and species list
   * @return IntegratedCharge - integrated charge state
   */
   virtual IntegratedCharge assembleCharge(
-    const LowFidelityState& current_state
-  ) const override; 
+    const LowFidelityState& state
+  ) const override;
 
   /**
   * @brief Return the CFL based on the maximum eigenvalue of the Euler system (fluid plus acoustic speed)
@@ -83,21 +97,39 @@ public:
   virtual double estimateCFL(const double & dt, const double & smallest_cell_lengthscale) const override;
 
   /**
+  * @brief Return the fluid total energy over the whole domain
+  *
+  * @param state Fluid state
+  *
+  * @return Total energy
+  */
+  virtual double computeTotalEnergy(const LowFidelityState& state) const override;
+
+  /**
+  * @brief Return the fluid total kinetic energy over the whole domain
+  *
+  * @param state Fluid state
+  *
+  * @return Total kinetic energy
+  */
+  virtual double computeTotalKineticEnergy(const LowFidelityState& state) const override;
+
+  /**
   * @brief Evaluates the particle distribution function for the low fidelity state at a given position and velocity.
   *
-  * @param current_state State including dofs and species list 
+  * @param state State including dofs and species list
   * @param position Location in physical space to evaluate PDF
   * @param velocity Location in velocity space to evaluate PDF
   * @param element  Element containing position
   * @param species  Evaluate PDF for the given species
-  * @return PDF value 
+  * @return PDF value
   */
   virtual double evaluateParticleDistributionFunction(
-    const LowFidelityState & current_state, 
-    const mfem::Vector position, 
-    const mfem::Vector velocity, 
-    const int element, 
-    const Species& species) const override; 
+    const LowFidelityState & state,
+    const mfem::Vector position,
+    const mfem::Vector velocity,
+    const int element,
+    const Species& species) const override;
 
 private:
   Discretization & charge_discretization_;

@@ -86,4 +86,7 @@ private:
   const FETypes element_type_;
 };
 
+Discretization getIdentityTestFunctionDiscretization(mfem::Mesh& mesh);
+Discretization getIdentityTestFunctionDiscretization(Discretization& discretization);
+
 } // namespace mfpic

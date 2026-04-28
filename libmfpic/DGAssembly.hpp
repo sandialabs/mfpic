@@ -93,6 +93,9 @@ public:
   *
   * @param species_state - current solution for a given species
   * @param[inout] rhs rhs storage
+  * @param include_energy_source - flag to determine if source should be applied to total energy,
+  *  if false, then total energy needs to be postprocessed to be correct,
+  *  if true, source will be applied to total energy but may cause errors in internal energy
   */
   virtual void computeVolumetricSources(
     const LowFidelitySpeciesState& species_state,
