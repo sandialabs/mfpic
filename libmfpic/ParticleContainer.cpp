@@ -37,8 +37,6 @@ void ParticleContainer::addParticles(const ParticleContainer &particles) {
 }
 
 int ParticleContainer::getParticleSpeciesIndex(const Particle& particle) const {
-  assert(std::find(particle_list_.begin(), particle_list_.end(), particle) != particle_list_.end());
-
   const Species& particle_species = particle.species;
   const auto species_iterator = std::find(species_represented_by_these_particles_.begin(), species_represented_by_these_particles_.end(), particle_species);
   return std::distance(species_represented_by_these_particles_.begin(), species_iterator);
