@@ -19,6 +19,12 @@ public:
     const LowFidelityState& state
   ) const = 0;
 
+  virtual LowFidelityState moveAccelerate(
+    double dt,
+    const LowFidelityState& state,
+    const ElectromagneticFieldsEvaluator& field_provider
+  ) const = 0;
+
   virtual IntegratedCharge assembleCharge(
     const LowFidelityState& state
   ) const = 0;

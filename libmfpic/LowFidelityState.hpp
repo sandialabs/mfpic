@@ -68,7 +68,7 @@ public:
 
   /// Number of species in the state
   int numSpecies() const { return std::ssize(species_states_); };
-  std::vector<Species> getSpeciesList();
+  std::vector<Species> getSpeciesList() const;
 
   LowFidelitySpeciesState& getSpeciesState(const int i_species) { return species_states_[i_species]; }
   const LowFidelitySpeciesState& getSpeciesState(const int i_species) const { return species_states_[i_species]; }
