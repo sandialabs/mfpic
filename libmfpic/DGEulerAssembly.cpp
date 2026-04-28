@@ -41,6 +41,8 @@ namespace mfpic {
     const LowFidelitySpeciesState& ,
     mfem::Vector &rhs) const {
 
+    if (not hasVolumetricSource()) return;
+
     mfem::LinearForm source_form(&getFiniteElementSpace());
     source_form.AddDomainIntegrator(createVolumetricSourceIntegrator());
     source_form.Assemble();

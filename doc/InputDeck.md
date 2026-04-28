@@ -497,6 +497,23 @@ Euler Fluids:
                   Number Density: 1e23
 ```
 
+### Euler Fluids Volumetric Sources
+Fluid sources can be added with the optional `Sources` key.
+The options are identical to those of the [Euler Fluids Initial Conditions](#euler-fluids-initial-conditions);
+however the ``Number Density`` key is interpreted as a rate with units $[-/m^3-s]$.
+Hence, the source is a pointwise injection of a Maxwellian with ``Temperature`` and ``Bulk Velocity`` at the rate specified with ``Number Density``.
+
+#### Example
+```yaml
+Euler Fluids:
+    Sources:
+        - Species: [proton, electron]
+          Constant:
+              Temperature: 11600.0         # [K]
+              Number Density: 1.0e24       # [-/m^3-s]
+              Bulk Velocity: [-1., 2., 3.] # [m/s]
+```
+
 ### Euler Fluids Boundary Conditions
 The boundary conditions for the Euler fluids are specified under ```Boundary Conditions```.
 The ```Boundary Conditions``` must be a sequence.

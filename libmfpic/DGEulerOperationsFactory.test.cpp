@@ -59,6 +59,7 @@ TEST(DGEulerOperationsFactory, BasicChecksOnOperationsAndState) {
     list_of_parameters.push_back(std::make_unique<ConstantSourceParameters>(species, number_density, temperature));
   }
   LowFidelityState dg_euler_state = buildEulerState(discretization, list_of_parameters);
+  std::vector<std::pair<Species, std::unique_ptr<mfem::VectorCoefficient>>> dg_euler_sources = buildListOfSpeciesAndEulerSourceCoefficients(list_of_parameters);
 
   constexpr int boundary_attribute_ghost = 3;
   constexpr int boundary_attribute_kfvs = 1;
@@ -73,7 +74,7 @@ TEST(DGEulerOperationsFactory, BasicChecksOnOperationsAndState) {
   }
 
   std::unique_ptr<LowFidelityOperations> dg_euler_operations = buildDGEulerOperations(
-    discretization, charge_discretization, species_list, bcs, empty_sources);
+    discretization, charge_discretization, species_list, bcs, dg_euler_sources);
 
   EXPECT_NO_FATAL_FAILURE(dg_euler_operations->move(1.0, dg_euler_state));
 }

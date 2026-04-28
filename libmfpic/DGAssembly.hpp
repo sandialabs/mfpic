@@ -146,10 +146,15 @@ public:
   /// where max_char_speed is updated during RHS evaluation
   mfem::real_t getMaxCharSpeed() const { return hyperbolic_form_integrator_->GetMaxCharSpeed(); }
 
-  /// TODO BWR FILL ME
+  /**
+   * @brief Add a volumetric source to the right hand side by specifying a mfem::VectorCoefficient
+   *
+   * @param coefficient mfem::VectorCoefficient
+   */
   void setVolumetricSourceCoefficient(std::unique_ptr<mfem::VectorCoefficient> && coefficient);
+  /// Flag to indicate if volumetric source has been set
   bool hasVolumetricSource() const {return has_volumetric_source_;};
-  // TODO BWR there has to be a better way?
+  /// Creates a linear form integrator for assembly of the volumetric source
   mfem::VectorDomainLFIntegrator * createVolumetricSourceIntegrator() const {return new mfem::VectorDomainLFIntegrator(*volumetric_source_);}
 
   /// Dtor.
