@@ -12,13 +12,9 @@ class ParticleContainer;
 class ParticleOperations;
 class Discretization;
 
-class VerletTimeIntegrator : public TimeIntegrator {
+class ForwardEulerTimeIntegrator : public TimeIntegrator {
 public:
-
-  VerletTimeIntegrator(Discretization &discretization, const bool &push_low_fidelity_with_particle_fields = false)
-  : discretization_(discretization), push_lf_with_particle_fields_(push_low_fidelity_with_particle_fields)
-  {}
-
+  ForwardEulerTimeIntegrator(Discretization& discretization) : discretization_(discretization) {}
   /**
    * @brief Advance the particle and low fidelity states one timestep using the Verlet algorithm
    *
@@ -31,7 +27,6 @@ public:
    * @param field_operations \ref ElectrostaticFieldOperations that form right-hand-side contributions
    * @param dt Time step
    */
-
   virtual void advanceTimestep(
     std::vector<LowFidelityState>& low_fidelity_states,
     std::vector<ElectrostaticFieldState>& low_fidelity_field_states,
@@ -43,8 +38,7 @@ public:
     double dt) const override;
 
 private:
-  Discretization & discretization_;
-  const bool & push_lf_with_particle_fields_;
+  Discretization& discretization_;
 };
 
-} // namespace mfpic
+}
