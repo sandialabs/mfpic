@@ -745,4 +745,58 @@ TEST(DGEulerAssembly, computeIntegratedKineticEnergy) {
   EXPECT_NEAR(diff_l2/exact_l2, 0., tolerance);
 }
 
+TEST(DGEulerAssembly, computeVolumetricSources) {
+  constexpr double tolerance = 1e-13;
+  constexpr int nx = 5;
+  constexpr mfem::real_t length = 1.0;
+  mfem::Mesh mesh = mfem::Mesh::MakeCartesian3D(nx, nx, nx, mfem::Element::HEXAHEDRON, length, length, length);
+
+  constexpr int basis_order = 1;
+  constexpr int num_equations = 5;
+
+  constexpr double charge_over_mass = 8.92;
+  const Species species{.charge_over_mass = charge_over_mass};
+
+  Discretization fluid_discretization(&mesh, basis_order, FETypes::DG, num_equations);
+
+  constexpr mfem::real_t c0(12.7), c1(-9.4), c2(2.2), c3(9.1);
+  auto linear_vec = [&](const mfem::Vector &x, mfem::Vector &y) {
+    mfem::real_t base_val = c0 + c1 * x[0] + c2 * x[1] + c3 * x[2];
+    for (int i = 0; i < num_equations; ++i) {
+      y[i] = (i+1) * base_val;
+    }
+  };
+  std::unique_ptr<mfem::VectorFunctionCoefficient> source_coeff = std::make_unique<mfem::VectorFunctionCoefficient>(num_equations,linear_vec);
+
+  LowFidelitySpeciesState fluid_state(fluid_discretization, species);
+  mfem::GridFunction& fluid_grid_function = fluid_state.getGridFunction();
+  const mfem::Vector fluid_constant_vals{1., 2., 3., 4., 5.};
+  mfem::VectorConstantCoefficient fluid_constant_coeff(fluid_constant_vals);
+
+  DGEulerAssembly op(fluid_discretization.getFeSpace(), species);
+  op.setVolumetricSourceCoefficient(std::move(source_coeff));
+
+  mfem::Vector rhs(fluid_discretization.getFeSpace().GetTrueVSize());
+  constexpr double rhs_offset = 123.456;
+
+  rhs = rhs_offset;
+
+  EXPECT_TRUE(rhs.Size() == fluid_grid_function.Size());
+  op.computeVolumetricSources(fluid_state, rhs);
+
+  mfem::LinearForm exact_form(&fluid_discretization.getFeSpace());
+  // this is the same as above, checking that our machinery matches
+  mfem::VectorFunctionCoefficient source_exact_coeff(num_equations, linear_vec);
+  exact_form.AddDomainIntegrator(new mfem::VectorDomainLFIntegrator(source_exact_coeff));
+  exact_form.Assemble();
+
+  mfem::Vector diff = exact_form;
+  diff += rhs_offset;
+  auto exact_l2 = diff.Norml2();
+  diff.Add(-1.0, rhs);
+  auto diff_l2 = diff.Norml2();
+
+  EXPECT_NEAR(diff_l2/exact_l2, 0., tolerance);
+}
+
 } // namespace

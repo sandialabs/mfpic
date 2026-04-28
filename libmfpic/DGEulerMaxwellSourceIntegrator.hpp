@@ -86,7 +86,6 @@ class EulerMaxwellSourceIntegrator : public mfem::LinearFormIntegrator
       const double weight = integration_point.weight * element_transformation.Weight();
 
       for (int dof = 0; dof < num_dof; ++dof) {
-        rhs_in_element(dof, euler::ConservativeVariables::MASS_DENSITY) += weight * basis_values(dof) * 11.1302888 * 1.25;
 
         rhs_in_element(dof, euler::ConservativeVariables::X_MOMENTUM_DENSITY) += weight * basis_values(dof) * 
           charge_over_mass_ * density * (e_field(0) + v_cross_b(0));
@@ -96,7 +95,7 @@ class EulerMaxwellSourceIntegrator : public mfem::LinearFormIntegrator
           charge_over_mass_ * density * (e_field(2) + v_cross_b(2));
 
         rhs_in_element(dof, euler::ConservativeVariables::TOTAL_ENERGY_DENSITY) += 
-          weight * basis_values(dof) * (15992276931.*1.25 + charge_over_mass_ * density * e_dot_v * include_energy_source_);
+          weight * basis_values(dof) * charge_over_mass_ * density * e_dot_v * include_energy_source_;
  
       }
     }
