@@ -63,4 +63,45 @@ TEST(TimeSteppingFactory, buildTimeSteppingParametersFromTimeStepSizeAndFinalTim
   EXPECT_LE(timestep_size, next_biggest_timestep_size);
 }
 
+TEST(TimeSteppingFactory, buildTimeSteppingParametersDefaultsToVerlet) {
+  const std::string time_stepping_string(
+    "Time Step Size: 0.5\n"
+    "Final Time: 1.0\n"
+  );
+
+  const YAML::Node time_stepping = YAML::Load(time_stepping_string);
+
+  const TimeSteppingParameters time_stepping_parameters = buildTimeSteppingParametersFromYAML(time_stepping);
+
+  EXPECT_EQ(TimeIntegratorType::verlet, time_stepping_parameters.time_integrator_type);
+}
+
+TEST(TimeSteppingFactory, buildTimeSteppingParametersVerletCanBeSpecified) {
+  const std::string time_stepping_string(
+    "Time Step Size: 0.5\n"
+    "Final Time: 1.0\n"
+    "Type: Verlet\n"
+  );
+
+  const YAML::Node time_stepping = YAML::Load(time_stepping_string);
+
+  const TimeSteppingParameters time_stepping_parameters = buildTimeSteppingParametersFromYAML(time_stepping);
+
+  EXPECT_EQ(TimeIntegratorType::verlet, time_stepping_parameters.time_integrator_type);
+}
+
+TEST(TimeSteppingFactory, buildTimeSteppingParametersForwardEulerCanBeSpecified) {
+  const std::string time_stepping_string(
+    "Time Step Size: 0.5\n"
+    "Final Time: 1.0\n"
+    "Type: Forward Euler\n"
+  );
+
+  const YAML::Node time_stepping = YAML::Load(time_stepping_string);
+
+  const TimeSteppingParameters time_stepping_parameters = buildTimeSteppingParametersFromYAML(time_stepping);
+
+  EXPECT_EQ(TimeIntegratorType::forward_euler, time_stepping_parameters.time_integrator_type);
+}
+
 }

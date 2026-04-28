@@ -31,6 +31,18 @@ TimeSteppingParameters buildTimeSteppingParametersFromYAML(const YAML::Node& tim
     parameters.timestep_size = new_timestep_size;
   }
 
+  parameters.time_integrator_type = TimeIntegratorType::verlet;
+  if (time_stepping["Type"]) {
+    const std::string type_string = time_stepping["Type"].as<std::string>();
+    if (type_string == "Verlet") {
+      parameters.time_integrator_type = TimeIntegratorType::verlet;
+    } else if (type_string == "Forward Euler") {
+      parameters.time_integrator_type = TimeIntegratorType::forward_euler;
+    } else {
+      errorWithUserMessage("Time Stepping: Type: must be either \"Verlet\" or \"Forward Euler\".");
+    }
+  }
+
   return parameters;
 }
 

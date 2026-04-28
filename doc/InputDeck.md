@@ -161,11 +161,18 @@ $$
     \text{Time Step Size} = \frac{\text{Final Time}}{\text{Number of Time Steps}}.
 $$
 
+Two different time integrators are available, "Verlet" and "Forward Euler".
+The default is "Verlet" and should be the option used almost all of the time.
+"Forward Euler" is only to be used for testing problems without particles.
+"Forward Euler" has an total energy growth problem and an internal energy decay problem, so this integrator should only be used
+for test problems demonstrating these issues.
+
 ```yaml
 Time Stepping:
     Final Time: double #[s]
     Number of Time Steps: integer
     Time Step Size: double #[s]
+    Type: string # default = "Verlet"
 ```
 
 **``Final Time``**: The physical time that the simulation should end in seconds.
@@ -173,6 +180,10 @@ Time Stepping:
 **``Number of Time Steps``**: The number of time steps to take in the simulation.
 
 **``Time Step Size``**: The size of each time step in seconds.
+
+**``Type``**: The type of time integrator to use.
+    The available options are "Verlet" and "Forward Euler".
+    "Forward Euler" should only be used with pure fluid simulations to show total energy and internal energy issues.
 
 Example
 ```yaml
