@@ -1,5 +1,11 @@
 #include <libmfpic/TimeSteppingFactory.hpp>
 
+#include <libmfpic/Discretization.hpp>
+#include <libmfpic/ForwardEulerTimeIntegrator.hpp>
+#include <libmfpic/VerletTimeIntegrator.hpp>
+
+#include <mfem.hpp>
+
 #include <yaml-cpp/yaml.h>
 
 #include <gtest/gtest.h>
@@ -102,6 +108,36 @@ TEST(TimeSteppingFactory, buildTimeSteppingParametersForwardEulerCanBeSpecified)
   const TimeSteppingParameters time_stepping_parameters = buildTimeSteppingParametersFromYAML(time_stepping);
 
   EXPECT_EQ(TimeIntegratorType::forward_euler, time_stepping_parameters.time_integrator_type);
+}
+
+TEST(TimeSteppingFactory, buildTimeIntegrator_VerletTimeIntegratorCanBeBuilt) {
+  TimeSteppingParameters time_stepping_parameters{
+    .timestep_size = 0.1,
+    .number_of_timesteps = 10,
+    .time_integrator_type = TimeIntegratorType::verlet};
+  mfem::Mesh mesh = mfem::Mesh::MakeCartesian1D(10);
+  constexpr int es_basis_order = 1;
+  Discretization es_discretization(&mesh, es_basis_order, FETypes::HGRAD);
+  const bool push_low_fidelity_with_particle_fields = false;
+
+  std::unique_ptr<TimeIntegrator> time_integrator = buildTimeIntegrator(
+    time_stepping_parameters, es_discretization, push_low_fidelity_with_particle_fields);
+  ASSERT_NO_THROW([[maybe_unused]] auto verlet = dynamic_cast<VerletTimeIntegrator&>(*time_integrator));
+}
+
+TEST(TimeSteppingFactory, buildTimeIntegrator_ForwardEulerIntegratorCanBeBuilt) {
+  TimeSteppingParameters time_stepping_parameters{
+    .timestep_size = 0.1,
+    .number_of_timesteps = 10,
+    .time_integrator_type = TimeIntegratorType::forward_euler};
+  mfem::Mesh mesh = mfem::Mesh::MakeCartesian1D(10);
+  constexpr int es_basis_order = 1;
+  Discretization es_discretization(&mesh, es_basis_order, FETypes::HGRAD);
+  const bool push_low_fidelity_with_particle_fields = false;
+
+  std::unique_ptr<TimeIntegrator> time_integrator = buildTimeIntegrator(
+    time_stepping_parameters, es_discretization, push_low_fidelity_with_particle_fields);
+  ASSERT_NO_THROW([[maybe_unused]] auto forward_euler = dynamic_cast<ForwardEulerTimeIntegrator&>(*time_integrator));
 }
 
 }

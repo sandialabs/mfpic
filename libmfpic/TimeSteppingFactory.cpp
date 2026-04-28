@@ -1,5 +1,9 @@
 #include <libmfpic/TimeSteppingFactory.hpp>
+
 #include <libmfpic/Errors.hpp>
+#include <libmfpic/ForwardEulerTimeIntegrator.hpp>
+#include <libmfpic/TimeIntegrator.hpp>
+#include <libmfpic/VerletTimeIntegrator.hpp>
 
 #include <yaml-cpp/yaml.h>
 
@@ -44,6 +48,25 @@ TimeSteppingParameters buildTimeSteppingParametersFromYAML(const YAML::Node& tim
   }
 
   return parameters;
+}
+
+std::unique_ptr<TimeIntegrator> buildTimeIntegrator(
+  const TimeSteppingParameters& time_stepping_parameters,
+  Discretization& electrostatic_discretization,
+  const bool push_low_fidelity_with_particle_fields)
+{
+  std::unique_ptr<TimeIntegrator> time_integrator;
+  switch (time_stepping_parameters.time_integrator_type) {
+    case TimeIntegratorType::verlet:
+      time_integrator = std::make_unique<VerletTimeIntegrator>(
+        electrostatic_discretization,
+        push_low_fidelity_with_particle_fields);
+      break;
+    case TimeIntegratorType::forward_euler:
+      time_integrator = std::make_unique<ForwardEulerTimeIntegrator>(electrostatic_discretization);
+      break;
+  }
+  return time_integrator;
 }
 
 } // namespace mfpic

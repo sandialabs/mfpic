@@ -1,10 +1,15 @@
 #pragma once
 
+#include <memory>
+
 namespace YAML {
 class Node;
 }
 
 namespace mfpic {
+
+class Discretization;
+class TimeIntegrator;
 
 enum class TimeIntegratorType { verlet, forward_euler };
 
@@ -24,4 +29,16 @@ struct TimeSteppingParameters {
  */
 TimeSteppingParameters buildTimeSteppingParametersFromYAML(const YAML::Node& time_stepping);
 
+/**
+ * @brief construct a time integrator based on user input
+ * 
+ * @param time_stepping_parameters - parameters defining time stepping
+ * @param electrostatic_discretization - discretization of the electrostatic solve
+ * @param push_low_fidelity_with_particle_fields - some time integrators switch which field state to use based on this flag
+ * @return std::unique_ptr<TimeIntegrator> - pointer to the time integrator to be used in the simulation
+ */
+std::unique_ptr<TimeIntegrator> buildTimeIntegrator(
+  const TimeSteppingParameters& time_stepping_parameters,
+  Discretization& electrostatic_discretization,
+  const bool push_low_fidelity_with_particle_fields);
 }
