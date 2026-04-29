@@ -119,14 +119,32 @@ TEST(ParticleContainer, SizeOfParticlesWithElementAndSpeciesMatchesExpectedNumbe
   const Species checked_species = species_0;
   for (int i = 0; i < expected_num_particles; i++) {
     particles.addParticle(Particle{.element = checked_element, .species = checked_species});
+    constexpr int unchecked_element = 2;
+    const Species unchecked_species = species_1;
+    particles.addParticle(Particle{.element = unchecked_element, .species = unchecked_species});
   }
-  constexpr int unchecked_element = 2;
-  const Species unchecked_species = species_1;
-  particles.addParticle(Particle{.element = unchecked_element, .species = unchecked_species});
 
   std::span<Particle> checked_particles = particles.particlesWithElementAndSpecies(checked_element, checked_species);
 
   ASSERT_EQ(expected_num_particles, checked_particles.size());
+}
+
+TEST(ParticleContainer, AllParticlesWithElementAndSpeciesActuallyHaveRequestedElementAndSpecies) {
+  ParticleContainer particles;
+  constexpr int expected_num_particles = 4;
+  constexpr int requested_element = 3;
+  const Species requested_species = species_0;
+  for (int i = 0; i < expected_num_particles; i++) {
+    particles.addParticle(Particle{.element = requested_element, .species = requested_species});
+    constexpr int unrequested_element = 2;
+    const Species unrequested_species = species_1;
+    particles.addParticle(Particle{.element = unrequested_element, .species = unrequested_species});
+  }
+
+  for (const Particle& particle : particles.particlesWithElementAndSpecies(requested_element, requested_species)) {
+    EXPECT_EQ(particle.element, requested_element);
+    EXPECT_EQ(particle.species, requested_species);
+  }
 }
 
 } // namespace
