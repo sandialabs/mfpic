@@ -425,4 +425,147 @@ mfem::DenseMatrix DGEulerOperations::integralForVarianceReducedNumberDensity(mfe
     return temperature_integral;
   }
 
+
+mfem::DenseMatrix DGEulerOperations::getCellAveragedNumberDensity(const LowFidelityState& current_state) const
+{
+  int num_species = current_state.numSpecies(); 
+  mfem::FiniteElementSpace finite_element_space = charge_discretization_.getFeSpace();
+  mfem::Mesh& mesh = *finite_element_space.GetMesh();
+  mfem::DenseMatrix number_density_integral;
+
+  number_density_integral.SetSize(mesh.GetNE(), num_species);
+  number_density_integral = 0.0;
+
+  for (int ispecies = 0; ispecies < current_state.numSpecies(); ++ispecies) {
+    const LowFidelitySpeciesState& current_species_state = current_state.getSpeciesState(ispecies);
+    Species current_species = current_species_state.getSpecies();
+    int species_id = current_species.id;
+    const mfem::GridFunction& current_species_grid_function = current_species_state.getGridFunction();
+    mfem::DenseMatrix fluid_state_at_integration_point_locations, integration_point_locations_in_physical_frame;
+
+    for (int element=0; element<finite_element_space.GetNE(); element++)
+    {
+      const mfem::IntegrationRule &integration_rule = mfem::IntRules.Get(
+        finite_element_space.GetFE(element)->GetGeomType(),
+        2*finite_element_space.GetFE(element)->GetOrder());
+
+      mfem::ElementTransformation* element_transformation = finite_element_space.GetElementTransformation(element);
+      element_transformation->Transform(integration_rule, integration_point_locations_in_physical_frame);
+      current_species_grid_function.GetVectorValues(
+        *element_transformation, integration_rule, fluid_state_at_integration_point_locations);
+
+      mfem::Vector position(integration_point_locations_in_physical_frame.NumRows());
+      mfem::Vector fluid_state(dg_assemblers_[ispecies]->getNumberOfEquations());
+      const double element_volume = mesh.GetElementVolume(element);
+
+      for (int ipoint = 0; ipoint < integration_rule.GetNPoints(); ++ipoint) 
+      {
+        const mfem::IntegrationPoint &integration_point = integration_rule.IntPoint(ipoint); 
+        element_transformation->SetIntPoint(&integration_point);
+        integration_point_locations_in_physical_frame.GetColumn(ipoint, position);
+        fluid_state_at_integration_point_locations.GetColumn(ipoint, fluid_state);
+        mfem::Vector primitive_state = euler::convertFromConservativeToPrimitive(fluid_state, current_species);
+        const double weight = integration_point.weight * element_transformation->Weight();
+        number_density_integral(element,species_id) += weight * primitive_state(euler::PrimitiveVariables::NUMBER_DENSITY) / element_volume;
+      }
+    }
+  }
+  return number_density_integral;
+}
+
+mfem::DenseTensor DGEulerOperations::getCellAveragedBulkVelocity(const LowFidelityState& current_state) const
+{
+  int num_species = current_state.numSpecies(); 
+  mfem::FiniteElementSpace finite_element_space = charge_discretization_.getFeSpace();
+  mfem::Mesh& mesh = *finite_element_space.GetMesh();
+  mfem::DenseTensor bulk_velocity_integral;
+  bulk_velocity_integral.SetSize(3,mesh.GetNE(), num_species);
+  bulk_velocity_integral = 0.0;
+
+  for (int ispecies = 0; ispecies < current_state.numSpecies(); ++ispecies) {
+    const LowFidelitySpeciesState& current_species_state = current_state.getSpeciesState(ispecies);
+    Species current_species = current_species_state.getSpecies();
+    int species_id = current_species.id;
+    const mfem::GridFunction& current_species_grid_function = current_species_state.getGridFunction();
+    mfem::DenseMatrix fluid_state_at_integration_point_locations, integration_point_locations_in_physical_frame;
+
+    for (int element=0; element<finite_element_space.GetNE(); element++)
+    {
+      const mfem::IntegrationRule &integration_rule = mfem::IntRules.Get(
+        finite_element_space.GetFE(element)->GetGeomType(),
+        2*finite_element_space.GetFE(element)->GetOrder());
+
+      mfem::ElementTransformation* element_transformation = finite_element_space.GetElementTransformation(element);
+      element_transformation->Transform(integration_rule, integration_point_locations_in_physical_frame);
+      current_species_grid_function.GetVectorValues(
+        *element_transformation, integration_rule, fluid_state_at_integration_point_locations);
+
+      mfem::Vector position(integration_point_locations_in_physical_frame.NumRows());
+      mfem::Vector fluid_state(dg_assemblers_[ispecies]->getNumberOfEquations());
+      const double element_volume = mesh.GetElementVolume(element);
+
+      for (int ipoint = 0; ipoint < integration_rule.GetNPoints(); ++ipoint) 
+      {
+        const mfem::IntegrationPoint &integration_point = integration_rule.IntPoint(ipoint); 
+        element_transformation->SetIntPoint(&integration_point);
+        integration_point_locations_in_physical_frame.GetColumn(ipoint, position);
+        fluid_state_at_integration_point_locations.GetColumn(ipoint, fluid_state);
+        mfem::Vector primitive_state = euler::convertFromConservativeToPrimitive(fluid_state, current_species);
+        const double weight = integration_point.weight * element_transformation->Weight();
+        mfem::Vector velocity_in_element(bulk_velocity_integral(species_id).GetColumn(element), 3);
+        velocity_in_element(0) += weight * primitive_state(euler::PrimitiveVariables::X_BULK_VELOCITY) / element_volume;
+        velocity_in_element(1) += weight * primitive_state(euler::PrimitiveVariables::Y_BULK_VELOCITY) / element_volume;
+        velocity_in_element(2) += weight * primitive_state(euler::PrimitiveVariables::Z_BULK_VELOCITY) / element_volume;
+      }
+    }
+  }
+  return bulk_velocity_integral;
+}
+
+mfem::DenseMatrix DGEulerOperations::getCellAveragedTemperature(const LowFidelityState& current_state) const
+{
+  int num_species = current_state.numSpecies(); 
+  mfem::FiniteElementSpace finite_element_space = charge_discretization_.getFeSpace();
+  mfem::Mesh& mesh = *finite_element_space.GetMesh();
+  mfem::DenseMatrix temperature_integral;
+  temperature_integral.SetSize(mesh.GetNE(), num_species);
+  temperature_integral = 0.0;
+
+  for (int ispecies = 0; ispecies < current_state.numSpecies(); ++ispecies) {
+    const LowFidelitySpeciesState& current_species_state = current_state.getSpeciesState(ispecies);
+    Species current_species = current_species_state.getSpecies();
+    int species_id = current_species.id;
+    const mfem::GridFunction& current_species_grid_function = current_species_state.getGridFunction();
+    mfem::DenseMatrix fluid_state_at_integration_point_locations, integration_point_locations_in_physical_frame;
+
+    for (int element=0; element<finite_element_space.GetNE(); element++)
+    {
+      const mfem::IntegrationRule &integration_rule = mfem::IntRules.Get(
+        finite_element_space.GetFE(element)->GetGeomType(),
+        2*finite_element_space.GetFE(element)->GetOrder());
+
+      mfem::ElementTransformation* element_transformation = finite_element_space.GetElementTransformation(element);
+      element_transformation->Transform(integration_rule, integration_point_locations_in_physical_frame);
+      current_species_grid_function.GetVectorValues(
+        *element_transformation, integration_rule, fluid_state_at_integration_point_locations);
+
+      mfem::Vector position(integration_point_locations_in_physical_frame.NumRows());
+      mfem::Vector fluid_state(dg_assemblers_[ispecies]->getNumberOfEquations());
+      const double element_volume = mesh.GetElementVolume(element);
+
+      for (int ipoint = 0; ipoint < integration_rule.GetNPoints(); ++ipoint) 
+      {
+        const mfem::IntegrationPoint &integration_point = integration_rule.IntPoint(ipoint); 
+        element_transformation->SetIntPoint(&integration_point);
+        integration_point_locations_in_physical_frame.GetColumn(ipoint, position);
+        fluid_state_at_integration_point_locations.GetColumn(ipoint, fluid_state);
+        mfem::Vector primitive_state = euler::convertFromConservativeToPrimitive(fluid_state, current_species);
+        const double weight = integration_point.weight * element_transformation->Weight();
+        temperature_integral(element,species_id) += weight * primitive_state(euler::PrimitiveVariables::TEMPERATURE) / element_volume;
+      }
+    }
+  }
+  return temperature_integral;
+}
+
 } // namespace mfpic

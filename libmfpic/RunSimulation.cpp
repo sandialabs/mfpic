@@ -135,6 +135,8 @@ void runSimulation(int argc, char* argv[]) {
     if (!ops) throw std::runtime_error("Cannot compute variance reduced moments for low_fidelity_operations[i] that is not DGEulerOperations.");
     const std::string variance_reduced_prefix = "variance_reduced_particle_moments";
     dumpVarianceReducedParticleMoments(particle_operations,particle_container,low_fidelity_states[i],*ops,variance_reduced_prefix, 0, 0.0);
+    const std::string low_fidelity_prefix = "low_fidelity_moments";
+    dumpLowFidelityMoments(low_fidelity_states[i],*ops,low_fidelity_prefix, 0, 0.0);
   }
 
   OutputParameters output_parameters;
@@ -215,6 +217,8 @@ void runSimulation(int argc, char* argv[]) {
         if (!ops) throw std::runtime_error("Cannot compute variance reduced moments for low_fidelity_operations[i] that is not DGEulerOperations.");
         const std::string variance_reduced_prefix = "variance_reduced_particle_moments";
         dumpVarianceReducedParticleMoments(particle_operations,particle_container,low_fidelity_states[i],*ops,variance_reduced_prefix, i_timestep, end_time);
+        const std::string low_fidelity_prefix = "low_fidelity_moments";
+        dumpLowFidelityMoments(low_fidelity_states[i],*ops,low_fidelity_prefix, i_timestep, end_time);
       }
 
       mesh_data_writer.output(

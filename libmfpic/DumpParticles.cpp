@@ -214,4 +214,57 @@ void dumpVarianceReducedParticleMoments(
   }
 }
 
+void dumpLowFidelityMoments(
+  const LowFidelityState& low_fidelity_state,
+  const DGEulerOperations& low_fidelity_operations,
+  const std::string& file_prefix,
+  const int step,
+  const double time) 
+{
+
+  mfem::DenseMatrix number_density = low_fidelity_operations.getCellAveragedNumberDensity(low_fidelity_state);
+  mfem::DenseTensor bulk_velocity = low_fidelity_operations.getCellAveragedBulkVelocity(low_fidelity_state);
+  mfem::DenseMatrix temperature = low_fidelity_operations.getCellAveragedTemperature(low_fidelity_state);
+
+  mfem::Mesh& mesh = low_fidelity_operations.getMesh();
+  const int nelem = mesh.GetNE();
+
+  for (int s = 0; s < low_fidelity_state.numSpecies(); ++s) {
+    std::string filename = file_prefix + "_species_" + std::to_string(s) + ".csv";
+
+    std::ofstream out;
+    if (step > 0)
+      out.open(filename, std::ios::out | std::ios::app);
+    else
+      out.open(filename, std::ios::out | std::ios::trunc);  
+    if (!out) throw std::runtime_error("Failed to open CSV file: " + filename);
+
+    out.setf(std::ios::scientific);
+    out << std::setprecision(17);
+
+    const bool need_header = fileIsEmpty(filename);
+    if (need_header) {
+      out << "step,time,elem,x,y,z,number_density,temperature,bulk_velocity_0,bulk_velocity_1,bulk_velocity_2\n";
+    }
+
+    for (int e = 0; e < nelem; ++e) {
+      mfem::Vector element_point(3);
+      element_point = 0.0;
+      const int dim = mesh.SpaceDimension();
+      mfem::Vector element_point_view(element_point.GetData(), dim);   
+      mesh.GetElementCenter(e, element_point_view);
+
+      const mfem::Vector bulk_velocity_in_element(bulk_velocity(s).GetColumn(e), 3);
+
+      out << step << ","
+          << time << ","
+          << e << ","
+          << element_point(0) << "," << element_point(1) << "," << element_point(2) << ","
+          << number_density(e, s) << ","
+          << temperature(e, s) << ","
+          << bulk_velocity_in_element(0) << "," << bulk_velocity_in_element(1) << "," << bulk_velocity_in_element(2) << "\n";
+    }
+  }
+}
+
 } // namespace mfpic

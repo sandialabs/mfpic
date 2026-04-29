@@ -143,6 +143,13 @@ public:
     const int element,
     const Species& species) const override;
 
+  /**
+   * @brief Get mfem mesh associated with the discretization
+   *
+   * @return mfem::Mesh 
+   */
+  mfem::Mesh& getMesh() const {return *charge_discretization_.getFeSpace().GetMesh();};
+
   mfem::DenseMatrix integralForVarianceReducedNumberDensity(
     mfem::FiniteElementSpace finite_element_space, 
     const LowFidelityState& current_state
@@ -158,11 +165,24 @@ public:
     const LowFidelityState& current_state
   ) const;
 
+  mfem::DenseMatrix getCellAveragedNumberDensity(
+    const LowFidelityState& current_state
+  ) const;
+
+  mfem::DenseTensor getCellAveragedBulkVelocity(
+    const LowFidelityState& current_state
+  ) const;
+
+  mfem::DenseMatrix getCellAveragedTemperature(
+    const LowFidelityState& current_state
+  ) const;
+
 private:
   Discretization & charge_discretization_;
   std::vector<std::shared_ptr<DGEulerAssembly>> dg_assemblers_;
   mutable mfem::Vector rhs_;
   mutable mfem::Vector temp_vector_;
+
 };
 
 } // namespace
