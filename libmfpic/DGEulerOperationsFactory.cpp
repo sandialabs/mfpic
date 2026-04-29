@@ -34,7 +34,7 @@ std::unique_ptr<LowFidelityOperations> buildDGEulerOperations(
     }
     if (not sources.empty()) {
       for (auto & [source_species, coefficient] : sources) {
-        if (source_species.id == species.id) {
+        if (source_species == species) {
           dg_assemblers.back()->setVolumetricSourceCoefficient(std::move(coefficient));
         }
       }

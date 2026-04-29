@@ -24,12 +24,22 @@ int ParticleContainer::numParticles() const {
 
 void ParticleContainer::addParticle(Particle particle) {
   particle_list_.push_back(particle);
+  const Species& particle_species = particle.species;
+  if (std::find(species_represented_by_these_particles_.begin(), species_represented_by_these_particles_.end(), particle_species) == species_represented_by_these_particles_.end()) {
+    species_represented_by_these_particles_.push_back(particle_species);
+  }
 }
 
 void ParticleContainer::addParticles(const ParticleContainer &particles) {
   for (const Particle& particle : particles) {
     addParticle(particle);
   }
+}
+
+int ParticleContainer::getParticleSpeciesIndex(const Particle& particle) const {
+  const Species& particle_species = particle.species;
+  const auto species_iterator = std::find(species_represented_by_these_particles_.begin(), species_represented_by_these_particles_.end(), particle_species);
+  return std::distance(species_represented_by_these_particles_.begin(), species_iterator);
 }
 
 void ParticleContainer::cleanOutDeadParticles() {

@@ -17,10 +17,10 @@ namespace {
 
 using namespace mfpic;
 
-constexpr Species species_0{.charge =  1.0, .mass = 2.0, .specific_heat_ratio = 1.4, .id = 0};
-constexpr Species species_1{.charge = -1.0, .mass = 3.0, .specific_heat_ratio = 2.8, .id = 1};
-constexpr Species species_2{.charge =  4.0, .mass = 6.0, .specific_heat_ratio = 4.2, .id = 2};
-constexpr Species species_3{.charge = -2.0, .mass = 1.5, .specific_heat_ratio = 5.6, .id = 3};
+const Species species_0{.charge =  1.0, .mass = 2.0, .specific_heat_ratio = 1.4};
+const Species species_1{.charge = -1.0, .mass = 3.0, .specific_heat_ratio = 2.8};
+const Species species_2{.charge =  4.0, .mass = 6.0, .specific_heat_ratio = 4.2};
+const Species species_3{.charge = -2.0, .mass = 1.5, .specific_heat_ratio = 5.6};
 
 const std::vector<Species> species_list{species_0,species_1,species_2,species_3};
 

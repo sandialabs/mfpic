@@ -158,7 +158,7 @@ static std::vector<std::string> splitCsv(const std::string& line)
 static int stringToInt(const std::string& s) { return std::stoi(s); }
 static double stringToDouble(const std::string& s) { return std::stod(s); }
 
-constexpr Species default_species{.charge = 1.0, .mass = 1.0, .id = 0};
+const Species default_species{.charge = 1.0, .mass = 1.0};
 const std::vector<std::shared_ptr<ParticleBoundaryFactory>> empty_particle_boundary_factory_list;
 const std::shared_ptr<ParticleBoundaryFactory> default_reflecting_particle_boundary_factory
   = std::make_shared<ReflectingParticleBoundaryFactory>();
@@ -248,8 +248,8 @@ TEST(DumpParticles, CSVCorrectForOneSpecies)
 TEST(DumpParticles, CSVCorrectForTwoSpecies)
 {
 
-  constexpr Species species_1{.charge = 1.0, .mass = 1.0, .id = 0};
-  constexpr Species species_2{.charge = 2.0, .mass = 2.0, .id = 1};
+  const Species species_1{.charge = 1.0, .mass = 1.0};
+  const Species species_2{.charge = 2.0, .mass = 2.0};
   const int num_elems = 5;
   std::shared_ptr<mfem::Mesh> mesh = std::make_shared<mfem::Mesh>(mfem::Mesh::MakeCartesian1D(num_elems, .234));
   constexpr int order = 1;

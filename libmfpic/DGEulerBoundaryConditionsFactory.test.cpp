@@ -119,7 +119,7 @@ TEST(DGEulerBoundaryConditionsFactory, BoundaryAttributeToBCTypeGivesCorrectBoun
   mfem::Mesh mesh = mfem::Mesh::MakeCartesian1D(10);
   constexpr int boundary_attribute = 1;
   std::unordered_map<int, DGEulerBCType> boundary_attribute_to_bc_type{{1, DGEulerBCType::REFLECTING}};
-  constexpr Species default_species;
+  const Species default_species;
   std::vector<Species> species_list = {default_species, default_species};
   std::vector<std::vector<std::unique_ptr<DGBC>>> dg_euler_bcs = buildDGEulerBoundaryConditions(boundary_attribute_to_bc_type, mesh, species_list);
   EXPECT_EQ(2, std::ssize(dg_euler_bcs));
