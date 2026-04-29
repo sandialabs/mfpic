@@ -17,7 +17,7 @@ class Discretization;
 class TimeIntegrator {
 public:
   /**
-   * @brief Advance the particle and low fidelity states one timestep using the Verlet algorithm
+   * @brief Advance the particle and low fidelity states one timestep
    *
    * @param[inout] low_fidelity_states Vector of \ref LowFidelityState 's to be updated
    * @param[inout] low_fidelity_field_states Vector of \ref ElectrostaticFieldStates to be updated

@@ -15,8 +15,9 @@ class Discretization;
 class ForwardEulerTimeIntegrator : public TimeIntegrator {
 public:
   ForwardEulerTimeIntegrator(Discretization& discretization) : discretization_(discretization) {}
+
   /**
-   * @brief Advance the particle and low fidelity states one timestep using the Verlet algorithm
+   * @brief Advance the low fidelity states one timestep using the Forward Euler algorithm
    *
    * @param[inout] low_fidelity_states Vector of \ref LowFidelityState 's to be updated
    * @param[inout] low_fidelity_field_states Vector of \ref ElectrostaticFieldStates to be updated
