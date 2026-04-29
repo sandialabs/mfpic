@@ -88,36 +88,13 @@ TEST(ParticleContainer, SortByElementsWithOneSpecies) {
   checkThatParticlesAreSortedByElementThenSpecies(to_sort);
 }
 
-TEST(ParticleContainer, SortBySpeciesWithAllParticlesInElementZero) {
-  ParticleContainer to_sort;
-  to_sort.addParticle(Particle{.element = 0, .species = species_2});
-  to_sort.addParticle(Particle{.element = 0, .species = species_1});
-  to_sort.addParticle(Particle{.element = 0, .species = species_0});
-
-  to_sort.sortByElementThenSpecies();
-
-  checkThatParticlesAreSortedByElementThenSpecies(to_sort);
-}
-
-TEST(ParticleContainer, SortBySpeciesWithAllParticlesInElementNonzero) {
-  constexpr int element = 3;
-  ParticleContainer to_sort;
-  to_sort.addParticle(Particle{.element = element, .species = species_2});
-  to_sort.addParticle(Particle{.element = element, .species = species_1});
-  to_sort.addParticle(Particle{.element = element, .species = species_0});
-
-  to_sort.sortByElementThenSpecies();
-
-  checkThatParticlesAreSortedByElementThenSpecies(to_sort);
-}
-
 TEST(ParticleContainer, SortByElementThenSpecies) {
   ParticleContainer to_sort;
-  to_sort.addParticle(Particle{.element = 4, .species = species_1});
-  to_sort.addParticle(Particle{.element = 2, .species = species_1});
-  to_sort.addParticle(Particle{.element = 2, .species = species_0});
+  to_sort.addParticle(Particle{.element = 3, .species = species_0});
   to_sort.addParticle(Particle{.element = 2, .species = species_0});
   to_sort.addParticle(Particle{.element = 3, .species = species_0});
+  to_sort.addParticle(Particle{.element = 4, .species = species_1});
+  to_sort.addParticle(Particle{.element = 2, .species = species_1});
 
   to_sort.sortByElementThenSpecies();
 
@@ -126,8 +103,8 @@ TEST(ParticleContainer, SortByElementThenSpecies) {
 
 TEST(ParticleContainer, ParticlesWithElementAndSpeciesEmptyIfNoSuchParticlesExist) {
   ParticleContainer no_particles_in_element_1_with_species_0;
-  no_particles_in_element_1_with_species_0.addParticle(Particle{.element = 1, .species = species_1});
-  no_particles_in_element_1_with_species_0.addParticle(Particle{.element = 0, .species = species_0});
+  no_particles_in_element_1_with_species_0.addParticle(Particle{.element = 1, .species = species_0});
+  no_particles_in_element_1_with_species_0.addParticle(Particle{.element = 0, .species = species_1});
 
   std::span<Particle> particles_in_element_1_with_species_0 =
     no_particles_in_element_1_with_species_0.particlesWithElementAndSpecies(1, species_0);
