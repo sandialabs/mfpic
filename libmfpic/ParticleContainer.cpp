@@ -110,9 +110,9 @@ void ParticleContainer::sortByElementThenSpecies() {
 }
 
 std::span<Particle> ParticleContainer::particlesWithElementAndSpecies(int element, const Species& species) {
-  assert(element < (std::ssize(element_species_bins_) - 1) / numSpecies());
-
   sortByElementThenSpecies();
+
+  assert(element < (std::ssize(element_species_bins_) - 1) / numSpecies());
 
   const int species_index = findSpeciesIndex(species_represented_by_these_particles_, species);
   const int flattened_bin_index = element * numSpecies() + species_index;
