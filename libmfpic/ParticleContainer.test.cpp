@@ -45,26 +45,6 @@ TEST(ParticleContainer, AddParticlesAddsParticles) {
   EXPECT_EQ(added_particle.element, element);
 }
 
-void checkThatParticlesAreSortedByElementThenSpecies(const ParticleContainer& particles) {
-  for (
-    auto particle_iter = particles.begin();
-    std::distance(particle_iter, particles.end()) > 1;
-    std::advance(particle_iter, 1)
-  ) {
-    const Particle& this_particle = *particle_iter;
-    const Particle& next_particle = *std::next(particle_iter);
-    if (this_particle.element == next_particle.element) {
-      EXPECT_LE(
-        particles.getParticleSpeciesIndex(this_particle),
-        particles.getParticleSpeciesIndex(next_particle)
-      );
-    }
-    else {
-      EXPECT_LT(this_particle.element, next_particle.element);
-    }
-  }
-}
-
 TEST(ParticleContainer, SortingAlreadySortedParticlesPreservesSortedness) {
   ParticleContainer already_sorted;
   already_sorted.addParticle(Particle{.element = 0, .species = species_0});
@@ -72,9 +52,9 @@ TEST(ParticleContainer, SortingAlreadySortedParticlesPreservesSortedness) {
   already_sorted.addParticle(Particle{.element = 1, .species = species_0});
   already_sorted.addParticle(Particle{.element = 1, .species = species_1});
 
+  ASSERT_TRUE(already_sorted.isSortedByElementThenSpecies());
   already_sorted.sortByElementThenSpecies();
-
-  checkThatParticlesAreSortedByElementThenSpecies(already_sorted);
+  ASSERT_TRUE(already_sorted.isSortedByElementThenSpecies());
 }
 
 TEST(ParticleContainer, SortByElementsWithOneSpecies) {
@@ -83,9 +63,9 @@ TEST(ParticleContainer, SortByElementsWithOneSpecies) {
   to_sort.addParticle(Particle{.element = 0});
   to_sort.addParticle(Particle{.element = 1});
 
+  ASSERT_FALSE(to_sort.isSortedByElementThenSpecies());
   to_sort.sortByElementThenSpecies();
-
-  checkThatParticlesAreSortedByElementThenSpecies(to_sort);
+  ASSERT_TRUE(to_sort.isSortedByElementThenSpecies());
 }
 
 TEST(ParticleContainer, SortByElementThenSpecies) {
@@ -96,9 +76,9 @@ TEST(ParticleContainer, SortByElementThenSpecies) {
   to_sort.addParticle(Particle{.element = 4, .species = species_1});
   to_sort.addParticle(Particle{.element = 2, .species = species_1});
 
+  ASSERT_FALSE(to_sort.isSortedByElementThenSpecies());
   to_sort.sortByElementThenSpecies();
-
-  checkThatParticlesAreSortedByElementThenSpecies(to_sort);
+  ASSERT_TRUE(to_sort.isSortedByElementThenSpecies());
 }
 
 TEST(ParticleContainer, ParticlesWithElementAndSpeciesEmptyIfNoSuchParticlesExist) {
@@ -106,6 +86,7 @@ TEST(ParticleContainer, ParticlesWithElementAndSpeciesEmptyIfNoSuchParticlesExis
   no_particles_in_element_1_with_species_0.addParticle(Particle{.element = 0, .species = species_0});
   no_particles_in_element_1_with_species_0.addParticle(Particle{.element = 1, .species = species_1});
 
+  no_particles_in_element_1_with_species_0.sortByElementThenSpecies();
   std::span<Particle> particles_in_element_1_with_species_0 =
     no_particles_in_element_1_with_species_0.particlesWithElementAndSpecies(1, species_0);
 
@@ -124,6 +105,7 @@ TEST(ParticleContainer, SizeOfParticlesWithElementAndSpeciesMatchesExpectedNumbe
     particles.addParticle(Particle{.element = unchecked_element, .species = unchecked_species});
   }
 
+  particles.sortByElementThenSpecies();
   std::span<Particle> checked_particles = particles.particlesWithElementAndSpecies(checked_element, checked_species);
 
   ASSERT_EQ(expected_num_particles, checked_particles.size());
@@ -141,6 +123,7 @@ TEST(ParticleContainer, AllParticlesWithElementAndSpeciesActuallyHaveRequestedEl
     particles.addParticle(Particle{.element = unrequested_element, .species = unrequested_species});
   }
 
+  particles.sortByElementThenSpecies();
   for (const Particle& particle : particles.particlesWithElementAndSpecies(requested_element, requested_species)) {
     EXPECT_EQ(particle.element, requested_element);
     EXPECT_EQ(particle.species, requested_species);
