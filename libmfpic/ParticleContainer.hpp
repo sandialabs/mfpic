@@ -77,8 +77,7 @@ public:
     assert(self.isSortedByElementThenSpecies());
     assert(element < (std::ssize(self.element_species_bins_) - 1) / self.numSpecies());
 
-    const auto species_iterator = std::find(self.species_represented_by_these_particles_.begin(), self.species_represented_by_these_particles_.end(), species);
-    const int species_index = std::distance(self.species_represented_by_these_particles_.begin(), species_iterator);
+    const int species_index = self.getSpeciesIndex_(species);
     const int flattened_bin_index = element * self.numSpecies() + species_index;
     const int element_species_bin_begin = self.element_species_bins_[flattened_bin_index];
     const int element_species_bin_end = self.element_species_bins_[flattened_bin_index + 1];
@@ -89,6 +88,15 @@ public:
   }
 
 private:
+  /**
+   * @brief Find the index of the given species in the internal species list.
+   *
+   * @param[in] species Species whose index to get.
+   *
+   * @returns Index of the given species in the internal species list.
+   */
+  int getSpeciesIndex_(const Species& species) const;
+
   /// List of particles.
   std::vector<Particle> particle_list_;
 

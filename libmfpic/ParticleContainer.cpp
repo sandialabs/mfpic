@@ -3,18 +3,6 @@
 
 namespace mfpic {
 
-namespace {
-
-int findSpeciesIndex(const std::vector<Species>& species_list, const Species& species_to_find) {
-  const auto species_iterator = std::find(species_list.begin(), species_list.end(), species_to_find);
-  if (species_iterator == species_list.end()) {
-    errorWithDeveloperMessage("Species not found in list!");
-  }
-  return std::distance(species_list.begin(), species_iterator);
-}
-
-} // namespace
-
 ParticleContainer::ParticleListType::iterator ParticleContainer::begin() {
   return particle_list_.begin();
 }
@@ -55,7 +43,7 @@ void ParticleContainer::addParticles(const ParticleContainer &particles) {
 
 int ParticleContainer::getParticleSpeciesIndex(const Particle& particle) const {
   const Species& particle_species = particle.species;
-  return findSpeciesIndex(species_represented_by_these_particles_, particle_species);
+  return getSpeciesIndex_(particle_species);
 }
 
 void ParticleContainer::cleanOutDeadParticles() {
@@ -117,6 +105,18 @@ bool ParticleContainer::isSortedByElementThenSpecies() const {
     }
   }
   return is_sorted;
+}
+
+int ParticleContainer::getSpeciesIndex_(const Species& species_to_find) const {
+  const auto species_iterator = std::find(
+    species_represented_by_these_particles_.begin(),
+    species_represented_by_these_particles_.end(),
+    species_to_find
+  );
+  if (species_iterator == species_represented_by_these_particles_.end()) {
+    errorWithDeveloperMessage("Species not found in list!");
+  }
+  return std::distance(species_represented_by_these_particles_.begin(), species_iterator);
 }
 
 } // namespace mfpic
