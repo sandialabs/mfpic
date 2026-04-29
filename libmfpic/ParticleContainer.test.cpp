@@ -54,13 +54,13 @@ void checkThatParticlesAreSortedByElementThenSpecies(const ParticleContainer& pa
     const Particle& this_particle = *particle_iter;
     const Particle& next_particle = *std::next(particle_iter);
     if (this_particle.element == next_particle.element) {
-      ASSERT_LE(
+      EXPECT_LE(
         particles.getParticleSpeciesIndex(this_particle),
         particles.getParticleSpeciesIndex(next_particle)
       );
     }
     else {
-      ASSERT_LT(this_particle.element, next_particle.element);
+      EXPECT_LT(this_particle.element, next_particle.element);
     }
   }
 }
