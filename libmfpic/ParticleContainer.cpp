@@ -88,15 +88,16 @@ void ParticleContainer::sortByElementThenSpecies() {
     )] += 1;
   }
 
-  std::vector<int> new_particle_indices(num_elements * num_species);
+  element_species_bin_offsets_ = std::vector<int>(num_elements * num_species);
   std::exclusive_scan(
     num_particles_in_element_and_species.begin(),
     num_particles_in_element_and_species.end(),
-    new_particle_indices.begin(),
+    element_species_bin_offsets_.begin(),
     0
   );
 
   std::vector<Particle> sorted_particles(numParticles());
+  std::vector<int> new_particle_indices = element_species_bin_offsets_;
   for (const Particle& particle : particle_list_) {
     const int new_particle_index = new_particle_indices[flattenElementSpeciesIndex(
       particle.element,
