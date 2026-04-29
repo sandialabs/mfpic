@@ -123,7 +123,8 @@ TEST(ParticleContainer, AllParticlesWithElementAndSpeciesActuallyHaveRequestedEl
   }
 
   particles.sortByElementThenSpecies();
-  for (const Particle& particle : particles.particlesWithElementAndSpecies(requested_element, requested_species)) {
+  const ParticleContainer& const_particles = particles;
+  for (const Particle& particle : const_particles.particlesWithElementAndSpecies(requested_element, requested_species)) {
     EXPECT_EQ(particle.element, requested_element);
     EXPECT_EQ(particle.species, requested_species);
   }
