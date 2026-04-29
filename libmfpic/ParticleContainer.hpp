@@ -32,6 +32,8 @@ private:
   std::vector<Particle> particle_list_;
 
   std::vector<Species> species_represented_by_these_particles_;
+
+  bool is_sorted_ = false;
 };
 
 } // namespace mfpic

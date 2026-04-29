@@ -3,6 +3,7 @@
 namespace mfpic {
 
 ParticleContainer::ParticleListType::iterator ParticleContainer::begin() {
+  is_sorted_ = false;
   return particle_list_.begin();
 }
 
@@ -11,6 +12,7 @@ ParticleContainer::ParticleListType::const_iterator ParticleContainer::begin() c
 }
 
 ParticleContainer::ParticleListType::iterator ParticleContainer::end() {
+  is_sorted_ = false;
   return particle_list_.end();
 }
 
@@ -32,12 +34,14 @@ void ParticleContainer::addParticle(Particle particle) {
   if (std::find(species_represented_by_these_particles_.begin(), species_represented_by_these_particles_.end(), particle_species) == species_represented_by_these_particles_.end()) {
     species_represented_by_these_particles_.push_back(particle_species);
   }
+  is_sorted_ = false;
 }
 
 void ParticleContainer::addParticles(const ParticleContainer &particles) {
   for (const Particle& particle : particles) {
     addParticle(particle);
   }
+  is_sorted_ = false;
 }
 
 int ParticleContainer::getParticleSpeciesIndex(const Particle& particle) const {
