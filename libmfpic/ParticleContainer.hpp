@@ -73,7 +73,20 @@ public:
    *
    * @returns A view of the requested particles, amenable to range-based for loops.
    */
-  std::span<Particle> particlesWithElementAndSpecies(int element, const Species& species);
+  decltype(auto) particlesWithElementAndSpecies(this auto& self, int element, const Species& species) {
+    assert(self.isSortedByElementThenSpecies());
+    assert(element < (std::ssize(self.element_species_bins_) - 1) / self.numSpecies());
+
+    const auto species_iterator = std::find(self.species_represented_by_these_particles_.begin(), self.species_represented_by_these_particles_.end(), species);
+    const int species_index = std::distance(self.species_represented_by_these_particles_.begin(), species_iterator);
+    const int flattened_bin_index = element * self.numSpecies() + species_index;
+    const int element_species_bin_begin = self.element_species_bins_[flattened_bin_index];
+    const int element_species_bin_end = self.element_species_bins_[flattened_bin_index + 1];
+    return std::span(
+      std::next(self.particle_list_.begin(), element_species_bin_begin),
+      std::next(self.particle_list_.begin(), element_species_bin_end)
+    );
+  }
 
 private:
   /// List of particles.
