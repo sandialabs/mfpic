@@ -103,8 +103,8 @@ TEST(ParticleContainer, SortByElementThenSpecies) {
 
 TEST(ParticleContainer, ParticlesWithElementAndSpeciesEmptyIfNoSuchParticlesExist) {
   ParticleContainer no_particles_in_element_1_with_species_0;
-  no_particles_in_element_1_with_species_0.addParticle(Particle{.element = 1, .species = species_0});
-  no_particles_in_element_1_with_species_0.addParticle(Particle{.element = 0, .species = species_1});
+  no_particles_in_element_1_with_species_0.addParticle(Particle{.element = 0, .species = species_0});
+  no_particles_in_element_1_with_species_0.addParticle(Particle{.element = 1, .species = species_1});
 
   std::span<Particle> particles_in_element_1_with_species_0 =
     no_particles_in_element_1_with_species_0.particlesWithElementAndSpecies(1, species_0);
