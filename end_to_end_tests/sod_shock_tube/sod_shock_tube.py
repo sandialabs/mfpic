@@ -46,16 +46,16 @@ base_num_elements = 50
 refinement_levels = [2, 4]
 
 
-def format_mesh_folder_name(refinement_level):
-    return f"MeshOutput{refinement_level:02}"
+def format_mesh_folder_name(refinement_level, time_integrator):
+    return f"MeshOutput{refinement_level:02}{time_integrator.replace(" ", "_")}"
 
 
-def get_input_deck(refinement_level):
+def get_input_deck(refinement_level, time_integrator):
     num_elements = base_num_elements * refinement_level
     dx = domain_length / num_elements
     dt, num_time_steps = utils.compute_timestepping_that_satisfies_cfl(max_cfl, dx, max_wavespeed, final_time)
 
-    mesh_folder_name = format_mesh_folder_name(refinement_level)
+    mesh_folder_name = format_mesh_folder_name(refinement_level, time_integrator)
 
     input_deck_contents = f"""
 Mesh:
@@ -66,6 +66,7 @@ Mesh:
 Time Stepping:
   Number of Time Steps: {num_time_steps}
   Time Step Size: {dt}
+  Type: {time_integrator}
 
 Species:
   neutral_electron:
@@ -100,9 +101,9 @@ Output:
     return input_deck_contents
 
 
-def run(mfpic_executable):
+def run(mfpic_executable, time_integrator):
     for refinement_level in refinement_levels:
-        input_deck_contents = get_input_deck(refinement_level)
+        input_deck_contents = get_input_deck(refinement_level, time_integrator)
         yaml = "sod_shock_tube.yaml"
         with open(yaml, "w") as input_deck:
             input_deck.write(input_deck_contents)
@@ -120,7 +121,7 @@ def compute_error(data, points, exact_solution):
     return error
 
 
-def analyze():
+def analyze(time_integrator):
     exact_mass_density, exact_velocity, exact_pressure = euler_exact_riemann_solver.form_exact_solutions(
         left_state_primitive,
         right_state_primitive,
@@ -133,7 +134,7 @@ def analyze():
     pressure_errors = []
     h_list = []
     for refinement_level in refinement_levels:
-        mesh_folder_name = format_mesh_folder_name(refinement_level)
+        mesh_folder_name = format_mesh_folder_name(refinement_level, time_integrator)
         _, mesh_data = read_mesh_data.read_mesh_data(mesh_folder_name)
 
         points = mesh_data[-1]["points"]
@@ -157,6 +158,10 @@ def analyze():
     mass_density_rates = verification.compute_convergence_rates(mass_density_errors, h_list)
     velocity_rates = verification.compute_convergence_rates(velocity_errors, h_list)
     pressure_rates = verification.compute_convergence_rates(pressure_errors, h_list)
+
+    print(f"mass_density_rates = {mass_density_rates}")
+    print(f"velocity_rates = {velocity_rates}")
+    print(f"pressure_rates = {pressure_rates}")
 
     # since there is a contact wave in this problem the expected convergence rate is
     # only 1/2
@@ -184,9 +189,9 @@ def plot_quantity(data, points, exact_solution, plot_points, time, name, i, figu
     plt.close(fig)
 
 
-def plot():
+def plot(time_integrator):
     for refinement_level in refinement_levels:
-        mesh_folder_name = format_mesh_folder_name(refinement_level)
+        mesh_folder_name = format_mesh_folder_name(refinement_level, time_integrator)
         timesteps, mesh_data = read_mesh_data.read_mesh_data(mesh_folder_name)
 
         points = mesh_data[0]["points"]
@@ -201,7 +206,7 @@ def plot():
         )
         x_plot = np.linspace(0, domain_length, 10 * num_cells)
 
-        figures_directory = f"Figures{refinement_level:02}"
+        figures_directory = f"Figures{refinement_level:02}{time_integrator.replace(" ", "_")}"
         os.makedirs(figures_directory, exist_ok=True)
         for i in range(len(timesteps)):
             fluid_data = np.transpose(mesh_data[i]["species_0_lf_0"])
@@ -248,8 +253,12 @@ if __name__ == "__main__":
     import sys
 
     if "run" in sys.argv[1:]:
-        run(sys.argv[2])
+        mfpic_executable = sys.argv[2]
+        time_integrator = sys.argv[3]
+        run(mfpic_executable, time_integrator)
     elif "plot" in sys.argv[1:]:
-        plot()
+        time_integrator = sys.argv[2]
+        plot(time_integrator)
     else:
-        analyze()
+        time_integrator = sys.argv[2]
+        analyze(time_integrator)

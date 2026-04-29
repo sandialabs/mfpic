@@ -120,7 +120,6 @@ def check_data_positive_and_constant(data):
         relative_change_in_data = 0
 
     relative_tolerance = 1e-14
-    print(f"relative_change_in_data = {relative_change_in_data}")
     assert(relative_change_in_data < relative_tolerance)
 
 def check_fluid_energy_positive_and_constant(key):
