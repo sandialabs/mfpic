@@ -18,6 +18,8 @@ public:
 
   int numParticles() const;
 
+  int numSpecies() const;
+
   void addParticle(Particle particle);
 
   void addParticles(const ParticleContainer& particles);

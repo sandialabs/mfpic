@@ -22,6 +22,10 @@ int ParticleContainer::numParticles() const {
   return std::ssize(particle_list_);
 }
 
+int ParticleContainer::numSpecies() const {
+  return std::ssize(species_represented_by_these_particles_);
+}
+
 void ParticleContainer::addParticle(Particle particle) {
   particle_list_.push_back(particle);
   const Species& particle_species = particle.species;
