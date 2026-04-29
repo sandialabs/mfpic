@@ -88,16 +88,15 @@ void ParticleContainer::sortByElementThenSpecies() {
     )] += 1;
   }
 
-  element_species_bin_offsets_ = std::vector<int>(num_elements * num_species);
-  std::exclusive_scan(
+  element_species_bins_ = std::vector<int>(num_elements * num_species + 1, 0);
+  std::inclusive_scan(
     num_particles_in_element_and_species.begin(),
     num_particles_in_element_and_species.end(),
-    element_species_bin_offsets_.begin(),
-    0
+    std::next(element_species_bins_.begin())
   );
 
   std::vector<Particle> sorted_particles(numParticles());
-  std::vector<int> new_particle_indices = element_species_bin_offsets_;
+  std::vector<int> new_particle_indices = element_species_bins_;
   for (const Particle& particle : particle_list_) {
     const int new_particle_index = new_particle_indices[flattenElementSpeciesIndex(
       particle.element,
@@ -115,8 +114,8 @@ std::span<Particle> ParticleContainer::particlesWithElementAndSpecies(int elemen
 
   const int species_index = findSpeciesIndex(species_represented_by_these_particles_, species);
   const int flattened_bin_index = element * numSpecies() + species_index;
-  const int element_species_bin_begin = element_species_bin_offsets_[flattened_bin_index];
-  const int element_species_bin_end = element_species_bin_offsets_[flattened_bin_index + 1];
+  const int element_species_bin_begin = element_species_bins_[flattened_bin_index];
+  const int element_species_bin_end = element_species_bins_[flattened_bin_index + 1];
   is_sorted_ = false;
   return std::span(
     std::next(particle_list_.begin(), element_species_bin_begin),

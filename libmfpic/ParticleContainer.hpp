@@ -37,7 +37,7 @@ private:
 
   std::vector<Species> species_represented_by_these_particles_;
 
-  std::vector<int> element_species_bin_offsets_;
+  std::vector<int> element_species_bins_;
 
   bool is_sorted_ = false;
 };
