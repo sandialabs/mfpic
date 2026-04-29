@@ -28,6 +28,8 @@ public:
 
   void cleanOutDeadParticles();
 
+  void sortByElementThenSpecies();
+
 private:
   std::vector<Particle> particle_list_;
 

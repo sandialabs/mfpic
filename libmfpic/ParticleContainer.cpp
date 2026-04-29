@@ -54,4 +54,46 @@ void ParticleContainer::cleanOutDeadParticles() {
   std::erase_if(particle_list_, [](const Particle& particle) {return not particle.is_alive;});
 }
 
+void ParticleContainer::sortByElementThenSpecies() {
+  if (is_sorted_) return;
+
+  cleanOutDeadParticles();
+
+  const Particle& particle_with_max_element =
+    std::ranges::max(particle_list_, {}, [](const Particle& particle) {return particle.element;});
+  const int num_elements = particle_with_max_element.element + 1;
+
+  auto flattenElementSpeciesIndex = [num_elements](int element, int species_index) {
+    return element + num_elements * species_index;
+  };
+
+  std::vector<int> num_particles_in_element_and_species(num_elements * numSpecies(), 0);
+  for (const Particle& particle : particle_list_) {
+    num_particles_in_element_and_species[flattenElementSpeciesIndex(
+      particle.element,
+      getParticleSpeciesIndex(particle)
+    )] += 1;
+  }
+
+  std::vector<int> new_particle_indices(num_elements * numSpecies());
+  std::exclusive_scan(
+    num_particles_in_element_and_species.begin(),
+    num_particles_in_element_and_species.end(),
+    new_particle_indices.begin(),
+    0
+  );
+
+  std::vector<Particle> sorted_particles(numParticles());
+  for (const Particle& particle : particle_list_) {
+    const int new_particle_index = new_particle_indices[flattenElementSpeciesIndex(
+      particle.element,
+      getParticleSpeciesIndex(particle)
+    )]++;
+    sorted_particles[new_particle_index] = particle;
+  }
+
+  particle_list_ = sorted_particles;
+  is_sorted_ = true;
+}
+
 } // namespace mfpic
