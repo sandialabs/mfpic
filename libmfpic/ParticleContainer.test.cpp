@@ -114,10 +114,10 @@ TEST(ParticleContainer, ParticlesWithElementAndSpeciesEmptyIfNoSuchParticlesExis
 
 TEST(ParticleContainer, SizeOfParticlesWithElementAndSpeciesMatchesExpectedNumber) {
   ParticleContainer particles;
-  constexpr int num_expected_particles = 4;
+  constexpr int expected_num_particles = 4;
   constexpr int checked_element = 3;
   const Species checked_species = species_0;
-  for (int i = 0; i < num_expected_particles; i++) {
+  for (int i = 0; i < expected_num_particles; i++) {
     particles.addParticle(Particle{.element = checked_element, .species = checked_species});
   }
   constexpr int unchecked_element = 2;
@@ -126,7 +126,7 @@ TEST(ParticleContainer, SizeOfParticlesWithElementAndSpeciesMatchesExpectedNumbe
 
   std::span<Particle> checked_particles = particles.particlesWithElementAndSpecies(checked_element, checked_species);
 
-  ASSERT_EQ(num_expected_particles, checked_particles.size());
+  ASSERT_EQ(expected_num_particles, checked_particles.size());
 }
 
 } // namespace
