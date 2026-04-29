@@ -122,6 +122,7 @@ TEST(ParticleContainer, SortByElementThenSpecies) {
   to_sort.addParticle(Particle{.element = 4, .species = species_1});
   to_sort.addParticle(Particle{.element = 2, .species = species_1});
   to_sort.addParticle(Particle{.element = 2, .species = species_0});
+  to_sort.addParticle(Particle{.element = 2, .species = species_0});
   to_sort.addParticle(Particle{.element = 3, .species = species_0});
 
   to_sort.sortByElementThenSpecies();
