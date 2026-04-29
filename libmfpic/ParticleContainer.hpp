@@ -30,6 +30,8 @@ public:
 
   void sortByElementThenSpecies();
 
+  std::span<Particle> particlesWithElementAndSpecies(int element, const Species& species);
+
 private:
   std::vector<Particle> particle_list_;
 

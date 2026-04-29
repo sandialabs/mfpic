@@ -110,4 +110,18 @@ void ParticleContainer::sortByElementThenSpecies() {
   is_sorted_ = true;
 }
 
+std::span<Particle> ParticleContainer::particlesWithElementAndSpecies(int element, const Species& species) {
+  sortByElementThenSpecies();
+
+  const int species_index = findSpeciesIndex(species_represented_by_these_particles_, species);
+  const int flattened_bin_index = element * numSpecies() + species_index;
+  const int element_species_bin_begin = element_species_bin_offsets_[flattened_bin_index];
+  const int element_species_bin_end = element_species_bin_offsets_[flattened_bin_index + 1];
+  is_sorted_ = false;
+  return std::span(
+    std::next(particle_list_.begin(), element_species_bin_begin),
+    std::next(particle_list_.begin(), element_species_bin_end)
+  );
+}
+
 } // namespace mfpic
