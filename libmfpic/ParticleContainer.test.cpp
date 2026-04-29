@@ -112,4 +112,18 @@ TEST(ParticleContainer, ParticlesWithElementAndSpeciesEmptyIfNoSuchParticlesExis
   ASSERT_EQ(0, particles_in_element_1_with_species_0.size());
 }
 
+TEST(ParticleContainer, SizeOfParticlesWithElementAndSpeciesMatchesExpectedNumber) {
+  ParticleContainer particles;
+  constexpr int num_expected_particles = 4;
+  constexpr int checked_element = 3;
+  const Species checked_species = species_0;
+  for (int i = 0; i < num_expected_particles; i++) {
+    particles.addParticle(Particle{.element = checked_element, .species = checked_species});
+  }
+
+  std::span<Particle> checked_particles = particles.particlesWithElementAndSpecies(checked_element, checked_species);
+
+  ASSERT_EQ(num_expected_particles, checked_particles.size());
+}
+
 } // namespace
