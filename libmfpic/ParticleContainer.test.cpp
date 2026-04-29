@@ -8,7 +8,6 @@ using namespace mfpic;
 
 const Species species_0{.name = "species_0"};
 const Species species_1{.name = "species_1"};
-const Species species_2{.name = "species_2"};
 
 TEST(ParticleContainer, DefaultInitializedParticleContainerIsEmpty) {
   ParticleContainer particle_container;
