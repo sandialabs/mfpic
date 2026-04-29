@@ -58,11 +58,15 @@ public:
   /// Sort particles in the raw data first by element, and then by species.
   void sortByElementThenSpecies();
 
+  /// Checks whether the particles in the raw data are sorted first by element, and then by species.
+  bool isSortedByElementThenSpecies() const;
+
   /**
    * @brief Get a subview of particles in a given element with a given species.
    *
-   * This internally sorts the particles by element and species so that the span is guaranteed contiguous,
-   * but as a result it is not constant.
+   * Requires particles to be sorted with @ref sortByElementThenSpecies.
+   * Since this is called in parallel, performance-critical kernels,
+   * the status of the sort is not checked in optimized builds.
    *
    * @param[in] element Element in which to look for particles.
    * @param[in] species Species of particles for which to look.

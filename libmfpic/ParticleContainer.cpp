@@ -102,9 +102,25 @@ void ParticleContainer::sortByElementThenSpecies() {
   particle_list_ = sorted_particles;
 }
 
-std::span<Particle> ParticleContainer::particlesWithElementAndSpecies(int element, const Species& species) {
-  sortByElementThenSpecies();
+bool ParticleContainer::isSortedByElementThenSpecies() const {
+  bool is_sorted = true;
+  for (int iparticle = 0; iparticle < numParticles() - 1; iparticle++) {
+    const Particle& this_particle = particle_list_[iparticle];
+    const Particle& next_particle = particle_list_[iparticle+1];
+    if (this_particle.element == next_particle.element) {
+      is_sorted = is_sorted and
+        getParticleSpeciesIndex(this_particle) <= getParticleSpeciesIndex(next_particle);
+    }
+    else {
+      is_sorted = is_sorted and
+        this_particle.element < next_particle.element;
+    }
+  }
+  return is_sorted;
+}
 
+std::span<Particle> ParticleContainer::particlesWithElementAndSpecies(int element, const Species& species) {
+  assert(isSortedByElementThenSpecies());
   assert(element < (std::ssize(element_species_bins_) - 1) / numSpecies());
 
   const int species_index = findSpeciesIndex(species_represented_by_these_particles_, species);
