@@ -120,6 +120,9 @@ TEST(ParticleContainer, SizeOfParticlesWithElementAndSpeciesMatchesExpectedNumbe
   for (int i = 0; i < num_expected_particles; i++) {
     particles.addParticle(Particle{.element = checked_element, .species = checked_species});
   }
+  constexpr int unchecked_element = 2;
+  const Species unchecked_species = species_1;
+  particles.addParticle(Particle{.element = unchecked_element, .species = unchecked_species});
 
   std::span<Particle> checked_particles = particles.particlesWithElementAndSpecies(checked_element, checked_species);
 
