@@ -80,9 +80,6 @@ private:
 
   /// If container is sorted, indices representing bin edges in @a particle_list_ in which all particles have the same element and species.
   std::vector<int> element_species_bins_;
-
-  /// Whether the container is sorted, which is set to false after every non-constant method is called except the sort.
-  bool is_sorted_ = false;
 };
 
 } // namespace mfpic

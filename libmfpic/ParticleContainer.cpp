@@ -16,7 +16,6 @@ int findSpeciesIndex(const std::vector<Species>& species_list, const Species& sp
 } // namespace
 
 ParticleContainer::ParticleListType::iterator ParticleContainer::begin() {
-  is_sorted_ = false;
   return particle_list_.begin();
 }
 
@@ -25,7 +24,6 @@ ParticleContainer::ParticleListType::const_iterator ParticleContainer::begin() c
 }
 
 ParticleContainer::ParticleListType::iterator ParticleContainer::end() {
-  is_sorted_ = false;
   return particle_list_.end();
 }
 
@@ -47,14 +45,12 @@ void ParticleContainer::addParticle(Particle particle) {
   if (std::find(species_represented_by_these_particles_.begin(), species_represented_by_these_particles_.end(), particle_species) == species_represented_by_these_particles_.end()) {
     species_represented_by_these_particles_.push_back(particle_species);
   }
-  is_sorted_ = false;
 }
 
 void ParticleContainer::addParticles(const ParticleContainer &particles) {
   for (const Particle& particle : particles) {
     addParticle(particle);
   }
-  is_sorted_ = false;
 }
 
 int ParticleContainer::getParticleSpeciesIndex(const Particle& particle) const {
@@ -67,8 +63,6 @@ void ParticleContainer::cleanOutDeadParticles() {
 }
 
 void ParticleContainer::sortByElementThenSpecies() {
-  if (is_sorted_) return;
-
   cleanOutDeadParticles();
 
   const Particle& particle_with_max_element =
@@ -106,7 +100,6 @@ void ParticleContainer::sortByElementThenSpecies() {
   }
 
   particle_list_ = sorted_particles;
-  is_sorted_ = true;
 }
 
 std::span<Particle> ParticleContainer::particlesWithElementAndSpecies(int element, const Species& species) {
@@ -118,7 +111,6 @@ std::span<Particle> ParticleContainer::particlesWithElementAndSpecies(int elemen
   const int flattened_bin_index = element * numSpecies() + species_index;
   const int element_species_bin_begin = element_species_bins_[flattened_bin_index];
   const int element_species_bin_end = element_species_bins_[flattened_bin_index + 1];
-  is_sorted_ = false;
   return std::span(
     std::next(particle_list_.begin(), element_species_bin_begin),
     std::next(particle_list_.begin(), element_species_bin_end)
