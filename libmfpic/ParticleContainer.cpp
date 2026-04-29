@@ -1,6 +1,19 @@
+#include <libmfpic/Errors.hpp>
 #include <libmfpic/ParticleContainer.hpp>
 
 namespace mfpic {
+
+namespace {
+
+int findSpeciesIndex(const std::vector<Species>& species_list, const Species& species_to_find) {
+  const auto species_iterator = std::find(species_list.begin(), species_list.end(), species_to_find);
+  if (species_iterator == species_list.end()) {
+    errorWithDeveloperMessage("Species not found in list!");
+  }
+  return std::distance(species_list.begin(), species_iterator);
+}
+
+} // namespace
 
 ParticleContainer::ParticleListType::iterator ParticleContainer::begin() {
   is_sorted_ = false;
@@ -46,8 +59,7 @@ void ParticleContainer::addParticles(const ParticleContainer &particles) {
 
 int ParticleContainer::getParticleSpeciesIndex(const Particle& particle) const {
   const Species& particle_species = particle.species;
-  const auto species_iterator = std::find(species_represented_by_these_particles_.begin(), species_represented_by_these_particles_.end(), particle_species);
-  return std::distance(species_represented_by_these_particles_.begin(), species_iterator);
+  return findSpeciesIndex(species_represented_by_these_particles_, particle_species);
 }
 
 void ParticleContainer::cleanOutDeadParticles() {
