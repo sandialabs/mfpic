@@ -28,7 +28,7 @@ public:
   }
 };
 
-constexpr Species default_species{.charge = 1.0, .mass = 1.0, .id = 0};
+const Species default_species{.charge = 1.0, .mass = 1.0};
 const std::vector<std::shared_ptr<ParticleBoundaryFactory>> empty_particle_boundary_factory_list;
 const std::shared_ptr<ParticleBoundaryFactory> default_reflecting_particle_boundary_factory
   = std::make_shared<ReflectingParticleBoundaryFactory>();
@@ -1152,8 +1152,8 @@ TEST(ParticleOperations, ParticleMomentsCorrectForKnownParticles) {
   constexpr int order = 1;
   Discretization discretization(mesh.get(),order);
 
-  Species electron {.mass = constants::electron_mass, .id = 0};
-  Species proton {.mass = constants::proton_mass, .id = 1};
+  Species electron {.mass = constants::electron_mass};
+  Species proton {.mass = constants::proton_mass};
 
   ParticleContainer particles;
   std::vector<MomentsInCell> exact_moments_electron;

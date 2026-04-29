@@ -245,7 +245,7 @@ mfem::DenseMatrix& ParticleOperations::getNumberDensity(const ParticleContainer&
     if (not particle.is_alive) continue;
 
     const int elem_id = particle.element;
-    const int species_id = particle.species.id;
+    const int species_id = particles.getParticleSpeciesIndex(particle);
     particle_number_density_(elem_id, species_id) += particle.weight / mesh.GetElementVolume(elem_id);
   }
 
@@ -263,7 +263,7 @@ mfem::DenseTensor& ParticleOperations::getBulkVelocity(const ParticleContainer& 
     if (not particle.is_alive) continue;
 
     const int elem_id = particle.element;
-    const int species_id = particle.species.id;
+    const int species_id = particles.getParticleSpeciesIndex(particle);
     const double sum_weights = sum_of_weights_(elem_id, species_id);
     if (sum_weights <= 0.0) continue;
 
@@ -286,7 +286,7 @@ mfem::DenseMatrix& ParticleOperations::getTemperature(const ParticleContainer& p
     if (not particle.is_alive) continue;
 
     const int elem_id = particle.element;
-    const int species_id = particle.species.id;
+    const int species_id = particles.getParticleSpeciesIndex(particle);
     const double sum_weights = sum_of_weights_(elem_id, species_id);
     if (sum_weights <= 0.0) continue;
 
@@ -310,7 +310,7 @@ void ParticleOperations::sumParticleWeights_(
       if (not particle.is_alive) continue;
 
       const int elem_id = particle.element;
-      const int species_id = particle.species.id;
+      const int species_id = particles.getParticleSpeciesIndex(particle);
       sum_of_weights_(elem_id, species_id) += particle.weight;
     }
 }

@@ -6,7 +6,7 @@ namespace {
 
 using namespace mfpic;
 
-constexpr Species default_species;
+const Species default_species;
 const mfem::Vector zero_vector({0.0, 0.0, 0.0});
 const int num_elems = 10;
 std::shared_ptr<mfem::Mesh> simple_mesh = std::make_shared<mfem::Mesh>(mfem::Mesh::MakeCartesian1D(num_elems));
@@ -168,7 +168,7 @@ TEST(LoadParticles, ParticleVelocitiesAreMaxwellianWhenMaxwellianParticlesAreReq
     sample_variance += relative_velocity * relative_velocity;
   }
   sample_variance /= num_particles - 1;
-  constexpr double expected_sample_variance = 3.0 * constants::boltzmann_constant * temperature / default_species.mass;
+  const double expected_sample_variance = 3.0 * constants::boltzmann_constant * temperature / default_species.mass;
   EXPECT_NEAR(sample_variance, expected_sample_variance, relative_tolerance * expected_sample_variance);
 }
 
@@ -207,7 +207,7 @@ TEST(LoadParticles, ParticleVelocitiesAreMaxwellianWithLargeKappa) {
     sample_variance += relative_velocity * relative_velocity;
   }
   sample_variance /= num_particles - 1;
-  constexpr double expected_sample_variance = 3.0 * constants::boltzmann_constant * temperature / default_species.mass;
+  const double expected_sample_variance = 3.0 * constants::boltzmann_constant * temperature / default_species.mass;
   EXPECT_NEAR(sample_variance, expected_sample_variance, relative_tolerance * expected_sample_variance);
 }
 
@@ -247,8 +247,8 @@ TEST(LoadParticles, ParticleVelocitiesMeanAndStdAreCorrectWhenKappaDistributionI
     sample_variance += relative_velocity * relative_velocity;
   }
   sample_variance /= num_particles - 1;
-  constexpr double expected_sample_variance_maxwellian = 3.0 * constants::boltzmann_constant * temperature / default_species.mass;
-  constexpr double expected_sample_variance_kappa = expected_sample_variance_maxwellian * (kappa / (kappa - 0.5));
+  const double expected_sample_variance_maxwellian = 3.0 * constants::boltzmann_constant * temperature / default_species.mass;
+  const double expected_sample_variance_kappa = expected_sample_variance_maxwellian * (kappa / (kappa - 0.5));
   EXPECT_NEAR(sample_variance, expected_sample_variance_kappa, relative_tolerance * expected_sample_variance_kappa);
 }
 

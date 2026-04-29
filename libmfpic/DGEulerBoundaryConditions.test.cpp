@@ -183,7 +183,7 @@ TEST(DGEulerBoundaryConditions, DGEulerReflectingBCCheckGhostBoundaryIntegrator)
 
 }
 
-constexpr Species electron_species{.charge = -constants::elementary_charge, .mass = constants::electron_mass, .specific_heat_ratio = 5./3.};
+const Species electron_species{.charge = -constants::elementary_charge, .mass = constants::electron_mass, .specific_heat_ratio = 5./3.};
 
 TEST(DGEulerBoundaryConditions, DummyFluxFunctionHasNoComputeFlux) {
   auto dummy_flux = DummyFluxFunction(5, 3);
