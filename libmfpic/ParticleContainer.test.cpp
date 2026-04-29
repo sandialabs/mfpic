@@ -6,6 +6,10 @@ namespace {
 
 using namespace mfpic;
 
+const Species species_0{.name = "species_0"};
+const Species species_1{.name = "species_1"};
+const Species species_2{.name = "species_2"};
+
 TEST(ParticleContainer, DefaultInitializedParticleContainerIsEmpty) {
   ParticleContainer particle_container;
 
@@ -62,8 +66,6 @@ void checkThatParticlesAreSortedByElementThenSpecies(const ParticleContainer& pa
 }
 
 TEST(ParticleContainer, SortingAlreadySortedParticlesPreservesSortedness) {
-  const Species species_0{.name = "species_0"};
-  const Species species_1{.name = "species_1"};
   ParticleContainer already_sorted;
   already_sorted.addParticle(Particle{.element = 0, .species = species_0});
   already_sorted.addParticle(Particle{.element = 0, .species = species_1});
@@ -87,9 +89,6 @@ TEST(ParticleContainer, SortByElementsWithOneSpecies) {
 }
 
 TEST(ParticleContainer, SortBySpeciesWithAllParticlesInElementZero) {
-  const Species species_0{.name = "species_0"};
-  const Species species_1{.name = "species_1"};
-  const Species species_2{.name = "species_2"};
   ParticleContainer to_sort;
   to_sort.addParticle(Particle{.element = 0, .species = species_2});
   to_sort.addParticle(Particle{.element = 0, .species = species_1});
@@ -101,9 +100,6 @@ TEST(ParticleContainer, SortBySpeciesWithAllParticlesInElementZero) {
 }
 
 TEST(ParticleContainer, SortBySpeciesWithAllParticlesInElementNonzero) {
-  const Species species_0{.name = "species_0"};
-  const Species species_1{.name = "species_1"};
-  const Species species_2{.name = "species_2"};
   constexpr int element = 3;
   ParticleContainer to_sort;
   to_sort.addParticle(Particle{.element = element, .species = species_2});
@@ -116,8 +112,6 @@ TEST(ParticleContainer, SortBySpeciesWithAllParticlesInElementNonzero) {
 }
 
 TEST(ParticleContainer, SortByElementThenSpecies) {
-  const Species species_0{.name = "species_0"};
-  const Species species_1{.name = "species_1"};
   ParticleContainer to_sort;
   to_sort.addParticle(Particle{.element = 4, .species = species_1});
   to_sort.addParticle(Particle{.element = 2, .species = species_1});
