@@ -63,11 +63,12 @@ void ParticleContainer::sortByElementThenSpecies() {
     std::ranges::max(particle_list_, {}, [](const Particle& particle) {return particle.element;});
   const int num_elements = particle_with_max_element.element + 1;
 
-  auto flattenElementSpeciesIndex = [num_elements](int element, int species_index) {
-    return element + num_elements * species_index;
+  const int num_species = numSpecies();
+  auto flattenElementSpeciesIndex = [num_species](int element, int species_index) {
+    return element * num_species + species_index;
   };
 
-  std::vector<int> num_particles_in_element_and_species(num_elements * numSpecies(), 0);
+  std::vector<int> num_particles_in_element_and_species(num_elements * num_species, 0);
   for (const Particle& particle : particle_list_) {
     num_particles_in_element_and_species[flattenElementSpeciesIndex(
       particle.element,
@@ -75,7 +76,7 @@ void ParticleContainer::sortByElementThenSpecies() {
     )] += 1;
   }
 
-  std::vector<int> new_particle_indices(num_elements * numSpecies());
+  std::vector<int> new_particle_indices(num_elements * num_species);
   std::exclusive_scan(
     num_particles_in_element_and_species.begin(),
     num_particles_in_element_and_species.end(),
