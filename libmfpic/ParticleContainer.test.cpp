@@ -41,7 +41,7 @@ TEST(ParticleContainer, AddParticlesAddsParticles) {
   EXPECT_EQ(added_particle.element, element);
 }
 
-void checkThatParticlesAreSorted(const ParticleContainer& particles) {
+void checkThatParticlesAreSortedByElementThenSpecies(const ParticleContainer& particles) {
   for (
     auto particle_iter = particles.begin();
     std::distance(particle_iter, particles.end()) > 1;
@@ -72,7 +72,61 @@ TEST(ParticleContainer, SortingAlreadySortedParticlesPreservesSortedness) {
 
   already_sorted.sortByElementThenSpecies();
 
-  checkThatParticlesAreSorted(already_sorted);
+  checkThatParticlesAreSortedByElementThenSpecies(already_sorted);
+}
+
+TEST(ParticleContainer, SortByElementsWithOneSpecies) {
+  ParticleContainer to_sort;
+  to_sort.addParticle(Particle{.element = 3});
+  to_sort.addParticle(Particle{.element = 0});
+  to_sort.addParticle(Particle{.element = 1});
+
+  to_sort.sortByElementThenSpecies();
+
+  checkThatParticlesAreSortedByElementThenSpecies(to_sort);
+}
+
+TEST(ParticleContainer, SortBySpeciesWithAllParticlesInElementZero) {
+  const Species species_0{.name = "species_0"};
+  const Species species_1{.name = "species_1"};
+  const Species species_2{.name = "species_2"};
+  ParticleContainer to_sort;
+  to_sort.addParticle(Particle{.element = 0, .species = species_2});
+  to_sort.addParticle(Particle{.element = 0, .species = species_1});
+  to_sort.addParticle(Particle{.element = 0, .species = species_0});
+
+  to_sort.sortByElementThenSpecies();
+
+  checkThatParticlesAreSortedByElementThenSpecies(to_sort);
+}
+
+TEST(ParticleContainer, SortBySpeciesWithAllParticlesInElementNonzero) {
+  const Species species_0{.name = "species_0"};
+  const Species species_1{.name = "species_1"};
+  const Species species_2{.name = "species_2"};
+  constexpr int element = 3;
+  ParticleContainer to_sort;
+  to_sort.addParticle(Particle{.element = element, .species = species_2});
+  to_sort.addParticle(Particle{.element = element, .species = species_1});
+  to_sort.addParticle(Particle{.element = element, .species = species_0});
+
+  to_sort.sortByElementThenSpecies();
+
+  checkThatParticlesAreSortedByElementThenSpecies(to_sort);
+}
+
+TEST(ParticleContainer, SortByElementThenSpecies) {
+  const Species species_0{.name = "species_0"};
+  const Species species_1{.name = "species_1"};
+  ParticleContainer to_sort;
+  to_sort.addParticle(Particle{.element = 4, .species = species_1});
+  to_sort.addParticle(Particle{.element = 2, .species = species_1});
+  to_sort.addParticle(Particle{.element = 2, .species = species_0});
+  to_sort.addParticle(Particle{.element = 3, .species = species_0});
+
+  to_sort.sortByElementThenSpecies();
+
+  checkThatParticlesAreSortedByElementThenSpecies(to_sort);
 }
 
 } // namespace
