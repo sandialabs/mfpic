@@ -755,8 +755,7 @@ TEST(DGEulerAssembly, computeVolumetricSources) {
   constexpr int basis_order = 1;
   constexpr int num_equations = 5;
 
-  constexpr double charge_over_mass = 8.92;
-  const Species species{.charge_over_mass = charge_over_mass};
+  const Species species;
 
   Discretization fluid_discretization(&mesh, basis_order, FETypes::DG, num_equations);
 
@@ -773,6 +772,7 @@ TEST(DGEulerAssembly, computeVolumetricSources) {
   mfem::GridFunction& fluid_grid_function = fluid_state.getGridFunction();
   const mfem::Vector fluid_constant_vals{1., 2., 3., 4., 5.};
   mfem::VectorConstantCoefficient fluid_constant_coeff(fluid_constant_vals);
+  fluid_grid_function.ProjectCoefficient(fluid_constant_coeff);
 
   DGEulerAssembly op(fluid_discretization.getFeSpace(), species);
   op.setVolumetricSourceCoefficient(std::move(source_coeff));

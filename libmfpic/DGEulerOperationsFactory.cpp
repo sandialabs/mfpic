@@ -32,11 +32,9 @@ std::unique_ptr<LowFidelityOperations> buildDGEulerOperations(
     for (size_t ibc = 0; ibc < species_bcs.size(); ++ibc) {
       dg_assemblers.back()->addBoundaryCondition(std::move(species_bcs[ibc]));
     }
-    if (not sources.empty()) {
-      for (auto & [source_species, coefficient] : sources) {
-        if (source_species == species) {
-          dg_assemblers.back()->setVolumetricSourceCoefficient(std::move(coefficient));
-        }
+    for (auto & [source_species, coefficient] : sources) {
+      if (source_species == species) {
+        dg_assemblers.back()->setVolumetricSourceCoefficient(std::move(coefficient));
       }
     }
   }
