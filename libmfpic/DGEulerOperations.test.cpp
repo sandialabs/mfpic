@@ -22,6 +22,8 @@ using namespace mfpic;
 Species electron_species{.charge = -constants::elementary_charge, .mass = constants::electron_mass};
 Species proton_species{.charge = constants::elementary_charge, .mass = constants::proton_mass};
 
+std::vector<std::pair<Species, std::unique_ptr<mfem::VectorCoefficient>>> empty_sources{};
+
 TEST(DGEulerOperations, EulerChargeAssemblyWorksForConstantDensityOrder0In3D) {
   constexpr int dg_order = 0;
   constexpr int num_equations = 5;
@@ -335,7 +337,7 @@ TEST(DGEulerOperations, MoveAccelerate_ZeroFieldsReproducesMove) {
   const std::vector<Species> species_list = initial_state.getSpeciesList();
   std::vector<std::vector<std::unique_ptr<DGBC>>> empty_bcs(species_list.size());
   std::unique_ptr<LowFidelityOperations> dg_euler_operations = buildDGEulerOperations(
-    dg_discretization, es_discretization, species_list, empty_bcs);
+    dg_discretization, es_discretization, species_list, empty_bcs, empty_sources);
 
   ElectrostaticFieldState es_field_state_zero(es_discretization);
   constexpr double dt = 1e-8;
@@ -392,7 +394,7 @@ TEST(DGEulerOperations, MoveAccelerate_ConstantEFieldAcceleratesConstantFluidCor
   const std::vector<Species> species_list = initial_state.getSpeciesList();
   std::vector<std::vector<std::unique_ptr<DGBC>>> empty_bcs(species_list.size());
   std::unique_ptr<LowFidelityOperations> dg_euler_operations = buildDGEulerOperations(
-    dg_discretization, es_discretization, species_list, empty_bcs);
+    dg_discretization, es_discretization, species_list, empty_bcs, empty_sources);
 
   const double plasma_frequency = sqrt(
     (number_density * electron_species.charge * electron_species.charge) / (electron_species.mass * constants::permittivity));
@@ -491,7 +493,7 @@ TEST(DGEulerOperations, computeTotalEnergy_dg_order_0) {
   const std::vector<Species> species_list = low_fidelity_state.getSpeciesList();
   std::vector<std::vector<std::unique_ptr<DGBC>>> empty_bcs(species_list.size());
   std::unique_ptr<LowFidelityOperations> dg_euler_operations = buildDGEulerOperations(
-    vector_dg_discretization, charge_discretization, species_list, empty_bcs);
+    vector_dg_discretization, charge_discretization, species_list, empty_bcs, empty_sources);
 
   const mfem::Vector primitive_state_e = euler::constructPrimitiveState(number_density_e, bulk_velocity_e, temperature_e);
   const mfem::Vector conservative_state_e = euler::convertFromPrimitiveToConservative(primitive_state_e, electron_species);
@@ -531,7 +533,7 @@ TEST(DGEulerOperations, computeTotalKineticEnergy_ZeroVelocityGivesZeroEnergy) {
   const std::vector<Species> species_list = low_fidelity_state.getSpeciesList();
   std::vector<std::vector<std::unique_ptr<DGBC>>> empty_bcs(species_list.size());
   std::unique_ptr<LowFidelityOperations> dg_euler_operations = buildDGEulerOperations(
-    vector_dg_discretization, charge_discretization, species_list, empty_bcs);
+    vector_dg_discretization, charge_discretization, species_list, empty_bcs, empty_sources);
 
   const double total_kinetic_energy = dg_euler_operations->computeTotalKineticEnergy(low_fidelity_state);
   constexpr double expected_total_kinetic_energy = 0.;
@@ -562,7 +564,7 @@ TEST(DGEulerOperations, computeTotalKineticEnergy_CorrectNonZeroKineticEnergyCom
   const std::vector<Species> species_list = low_fidelity_state.getSpeciesList();
   std::vector<std::vector<std::unique_ptr<DGBC>>> empty_bcs(species_list.size());
   std::unique_ptr<LowFidelityOperations> dg_euler_operations = buildDGEulerOperations(
-    vector_dg_discretization, charge_discretization, species_list, empty_bcs);
+    vector_dg_discretization, charge_discretization, species_list, empty_bcs, empty_sources);
 
   const double total_kinetic_energy = dg_euler_operations->computeTotalKineticEnergy(low_fidelity_state);
 

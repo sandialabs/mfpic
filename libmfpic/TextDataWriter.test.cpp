@@ -21,6 +21,8 @@ namespace {
 
 using namespace mfpic;
 
+std::vector<std::pair<Species, std::unique_ptr<mfem::VectorCoefficient>>> empty_sources{};
+
 TEST(TextDataWriter, constructorAndOutput) {
   constexpr int num_low_fidelity_models = 2;
 
@@ -63,7 +65,8 @@ TEST(TextDataWriter, constructorAndOutput) {
       dg_discretization,
       electrostatic_discretization,
       species_list,
-      empty_bcs);
+      empty_bcs,
+      empty_sources);
     low_fidelity_operations.push_back(std::move(dg_euler_operations));
   }
 

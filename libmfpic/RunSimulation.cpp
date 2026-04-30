@@ -25,6 +25,7 @@
 #include <libmfpic/TimeSteppingFactory.hpp>
 #include <libmfpic/VerletTimeIntegrator.hpp>
 
+#include <memory>
 #include <mfem/mfem.hpp>
 
 #include <yaml-cpp/yaml.h>
@@ -104,21 +105,28 @@ void runSimulation(int argc, char* argv[]) {
   }
   Discretization dg_euler_discretization(mesh.get(), dg_euler_order, FETypes::DG, euler::ConservativeVariables::NUM_VARS);
 
-  std::vector<std::unique_ptr<SourceParameters>> list_of_parameters = buildListOfSourceParametersFromYAML(
+  std::vector<std::unique_ptr<SourceParameters>> list_of_euler_ic_parameters = buildListOfSourceParametersFromYAML(
     euler_fluids["Initial Conditions"], species_map);
-  if (not list_of_parameters.empty()) {
-    LowFidelityState dg_euler_state = buildEulerState(dg_euler_discretization, list_of_parameters);
+  std::vector<std::unique_ptr<SourceParameters>> list_of_euler_source_parameters;
+  if (euler_fluids["Sources"]) {
+    list_of_euler_source_parameters = buildListOfSourceParametersFromYAML(euler_fluids["Sources"], species_map);
+  }
+
+  if (not list_of_euler_ic_parameters.empty()) {
+    LowFidelityState dg_euler_state = buildEulerState(dg_euler_discretization, list_of_euler_ic_parameters);
     low_fidelity_states.push_back(dg_euler_state);
 
     std::vector<Species> species_list = dg_euler_state.getSpeciesList();
     std::unordered_map<int, DGEulerBCType> boundary_attribute_to_bc_type = buildBoundaryAttributeToBCTypeFromYAML(
       euler_fluids["Boundary Conditions"], mesh_dimension);
     std::vector<std::vector<std::unique_ptr<DGBC>>> dg_euler_bcs = buildDGEulerBoundaryConditions(boundary_attribute_to_bc_type, *mesh, species_list);
+    std::vector<std::pair<Species, std::unique_ptr<mfem::VectorCoefficient>>> dg_euler_sources = buildListOfSpeciesAndEulerSourceCoefficients(list_of_euler_source_parameters);
     std::unique_ptr<LowFidelityOperations> dg_euler_operations = buildDGEulerOperations(
       dg_euler_discretization,
       electrostatic_discretization,
       species_list,
-      dg_euler_bcs);
+      dg_euler_bcs,
+      dg_euler_sources);
     low_fidelity_operations.push_back(std::move(dg_euler_operations));
     low_fidelity_field_states.emplace_back(electrostatic_discretization);
   }

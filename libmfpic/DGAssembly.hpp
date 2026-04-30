@@ -86,23 +86,20 @@ public:
   void computeHyperbolicFluxes(const mfem::Vector &dofs, mfem::Vector &rhs) const;
 
  /**
-  * @brief Compute the electromagnetic source terms for the residual.
+  * @brief Compute the volumetric source terms for the residual.
   * Adds \f$(S(U),v)\f$ to the vector \p rhs .
   *
   * @note Does not apply \f$M^{-1}\f$.
   *
   * @param species_state - current solution for a given species
-  * @param field_evaluator electromagnetic field evaluator
   * @param[inout] rhs rhs storage
   * @param include_energy_source - flag to determine if source should be applied to total energy,
   *  if false, then total energy needs to be postprocessed to be correct,
   *  if true, source will be applied to total energy but may cause errors in internal energy
   */
-  virtual void computeSources(
+  virtual void computeVolumetricSources(
     const LowFidelitySpeciesState& species_state,
-    const ElectromagneticFieldsEvaluator& field_evaluator,
-    mfem::Vector& rhs,
-    const bool include_energy_source) const = 0;
+    mfem::Vector& rhs) const = 0;
 
   /**
   * @brief Apply the local inverse mass matrices and store in \p dofs
@@ -152,6 +149,17 @@ public:
   /// where max_char_speed is updated during RHS evaluation
   mfem::real_t getMaxCharSpeed() const { return hyperbolic_form_integrator_->GetMaxCharSpeed(); }
 
+  /**
+   * @brief Add a volumetric source to the right hand side by specifying a mfem::VectorCoefficient
+   *
+   * @param coefficient mfem::VectorCoefficient
+   */
+  void setVolumetricSourceCoefficient(std::unique_ptr<mfem::VectorCoefficient> && coefficient);
+  /// Flag to indicate if volumetric source has been set
+  bool hasVolumetricSource() const {return has_volumetric_source_;};
+  /// Creates a linear form integrator for assembly of the volumetric source
+  mfem::VectorDomainLFIntegrator * createVolumetricSourceIntegrator() const {return new mfem::VectorDomainLFIntegrator(*volumetric_source_);}
+
   /// Dtor.
   virtual ~DGAssembly();
 
@@ -180,6 +188,10 @@ private:
   std::vector<std::unique_ptr<DGBC>> bcs_;
   /// boundary condition integrators
   std::vector<std::unique_ptr<mfem::NonlinearFormIntegrator>> bc_integrators_;
+  /// volumetric source
+  std::unique_ptr<mfem::VectorCoefficient> volumetric_source_;
+  /// volumetric source flags
+  bool has_volumetric_source_ = false;
 
   /// Compute element-wise inverse mass matrix
   void computeInvMass_();

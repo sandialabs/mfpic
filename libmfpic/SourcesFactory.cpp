@@ -1,6 +1,7 @@
 #include <libmfpic/Errors.hpp>
 #include <libmfpic/Euler.hpp>
 #include <libmfpic/SourcesFactory.hpp>
+#include <memory>
 
 namespace mfpic {
 
@@ -310,6 +311,22 @@ std::vector<std::unique_ptr<SourceParameters>> buildListOfSourceParametersFromYA
   }
 
   return list_of_parameters;
+}
+
+std::vector<std::pair<Species, std::unique_ptr<mfem::VectorCoefficient>>> buildListOfSpeciesAndEulerSourceCoefficients(
+  const std::vector<std::unique_ptr<SourceParameters>>& list_of_parameters)
+{
+
+  std::vector<std::pair<Species, std::unique_ptr<mfem::VectorCoefficient>>> species_coefficient_list;
+  for (const std::unique_ptr<SourceParameters>& parameters : list_of_parameters) {
+    auto coefficient =
+      std::make_unique<mfem::VectorFunctionCoefficient>(parameters->getEulerVectorCoefficient());
+    species_coefficient_list.emplace_back(
+      std::piecewise_construct,
+      std::forward_as_tuple(parameters->species),
+      std::forward_as_tuple(std::move(coefficient)));
+  }
+  return species_coefficient_list;
 }
 
 }

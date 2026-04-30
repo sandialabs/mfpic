@@ -24,7 +24,8 @@ const Species species_3{.charge = -2.0, .mass = 1.5, .specific_heat_ratio = 5.6}
 
 const std::vector<Species> species_list{species_0,species_1,species_2,species_3};
 
-std::vector<std::vector<std::unique_ptr<DGBC>>> empty_bcs(species_list.size());
+std::vector<std::vector<std::unique_ptr<DGBC>>> empty_bcs{};
+std::vector<std::pair<Species, std::unique_ptr<mfem::VectorCoefficient>>> empty_sources{};
 
 TEST(DGEulerOperationsFactory, ErrorsOutIfDiscretizationIsWrong) {
   constexpr int nx = 5;
@@ -36,7 +37,7 @@ TEST(DGEulerOperationsFactory, ErrorsOutIfDiscretizationIsWrong) {
   Discretization charge_discretization(&mesh, basis_order, FETypes::HGRAD);
   Discretization discretization(&mesh, basis_order, FETypes::HGRAD, num_equations);
 
-  EXPECT_DEATH(buildDGEulerOperations(discretization, charge_discretization, species_list, empty_bcs),
+  EXPECT_DEATH(buildDGEulerOperations(discretization, charge_discretization, species_list, empty_bcs, empty_sources),
                "Fluid discretization must be DG.");
 }
 
@@ -58,6 +59,7 @@ TEST(DGEulerOperationsFactory, BasicChecksOnOperationsAndState) {
     list_of_parameters.push_back(std::make_unique<ConstantSourceParameters>(species, number_density, temperature));
   }
   LowFidelityState dg_euler_state = buildEulerState(discretization, list_of_parameters);
+  std::vector<std::pair<Species, std::unique_ptr<mfem::VectorCoefficient>>> dg_euler_sources = buildListOfSpeciesAndEulerSourceCoefficients(list_of_parameters);
 
   constexpr int boundary_attribute_ghost = 3;
   constexpr int boundary_attribute_kfvs = 1;
@@ -72,7 +74,7 @@ TEST(DGEulerOperationsFactory, BasicChecksOnOperationsAndState) {
   }
 
   std::unique_ptr<LowFidelityOperations> dg_euler_operations = buildDGEulerOperations(
-    discretization, charge_discretization, species_list, bcs);
+    discretization, charge_discretization, species_list, bcs, dg_euler_sources);
 
   EXPECT_NO_FATAL_FAILURE(dg_euler_operations->move(1.0, dg_euler_state));
 }

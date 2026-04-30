@@ -16,15 +16,8 @@ LowFidelityState buildEulerState(
   Discretization& discretization,
   const std::vector<std::unique_ptr<SourceParameters>>& list_of_parameters)
 {
-  std::vector<std::pair<Species, std::unique_ptr<mfem::VectorCoefficient>>> species_coefficient_list;
-  for (const std::unique_ptr<SourceParameters>& parameters : list_of_parameters) {
-    auto initial_conditions_coefficient =
-      std::make_unique<mfem::VectorFunctionCoefficient>(parameters->getEulerVectorCoefficient());
-    species_coefficient_list.emplace_back(
-      std::piecewise_construct,
-      std::forward_as_tuple(parameters->species),
-      std::forward_as_tuple(std::move(initial_conditions_coefficient)));
-  }
+  std::vector<std::pair<Species, std::unique_ptr<mfem::VectorCoefficient>>> species_coefficient_list =
+    buildListOfSpeciesAndEulerSourceCoefficients(list_of_parameters);
 
   LowFidelityState euler_state(discretization, species_coefficient_list);
   return euler_state;

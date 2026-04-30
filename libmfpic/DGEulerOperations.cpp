@@ -33,7 +33,7 @@ LowFidelityState DGEulerOperations::accelerate(
 
     temp_vector_ = 0.;
     constexpr bool include_energy_source = false;
-    dg_assemblers_[ispecies]->computeSources(species_state, field_evaluator, temp_vector_, include_energy_source);
+    dg_assemblers_[ispecies]->computeElectromagneticSources(species_state, field_evaluator, temp_vector_, include_energy_source);
     dg_assemblers_[ispecies]->applyInverseMass(temp_vector_, rhs_);
 
     temp_vector_ = 0.;
@@ -87,7 +87,7 @@ LowFidelityState DGEulerOperations::moveAccelerate(
     temp_vector_ = 0.;
     dg_assemblers_[i_species]->computeHyperbolicFluxes(species_grid_function, temp_vector_);
     constexpr bool include_energy_source = true;
-    dg_assemblers_[i_species]->computeSources(species_state, field_evaluator, temp_vector_, include_energy_source);
+    dg_assemblers_[i_species]->computeElectromagneticSources(species_state, field_evaluator, temp_vector_, include_energy_source);
     dg_assemblers_[i_species]->applyInverseMass(temp_vector_, rhs_);
 
     LowFidelitySpeciesState& updated_species_state = updated_state.getSpeciesState(i_species);
@@ -96,6 +96,27 @@ LowFidelityState DGEulerOperations::moveAccelerate(
   }
   return updated_state;
 }
+
+  LowFidelityState DGEulerOperations::addVolumetricSource(
+    double dt,
+    const LowFidelityState& state) const
+  {
+    LowFidelityState updated_state(state);
+
+    for (int ispecies = 0; ispecies < state.numSpecies(); ++ispecies) {
+      const LowFidelitySpeciesState& species_state = state.getSpeciesState(ispecies);
+      LowFidelitySpeciesState& updated_species_state = updated_state.getSpeciesState(ispecies);
+
+      temp_vector_ = 0.;
+      dg_assemblers_[ispecies]->computeVolumetricSources(species_state, temp_vector_);
+      dg_assemblers_[ispecies]->applyInverseMass(temp_vector_, rhs_);
+
+      mfem::GridFunction& updated_species_grid_function = updated_species_state.getGridFunction();
+      updated_species_grid_function.Add(dt, rhs_);
+    }
+
+    return updated_state;
+  }
 
 IntegratedCharge DGEulerOperations::assembleCharge(const LowFidelityState& state) const {
   IntegratedCharge charge_state(charge_discretization_);
