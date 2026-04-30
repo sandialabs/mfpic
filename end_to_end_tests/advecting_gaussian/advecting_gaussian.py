@@ -1,7 +1,3 @@
-import sys
-
-sys.path.append("../python")
-
 import euler
 import read_mesh_data
 import species
