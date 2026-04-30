@@ -1,2 +1,2 @@
-mfpic_end_to_end_test("sod_shock_tube" "Forward Euler")
-mfpic_end_to_end_test("sod_shock_tube" "Verlet")
+add_subdirectory(sod_shock_tube_forward_euler)
+add_subdirectory(sod_shock_tube_verlet)
