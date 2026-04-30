@@ -15,7 +15,7 @@ class Discretization;
 class VerletTimeIntegrator : public TimeIntegrator {
 public:
 
-  VerletTimeIntegrator(Discretization &discretization, const bool &push_low_fidelity_with_particle_fields = false)
+  VerletTimeIntegrator(Discretization &discretization, const bool push_low_fidelity_with_particle_fields = false)
   : discretization_(discretization), push_lf_with_particle_fields_(push_low_fidelity_with_particle_fields)
   {}
 
@@ -31,7 +31,6 @@ public:
    * @param field_operations \ref ElectrostaticFieldOperations that form right-hand-side contributions
    * @param dt Time step
    */
-
   virtual void advanceTimestep(
     std::vector<LowFidelityState>& low_fidelity_states,
     std::vector<ElectrostaticFieldState>& low_fidelity_field_states,
@@ -44,7 +43,7 @@ public:
 
 private:
   Discretization & discretization_;
-  const bool & push_lf_with_particle_fields_;
+  const bool push_lf_with_particle_fields_;
 };
 
 } // namespace mfpic

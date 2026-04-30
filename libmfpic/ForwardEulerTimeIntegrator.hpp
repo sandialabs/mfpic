@@ -18,6 +18,7 @@ public:
 
   /**
    * @brief Advance the low fidelity states one timestep using the Forward Euler algorithm
+   *  doesn't update particle data
    *
    * @param[inout] low_fidelity_states Vector of \ref LowFidelityState 's to be updated
    * @param[inout] low_fidelity_field_states Vector of \ref ElectrostaticFieldStates to be updated

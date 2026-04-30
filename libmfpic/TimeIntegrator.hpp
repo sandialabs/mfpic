@@ -16,6 +16,9 @@ class Discretization;
 
 class TimeIntegrator {
 public:
+
+  virtual ~TimeIntegrator() = default;
+
   /**
    * @brief Advance the particle and low fidelity states one timestep
    *
@@ -28,7 +31,6 @@ public:
    * @param field_operations \ref ElectrostaticFieldOperations that form right-hand-side contributions
    * @param dt Time step
    */
-
   virtual void advanceTimestep(
     std::vector<LowFidelityState>& low_fidelity_states,
     std::vector<ElectrostaticFieldState>& low_fidelity_field_states,
