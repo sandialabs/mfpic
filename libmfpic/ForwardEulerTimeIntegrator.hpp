@@ -12,15 +12,13 @@ class ParticleContainer;
 class ParticleOperations;
 class Discretization;
 
-class VerletTimeIntegrator : public TimeIntegrator {
+class ForwardEulerTimeIntegrator : public TimeIntegrator {
 public:
-
-  VerletTimeIntegrator(Discretization &discretization, const bool push_low_fidelity_with_particle_fields = false)
-  : discretization_(discretization), push_lf_with_particle_fields_(push_low_fidelity_with_particle_fields)
-  {}
+  ForwardEulerTimeIntegrator(Discretization& discretization) : discretization_(discretization) {}
 
   /**
-   * @brief Advance the particle and low fidelity states one timestep using the Verlet algorithm
+   * @brief Advance the low fidelity states one timestep using the Forward Euler algorithm
+   *  doesn't update particle data
    *
    * @param[inout] low_fidelity_states Vector of \ref LowFidelityState 's to be updated
    * @param[inout] low_fidelity_field_states Vector of \ref ElectrostaticFieldStates to be updated
@@ -42,8 +40,7 @@ public:
     double dt) const override;
 
 private:
-  Discretization & discretization_;
-  const bool push_lf_with_particle_fields_;
+  Discretization& discretization_;
 };
 
-} // namespace mfpic
+}

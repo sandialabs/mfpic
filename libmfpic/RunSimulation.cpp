@@ -22,8 +22,8 @@
 #include <libmfpic/RunSimulation.hpp>
 #include <libmfpic/SourcesFactory.hpp>
 #include <libmfpic/TextDataWriter.hpp>
+#include <libmfpic/TimeIntegrator.hpp>
 #include <libmfpic/TimeSteppingFactory.hpp>
-#include <libmfpic/VerletTimeIntegrator.hpp>
 
 #include <memory>
 #include <mfem/mfem.hpp>
@@ -160,7 +160,10 @@ void runSimulation(int argc, char* argv[]) {
     0.);
 
   TimeSteppingParameters time_stepping_parameters = buildTimeSteppingParametersFromYAML(main["Time Stepping"]);
-  VerletTimeIntegrator verlet_time_integrator(electrostatic_discretization, push_low_fidelity_with_particle_fields);
+  std::unique_ptr<TimeIntegrator> time_integrator = buildTimeIntegrator(
+    time_stepping_parameters,
+    electrostatic_discretization,
+    push_low_fidelity_with_particle_fields);
   const double smallest_cell_lengthscale = getSmallestCellLengthscale(*mesh);
   for (int i_timestep = 1; i_timestep <= time_stepping_parameters.number_of_timesteps; ++i_timestep) {
     const double timestep_size = time_stepping_parameters.timestep_size;
@@ -169,7 +172,7 @@ void runSimulation(int argc, char* argv[]) {
 
     std::cout << "Time Step: " << i_timestep << "    Time: " << begin_time << std::endl;
 
-    verlet_time_integrator.advanceTimestep(
+    time_integrator->advanceTimestep(
       low_fidelity_states,
       low_fidelity_field_states,
       low_fidelity_operations,
