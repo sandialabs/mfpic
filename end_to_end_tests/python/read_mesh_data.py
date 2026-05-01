@@ -5,8 +5,9 @@ import vtk
 import vtk.util.numpy_support as vtk_numpy_support
 
 
-def read_timesteps_and_files(mesh_output_name="MeshOutput"):
-    xml_tree = ET.parse(f"{mesh_output_name}/{mesh_output_name}.pvd")
+def read_timesteps_and_files(mesh_output_directory="MeshOutput"):
+    mesh_output_filename = mesh_output_directory.split("/")[-1]
+    xml_tree = ET.parse(f"{mesh_output_directory}/{mesh_output_filename}.pvd")
     root = xml_tree.getroot()
     vtk_collection = root[0]
 
@@ -39,11 +40,11 @@ def read_single_timestep(folder_name, filename):
     return timestep_data
 
 
-def read_mesh_data(mesh_output_name="MeshOutput"):
-    timesteps, filenames = read_timesteps_and_files(mesh_output_name)
+def read_mesh_data(mesh_output_directory="MeshOutput"):
+    timesteps, filenames = read_timesteps_and_files(mesh_output_directory)
 
     mesh_data = []
     for filename in filenames:
-        mesh_data.append(read_single_timestep(mesh_output_name, filename))
+        mesh_data.append(read_single_timestep(mesh_output_directory, filename))
 
     return timesteps, mesh_data

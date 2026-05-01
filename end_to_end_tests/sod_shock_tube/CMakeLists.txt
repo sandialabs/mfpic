@@ -1,2 +1,1 @@
-add_subdirectory(sod_shock_tube_forward_euler)
-add_subdirectory(sod_shock_tube_verlet)
+mfpic_end_to_end_test("sod_shock_tube")

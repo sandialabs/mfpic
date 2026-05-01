@@ -1,2 +1,1 @@
-add_subdirectory(advecting_gaussian_forward_euler)
-add_subdirectory(advecting_gaussian_verlet)
+mfpic_end_to_end_test("advecting_gaussian")
