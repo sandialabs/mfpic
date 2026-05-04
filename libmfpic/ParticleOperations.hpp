@@ -11,7 +11,9 @@
 #include <libmfpic/ParticleBoundary.hpp>
 #include <libmfpic/ParticleContainer.hpp>
 
+#include <mfem/linalg/densemat.hpp>
 #include <mfem/mfem.hpp>
+#include <unordered_map>
 
 #include <unordered_map>
 
