@@ -2,11 +2,12 @@
 #include <H5Ppublic.h>
 #include <H5Spublic.h>
 #include <H5Tpublic.h>
+#include <hdf5.h>
+
 #include <libmfpic/DumpParticles.hpp>
 #include <libmfpic/ParticleContainer.hpp>
 #include <libmfpic/ParticleOperations.hpp>
 
-#include <hdf5.h>
 #include <unordered_map>
 
 namespace mfpic {
@@ -107,9 +108,8 @@ void dumpParticleMoments(
   mfem::Mesh& mesh = particle_operations.getMesh();
   const int nelem = mesh.GetNE();
 
-  int s = 0; // TODO BWR i dont like this...
   for (const auto & [species, _] : number_density) {
-    std::string filename = file_prefix + "_species_" + std::to_string(s) + ".csv";
+    std::string filename = file_prefix + "_" + species.name + ".csv";
 
     std::ofstream out;
     if (step > 0)
@@ -143,7 +143,6 @@ void dumpParticleMoments(
           << temperature.at(species)(e) << ","
           << bulk_velocity_in_element(0) << "," << bulk_velocity_in_element(1) << "," << bulk_velocity_in_element(2) << "\n";
     }
-    s++;
   }
 }
 

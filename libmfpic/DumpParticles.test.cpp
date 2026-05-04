@@ -158,11 +158,11 @@ static std::vector<std::string> splitCsv(const std::string& line)
 static int stringToInt(const std::string& s) { return std::stoi(s); }
 static double stringToDouble(const std::string& s) { return std::stod(s); }
 
-const Species default_species{.charge = 1.0, .mass = 1.0};
+const Species default_species{.charge = 1.0, .mass = 1.0, .name = "species_1"};
 const std::vector<std::shared_ptr<ParticleBoundaryFactory>> empty_particle_boundary_factory_list;
 const std::shared_ptr<ParticleBoundaryFactory> default_reflecting_particle_boundary_factory
   = std::make_shared<ReflectingParticleBoundaryFactory>();
-const std::unordered_map<std::string, Species> one_species {{"one", default_species}};
+const std::unordered_map<std::string, Species> one_species {{"species_1", default_species}};
 
 TEST(DumpParticles, CSVCorrectForOneSpecies)
 {
@@ -180,7 +180,6 @@ TEST(DumpParticles, CSVCorrectForOneSpecies)
     .temperature = temperature,
   };
   constexpr int num_particles = 100;
-  constexpr int num_species = 1; 
 
   std::mt19937 generator;
 
@@ -199,8 +198,8 @@ TEST(DumpParticles, CSVCorrectForOneSpecies)
 
   const std::string prefix = "csv_test_one";
 
-  for (int s = 0; s < num_species; ++s)
-    removeIfExists(prefix + "_species_" + std::to_string(s) + ".csv");
+  for (const auto & [name, species] : one_species)
+    removeIfExists(prefix + "_" + name + ".csv");
 
   const int steps = 10;
   const double dt = 0.25;
@@ -212,8 +211,8 @@ TEST(DumpParticles, CSVCorrectForOneSpecies)
   for (int step = 0; step < steps; ++step)
     dumpParticleMoments(particle_operations,particles, prefix, step, dt * step);
 
-  for (int s = 0; s < num_species; ++s) {
-    const auto file = prefix + "_species_" + std::to_string(s) + ".csv";
+  for (const auto & [name, species] : one_species) {
+    const auto file = prefix + "_" + name + ".csv";
     const auto lines = readLines(file);
     ASSERT_EQ(lines.size(), static_cast<size_t>(1 + num_elems*steps));
 
@@ -233,10 +232,10 @@ TEST(DumpParticles, CSVCorrectForOneSpecies)
         const double csv_bulk_velocity_1 = stringToDouble(toks[9]);
         const double csv_bulk_velocity_2 = stringToDouble(toks[10]);
 
-        EXPECT_NEAR(csv_number_density, computed_number_density.at(default_species)(e), 1e-12);
-        EXPECT_NEAR(csv_temperature,  computed_temperature.at(default_species)(e),  1e-12);
+        EXPECT_NEAR(csv_number_density, computed_number_density.at(species)(e), 1e-12);
+        EXPECT_NEAR(csv_temperature,  computed_temperature.at(species)(e),  1e-12);
 
-        const mfem::Vector computed_bulk_velocity_in_element(computed_bulk_velocity.at(default_species).GetColumn(e), 3);
+        const mfem::Vector computed_bulk_velocity_in_element(computed_bulk_velocity.at(species).GetColumn(e), 3);
         EXPECT_NEAR(csv_bulk_velocity_0, computed_bulk_velocity_in_element(0), 1e-12);
         EXPECT_NEAR(csv_bulk_velocity_1, computed_bulk_velocity_in_element(1), 1e-12);
         EXPECT_NEAR(csv_bulk_velocity_2, computed_bulk_velocity_in_element(2), 1e-12);
@@ -248,8 +247,8 @@ TEST(DumpParticles, CSVCorrectForOneSpecies)
 TEST(DumpParticles, CSVCorrectForTwoSpecies)
 {
 
-  const Species species_1{.charge = 1.0, .mass = 1.0};
-  const Species species_2{.charge = 2.0, .mass = 2.0};
+  const Species species_1{.charge = 1.0, .mass = 1.0, .name="species_1"};
+  const Species species_2{.charge = 2.0, .mass = 2.0, .name="species_2"};
   const int num_elems = 5;
   std::shared_ptr<mfem::Mesh> mesh = std::make_shared<mfem::Mesh>(mfem::Mesh::MakeCartesian1D(num_elems, .234));
   constexpr int order = 1;
@@ -264,8 +263,7 @@ TEST(DumpParticles, CSVCorrectForTwoSpecies)
     .temperature = temperature,
   };
   constexpr int num_particles = 100;
-  constexpr int num_species = 2;
-  const std::unordered_map<std::string, Species> two_species {{"one", species_1}, {"two", species_2}};
+  const std::unordered_map<std::string, Species> two_species {{"species_1", species_1}, {"species_2", species_2}};
 
   std::mt19937 generator;
 
@@ -290,8 +288,8 @@ TEST(DumpParticles, CSVCorrectForTwoSpecies)
 
   const std::string prefix = "csv_test_two";
 
-  for (int s = 0; s < num_species; ++s)
-    removeIfExists(prefix + "_species_" + std::to_string(s) + ".csv");
+  for (const auto & [name, species] : two_species)
+    removeIfExists(prefix + "_" + name + ".csv");
 
   const int steps = 10;
   const double dt = 0.25;
@@ -303,9 +301,8 @@ TEST(DumpParticles, CSVCorrectForTwoSpecies)
   for (int step = 0; step < steps; ++step)
     dumpParticleMoments(particle_operations,particles, prefix, step, dt * step);
 
-  for (int s = 0; s < num_species; ++s) {
-    const Species & species = (s == 0) ? species_1 : species_2;
-    const auto file = prefix + "_species_" + std::to_string(s) + ".csv";
+  for (const auto & [name, species] : two_species) {
+    const auto file = prefix + "_" + name + ".csv";
     const auto lines = readLines(file);
     ASSERT_EQ(lines.size(), static_cast<size_t>(1 + num_elems*steps));
 

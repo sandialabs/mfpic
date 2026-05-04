@@ -131,7 +131,6 @@ TEST(ConjugateGradientLinearSolver, InvertRandomSPDMatrix) {
   constexpr int size = 10;
   const mfem::SparseMatrix random_spd_matrix = generateRandomSPDMatrix(size);
 
-
   mfem::Vector rhs_vector = generateRandomVector(size);
   mfem::Vector sol_vector(size);
   sol_vector = 0.;
@@ -183,7 +182,7 @@ TEST(ConjugateGradientLinearSolver, InvertElectrostaticMatrix) {
     default_particle_boundary_factory,
     species_map);
 
- constexpr int num_particles = 100000;
+  constexpr int num_particles = 100000;
   const SourceStateParameters particle_source_state_parameters{
     .number_density = number_density,
     .bulk_velocity = mfem::Vector({0.0, 0.0, 0.0}),

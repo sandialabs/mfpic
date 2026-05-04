@@ -1202,8 +1202,8 @@ TEST(ParticleOperations, ParticleMomentsCorrectForKnownParticles) {
         }
 
         mfem::Vector bulk = center;
-        exact_moments_electron.emplace_back(MomentsInCell{.number_density = sum_of_weights / (dx * dy *dz), .bulk_velocity = bulk, .temperature = 3. * sum_of_inverse / sum_of_weights * electron_fac});
-        exact_moments_proton.emplace_back(MomentsInCell{.number_density = sum_of_weights / (dx * dy *dz), .bulk_velocity = bulk, .temperature = 3. * sum_of_inverse / sum_of_weights * proton_fac});
+        exact_moments_electron.emplace_back(MomentsInCell{.number_density = sum_of_weights / (dx * dy * dz), .bulk_velocity = bulk, .temperature = 3. * sum_of_inverse / sum_of_weights * electron_fac});
+        exact_moments_proton.emplace_back(MomentsInCell{.number_density = sum_of_weights / (dx * dy * dz), .bulk_velocity = bulk, .temperature = 3. * sum_of_inverse / sum_of_weights * proton_fac});
         elem_ids.push_back(i_elem);
       }
     }
