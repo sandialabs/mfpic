@@ -6,10 +6,12 @@
 #include <libmfpic/ParticleContainer.hpp>
 #include <libmfpic/ParticleOperations.hpp>
 #include <libmfpic/PeriodicParticleBoundary.hpp>
+#include <libmfpic/Species.hpp>
 
 #include <mfem/mfem.hpp>
 
 #include <limits>
+#include <unordered_map>
 
 namespace mfpic {
 
@@ -17,17 +19,20 @@ ParticleOperations::ParticleOperations(
   Discretization &discretization,
   std::vector<std::shared_ptr<ParticleBoundaryFactory>> particle_boundary_factories,
   std::shared_ptr<ParticleBoundaryFactory> default_particle_boundary_factory,
-  const int num_species
+  std::unordered_map<std::string, Species> species_map
 ) :
   discretization_(discretization),
-  dim_(discretization_.getFeSpace().GetMesh()->Dimension()),
-  num_species_(num_species)
+  dim_(discretization_.getFeSpace().GetMesh()->Dimension())
 {
   mfem::Mesh& mesh = *discretization_.getFeSpace().GetMesh();
-  particle_number_density_.SetSize(mesh.GetNE(), num_species_);
-  particle_bulk_velocity_.SetSize(3, mesh.GetNE(), num_species_);
-  particle_temperature_.SetSize(mesh.GetNE(), num_species_);
-  sum_of_weights_.SetSize(mesh.GetNE(), num_species_);
+
+  for (const auto & [name, species] : species_map) {
+    particle_number_density_.insert({species, mfem::Vector(mesh.GetNE())});
+    particle_bulk_velocity_.insert({species, mfem::DenseMatrix(3, mesh.GetNE())});
+    particle_temperature_.insert({species, mfem::Vector(mesh.GetNE())});
+    sum_of_weights_.insert({species, mfem::Vector(mesh.GetNE())});
+  }
+
   element_face_unit_normal_ = std::make_shared<ElementFaceContainer<mfem::Vector>>();
   for (int element = 0; element < mesh.GetNE(); element++) {
     const int num_faces = getNumFacesOnElement(mesh, element);
@@ -159,7 +164,7 @@ IntegratedCharge ParticleOperations::assembleCharge(
   charge_state.setIntegratedChargeValue(0.0);
   mfem::Mesh &mesh = *finite_element_space.GetMesh();
 
-  for (Particle& particle : particles) {
+  for (const Particle& particle : particles) {
     if (not particle.is_alive) continue;
 
     const int elem_id = particle.element;
@@ -197,7 +202,7 @@ IntegratedCharge ParticleOperations::assembleVarianceReducedCharge(
   charge_state.setIntegratedChargeValue(0.0);
   mfem::Mesh &mesh = *finite_element_space.GetMesh();
 
-  for (Particle& particle : particles) {
+  for (const Particle& particle : particles) {
     if (not particle.is_alive) continue;
 
     const int elem_id = particle.element;
@@ -232,10 +237,11 @@ IntegratedCharge ParticleOperations::assembleVarianceReducedCharge(
   return charge_state;
 }
 
-mfem::DenseMatrix& ParticleOperations::getNumberDensity(const ParticleContainer& particles
+std::unordered_map<Species, mfem::Vector>& ParticleOperations::getNumberDensity(const ParticleContainer& particles
 ) {
 
-  particle_number_density_ = 0.0;
+  for (auto & species_and_number_density : particle_number_density_)
+    species_and_number_density.second = 0.0;
 
   mfem::Array<int> vector_dofs;
   mfem::FiniteElementSpace finite_element_space = discretization_.getFeSpace();
@@ -245,17 +251,18 @@ mfem::DenseMatrix& ParticleOperations::getNumberDensity(const ParticleContainer&
     if (not particle.is_alive) continue;
 
     const int elem_id = particle.element;
-    const int species_id = particles.getParticleSpeciesIndex(particle);
-    particle_number_density_(elem_id, species_id) += particle.weight / mesh.GetElementVolume(elem_id);
+    const Species & species = particle.species;
+    particle_number_density_.at(species)(elem_id) += particle.weight / mesh.GetElementVolume(elem_id);
   }
 
   return this->particle_number_density_;
 }
 
-mfem::DenseTensor& ParticleOperations::getBulkVelocity(const ParticleContainer& particles, const bool sum_weights
+std::unordered_map<Species, mfem::DenseMatrix>& ParticleOperations::getBulkVelocity(const ParticleContainer& particles, const bool sum_weights
 ) {
 
-  particle_bulk_velocity_ = 0.0;
+  for (auto & species_and_bulk_velocity : particle_bulk_velocity_)
+    species_and_bulk_velocity.second = 0.0;
 
   if (sum_weights) this->sumParticleWeights_(particles);
 
@@ -263,21 +270,22 @@ mfem::DenseTensor& ParticleOperations::getBulkVelocity(const ParticleContainer& 
     if (not particle.is_alive) continue;
 
     const int elem_id = particle.element;
-    const int species_id = particles.getParticleSpeciesIndex(particle);
-    const double sum_weights = sum_of_weights_(elem_id, species_id);
+    const Species & species = particle.species;
+    const double sum_weights = sum_of_weights_.at(species)(elem_id);
     if (sum_weights <= 0.0) continue;
 
-    mfem::Vector velocity_in_element(particle_bulk_velocity_(species_id).GetColumn(elem_id), 3);
+    mfem::Vector velocity_in_element(particle_bulk_velocity_.at(species).GetColumn(elem_id), 3);
     velocity_in_element.Add(particle.weight / sum_weights, particle.velocity);
   }
 
   return this->particle_bulk_velocity_;
 }
 
-mfem::DenseMatrix& ParticleOperations::getTemperature(const ParticleContainer& particles, const bool sum_weights, const bool compute_bulk_velocity
+std::unordered_map<Species, mfem::Vector>& ParticleOperations::getTemperature(const ParticleContainer& particles, const bool sum_weights, const bool compute_bulk_velocity
 ) {
 
-  particle_temperature_ = 0.0;
+  for (auto & species_and_temperature : particle_temperature_)
+    species_and_temperature.second = 0.0;
 
   if (sum_weights) this->sumParticleWeights_(particles);
   if (compute_bulk_velocity) this->getBulkVelocity(particles, false);
@@ -286,17 +294,23 @@ mfem::DenseMatrix& ParticleOperations::getTemperature(const ParticleContainer& p
     if (not particle.is_alive) continue;
 
     const int elem_id = particle.element;
-    const int species_id = particles.getParticleSpeciesIndex(particle);
-    const double sum_weights = sum_of_weights_(elem_id, species_id);
+    const Species & species = particle.species;
+    const double sum_weights = sum_of_weights_.at(species)(elem_id);
     if (sum_weights <= 0.0) continue;
 
-    const mfem::Vector bulk_velocity_in_element(particle_bulk_velocity_(species_id).GetColumn(elem_id), 3);
+    const mfem::Vector bulk_velocity_in_element(particle_bulk_velocity_.at(species).GetColumn(elem_id), 3);
     mfem::Vector fluctuation_velocity = particle.velocity;
     fluctuation_velocity -= bulk_velocity_in_element;
 
     const double norm_squared = fluctuation_velocity * fluctuation_velocity;
 
-    particle_temperature_(elem_id, species_id) += norm_squared * particle.weight * particle.species.mass / (3.0 * constants::boltzmann_constant * sum_weights);
+    // this only holds for constant weights
+    const double number_of_samples = sum_weights / particle.weight;
+    if (number_of_samples <= 1.) continue;
+
+    const double bias_corrected_weight = particle.weight * number_of_samples / (number_of_samples - 1.);
+
+    particle_temperature_.at(species)(elem_id) += norm_squared * bias_corrected_weight * particle.species.mass / (3.0 * constants::boltzmann_constant * sum_weights);
   }
 
   return this->particle_temperature_;
@@ -305,13 +319,14 @@ mfem::DenseMatrix& ParticleOperations::getTemperature(const ParticleContainer& p
 void ParticleOperations::sumParticleWeights_(
   const ParticleContainer& particles
 ) {
-    sum_of_weights_ = 0.0;
+    for (auto & species_and_sum_of_weights : sum_of_weights_)
+      species_and_sum_of_weights.second = 0.0;
     for (const Particle& particle : particles) {
       if (not particle.is_alive) continue;
 
       const int elem_id = particle.element;
-      const int species_id = particles.getParticleSpeciesIndex(particle);
-      sum_of_weights_(elem_id, species_id) += particle.weight;
+      const Species & species = particle.species;
+      sum_of_weights_.at(species)(elem_id) += particle.weight;
     }
 }
 

@@ -13,6 +13,8 @@
 
 #include <mfem/mfem.hpp>
 
+#include <unordered_map>
+
 namespace mfpic {
 
 class ParticleOperations {
@@ -24,13 +26,13 @@ public:
   * @param discretization - Discretization object containing the finite element space 
   * @param particle_boundary_factories - List of factories for particle boundaries and attributes to which they apply.
   * @param default_particle_boundary_factory - Factory for particle boundary to apply to uncovered attributes.
-  * @param num_species - Number of particle species
+  * @param species_map - Map species names to Species structs
   */
   ParticleOperations(
     Discretization &discretization,
     std::vector<std::shared_ptr<ParticleBoundaryFactory>> particle_boundary_factories,
     std::shared_ptr<ParticleBoundaryFactory> default_particle_boundary_factory,
-    const int num_species
+    std::unordered_map<std::string, Species> species_map
   );
 
   ParticleContainer accelerate(
@@ -79,9 +81,9 @@ public:
    *
    * @param[in] particles   \ref ParticleContainer
    *
-   * @return mfem::DenseMatrix of number density for each particle species, (element, species)
+   * @return Map of particle species to number density, (species, (element))
    */
-  mfem::DenseMatrix& getNumberDensity(const ParticleContainer& particles);
+  std::unordered_map<Species, mfem::Vector>& getNumberDensity(const ParticleContainer& particles);
 
   /**
    * @brief Compute the bulk velocity in each element
@@ -89,9 +91,9 @@ public:
    * @param[in] particles   \ref ParticleContainer
    * @param[in] sum_weights Optional flag that resums the weights. Default is true.
    *
-   * @return mfem::DenseTensor of bulk velocity for each particle species, (dimension, element, species)
+   * @return Map of particle species to bulk velocity (species, (dimension, element))
    */
-  mfem::DenseTensor& getBulkVelocity(const ParticleContainer& particles, const bool sum_weights = true);
+  std::unordered_map<Species, mfem::DenseMatrix>& getBulkVelocity(const ParticleContainer& particles, const bool sum_weights = true);
 
   /**
    * @brief Compute the temperature in each element
@@ -100,16 +102,9 @@ public:
    * @param[in] sum_weights           Optional flag that resums the weights. Default is true.
    * @param[in] compute_bulk_velocity Optional flag that recomputes the bulk velocity. Default is true.
    *
-   * @return mfem::DenseMatrix of temperature for each particle species, (element, species)
+   * @return Map of particle species to temperature, (species, (element))
    */
-  mfem::DenseMatrix& getTemperature(const ParticleContainer& particles, const bool sum_weights = true, const bool compute_bulk_velocity = true);
-
-  /**
-   * @brief Get number of species in the particle container
-   *
-   * @return int of number of species 
-   */
-  int getNumSpecies() const {return num_species_;};
+  std::unordered_map<Species, mfem::Vector>& getTemperature(const ParticleContainer& particles, const bool sum_weights = true, const bool compute_bulk_velocity = true);
 
   /**
    * @brief Get mfem mesh associated with the discretization
@@ -143,22 +138,19 @@ private:
   ElementFaceContainer<std::shared_ptr<ParticleBoundary>> particle_boundaries_;
 
   /// Particle number density
-  mfem::DenseMatrix particle_number_density_;
+  std::unordered_map<Species, mfem::Vector> particle_number_density_;
 
   /// Particle bulk velocity
-  mfem::DenseTensor particle_bulk_velocity_;
+  std::unordered_map<Species, mfem::DenseMatrix> particle_bulk_velocity_;
 
   /// Particle temperature
-  mfem::DenseMatrix particle_temperature_;
+  std::unordered_map<Species, mfem::Vector> particle_temperature_;
 
   /// Particle sum of weights
-  mfem::DenseMatrix sum_of_weights_;
+  std::unordered_map<Species, mfem::Vector> sum_of_weights_;
 
   /// Mesh dimension
   const int dim_;
-
-  /// Number of species
-  const int num_species_;
 
 };
 

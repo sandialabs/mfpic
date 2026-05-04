@@ -131,7 +131,6 @@ TEST(ConjugateGradientLinearSolver, InvertRandomSPDMatrix) {
   constexpr int size = 10;
   const mfem::SparseMatrix random_spd_matrix = generateRandomSPDMatrix(size);
 
-
   mfem::Vector rhs_vector = generateRandomVector(size);
   mfem::Vector sol_vector(size);
   sol_vector = 0.;
@@ -172,15 +171,17 @@ TEST(ConjugateGradientLinearSolver, InvertElectrostaticMatrix) {
   mfem::GridFunction potential = field_state.getPotential();
 
   auto default_particle_boundary_factory = std::make_shared<ReflectingParticleBoundaryFactory>();
-  const int num_species = 2;
+  Species electron_species{.charge = qe, .mass = me};
+  Species proton_species{.charge = constants::elementary_charge, .mass = constants::proton_mass};
+
+  const std::unordered_map<std::string, Species> species_map {{"electron", electron_species}, {"proton", proton_species}};
+ 
   ParticleOperations particle_operations(
     electrostatic_discretization,
     {},
     default_particle_boundary_factory,
-    num_species);
+    species_map);
 
-  Species electron_species{.charge = qe, .mass = me};
-  Species proton_species{.charge = constants::elementary_charge, .mass = constants::proton_mass};
   constexpr int num_particles = 100000;
   const SourceStateParameters particle_source_state_parameters{
     .number_density = number_density,

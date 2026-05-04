@@ -66,7 +66,6 @@ void runSimulation(int argc, char* argv[]) {
   ElectrostaticFieldState particle_electrostatic_field_state(electrostatic_discretization);
 
   std::unordered_map<std::string, Species> species_map = buildSpeciesMapFromYaml(main["Species"]);
-  const int num_species = species_map.size();
 
   const auto [particle_boundary_factories, default_particle_boundary_factory] = buildParticleBoundariesFromYaml(
     main["Particles"],
@@ -76,7 +75,7 @@ void runSimulation(int argc, char* argv[]) {
     electrostatic_discretization,
     particle_boundary_factories,
     default_particle_boundary_factory,
-    num_species
+    species_map
   );
 
   std::default_random_engine generator;
