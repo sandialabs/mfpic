@@ -8,6 +8,7 @@
 #include <libmfpic/LowFidelityState.hpp>
 
 #include <mfem/mfem.hpp>
+#include <unordered_map>
 
 namespace mfpic {
 
@@ -150,30 +151,30 @@ public:
    */
   mfem::Mesh& getMesh() const {return *charge_discretization_.getFeSpace().GetMesh();};
 
-  mfem::DenseMatrix integralForVarianceReducedNumberDensity(
+  std::unordered_map<Species,mfem::Vector> integralForVarianceReducedNumberDensity(
     mfem::FiniteElementSpace finite_element_space, 
     const LowFidelityState& current_state
   ) const;
 
-  mfem::DenseTensor integralForVarianceReducedBulkVelocity(
+  std::unordered_map<Species, mfem::DenseMatrix> integralForVarianceReducedBulkVelocity(
     mfem::FiniteElementSpace finite_element_space, 
     const LowFidelityState& current_state
   ) const;
 
-  mfem::DenseMatrix integralForVarianceReducedTemperature(
+  std::unordered_map<Species,mfem::Vector> integralForVarianceReducedTemperature(
     mfem::FiniteElementSpace finite_element_space, 
     const LowFidelityState& current_state
   ) const;
 
-  mfem::DenseMatrix getCellAveragedNumberDensity(
+  std::unordered_map<Species,mfem::Vector> getCellAveragedNumberDensity(
     const LowFidelityState& current_state
   ) const;
 
-  mfem::DenseTensor getCellAveragedBulkVelocity(
+  std::unordered_map<Species,mfem::DenseMatrix> getCellAveragedBulkVelocity(
     const LowFidelityState& current_state
   ) const;
 
-  mfem::DenseMatrix getCellAveragedTemperature(
+  std::unordered_map<Species,mfem::Vector> getCellAveragedTemperature(
     const LowFidelityState& current_state
   ) const;
 

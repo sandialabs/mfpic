@@ -286,18 +286,16 @@ double DGEulerOperations::evaluateParticleDistributionFunction(
   errorWithUserMessage(error_message.str());
 }
 
-mfem::DenseMatrix DGEulerOperations::integralForVarianceReducedNumberDensity(mfem::FiniteElementSpace finite_element_space, const LowFidelityState& current_state) const
+std::unordered_map<Species,mfem::Vector> DGEulerOperations::integralForVarianceReducedNumberDensity(mfem::FiniteElementSpace finite_element_space, const LowFidelityState& current_state) const
   {
-    int num_species = current_state.numSpecies(); 
     mfem::Mesh& mesh = *finite_element_space.GetMesh();
-    mfem::DenseMatrix number_density_integral;
-    number_density_integral.SetSize(mesh.GetNE(), num_species);
-    number_density_integral = 0.0;
+    std::unordered_map<Species, mfem::Vector> number_density_integral;
 
     for (int ispecies = 0; ispecies < current_state.numSpecies(); ++ispecies) {
       const LowFidelitySpeciesState& current_species_state = current_state.getSpeciesState(ispecies);
       Species current_species = current_species_state.getSpecies();
-      int species_id = current_species.id;
+      number_density_integral.insert({current_species, mfem::Vector(mesh.GetNE())});
+      number_density_integral.at(current_species) = 0.0;
       const mfem::GridFunction& current_species_grid_function = current_species_state.getGridFunction();
       mfem::DenseMatrix fluid_state_at_integration_point_locations, integration_point_locations_in_physical_frame;
 
@@ -323,26 +321,23 @@ mfem::DenseMatrix DGEulerOperations::integralForVarianceReducedNumberDensity(mfe
           fluid_state_at_integration_point_locations.GetColumn(ipoint, fluid_state);
           mfem::Vector primitive_state = euler::convertFromConservativeToPrimitive(fluid_state, current_species);
           const double weight = integration_point.weight * element_transformation->Weight();
-          number_density_integral(element,species_id) += weight * primitive_state(euler::PrimitiveVariables::NUMBER_DENSITY);
+          number_density_integral.at(current_species)(element) += weight * primitive_state(euler::PrimitiveVariables::NUMBER_DENSITY);
         }
       }
     }
     return number_density_integral;
   }
 
-
-  mfem::DenseTensor DGEulerOperations::integralForVarianceReducedBulkVelocity(mfem::FiniteElementSpace finite_element_space, const LowFidelityState& current_state) const
+  std::unordered_map<Species,mfem::DenseMatrix> DGEulerOperations::integralForVarianceReducedBulkVelocity(mfem::FiniteElementSpace finite_element_space, const LowFidelityState& current_state) const
   {
-    int num_species = current_state.numSpecies(); 
     mfem::Mesh& mesh = *finite_element_space.GetMesh();
-    mfem::DenseTensor bulk_velocity_integral;
-    bulk_velocity_integral.SetSize(3,mesh.GetNE(), num_species);
-    bulk_velocity_integral = 0.0;
+    std::unordered_map<Species, mfem::DenseMatrix> bulk_velocity_integral;
 
     for (int ispecies = 0; ispecies < current_state.numSpecies(); ++ispecies) {
       const LowFidelitySpeciesState& current_species_state = current_state.getSpeciesState(ispecies);
       Species current_species = current_species_state.getSpecies();
-      int species_id = current_species.id;
+      bulk_velocity_integral.insert({current_species, mfem::DenseMatrix(3,mesh.GetNE())});
+      bulk_velocity_integral.at(current_species) = 0.0;
       const mfem::GridFunction& current_species_grid_function = current_species_state.getGridFunction();
       mfem::DenseMatrix fluid_state_at_integration_point_locations, integration_point_locations_in_physical_frame;
 
@@ -368,27 +363,25 @@ mfem::DenseMatrix DGEulerOperations::integralForVarianceReducedNumberDensity(mfe
           fluid_state_at_integration_point_locations.GetColumn(ipoint, fluid_state);
           mfem::Vector primitive_state = euler::convertFromConservativeToPrimitive(fluid_state, current_species);
           const double weight = integration_point.weight * element_transformation->Weight();
-          bulk_velocity_integral(0,element,species_id) += weight * primitive_state(euler::PrimitiveVariables::NUMBER_DENSITY) * primitive_state(euler::PrimitiveVariables::X_BULK_VELOCITY);
-          bulk_velocity_integral(1,element,species_id) += weight * primitive_state(euler::PrimitiveVariables::NUMBER_DENSITY) * primitive_state(euler::PrimitiveVariables::Y_BULK_VELOCITY);
-          bulk_velocity_integral(2,element,species_id) += weight * primitive_state(euler::PrimitiveVariables::NUMBER_DENSITY) * primitive_state(euler::PrimitiveVariables::Z_BULK_VELOCITY);
+          bulk_velocity_integral.at(current_species)(0,element) += weight * primitive_state(euler::PrimitiveVariables::NUMBER_DENSITY) * primitive_state(euler::PrimitiveVariables::X_BULK_VELOCITY);
+          bulk_velocity_integral.at(current_species)(1,element) += weight * primitive_state(euler::PrimitiveVariables::NUMBER_DENSITY) * primitive_state(euler::PrimitiveVariables::Y_BULK_VELOCITY);
+          bulk_velocity_integral.at(current_species)(2,element) += weight * primitive_state(euler::PrimitiveVariables::NUMBER_DENSITY) * primitive_state(euler::PrimitiveVariables::Z_BULK_VELOCITY);
         }
       }
     }
     return bulk_velocity_integral;
   }
 
-  mfem::DenseMatrix DGEulerOperations::integralForVarianceReducedTemperature(mfem::FiniteElementSpace finite_element_space, const LowFidelityState& current_state) const
+  std::unordered_map<Species,mfem::Vector> DGEulerOperations::integralForVarianceReducedTemperature(mfem::FiniteElementSpace finite_element_space, const LowFidelityState& current_state) const
   {
-    int num_species = current_state.numSpecies(); 
     mfem::Mesh& mesh = *finite_element_space.GetMesh();
-    mfem::DenseMatrix temperature_integral;
-    temperature_integral.SetSize(mesh.GetNE(), num_species);
-    temperature_integral = 0.0;
+    std::unordered_map<Species, mfem::Vector> temperature_integral;
 
     for (int ispecies = 0; ispecies < current_state.numSpecies(); ++ispecies) {
       const LowFidelitySpeciesState& current_species_state = current_state.getSpeciesState(ispecies);
       Species current_species = current_species_state.getSpecies();
-      int species_id = current_species.id;
+      temperature_integral.insert({current_species, mfem::Vector(mesh.GetNE())});
+      temperature_integral.at(current_species) = 0.0;
       const mfem::GridFunction& current_species_grid_function = current_species_state.getGridFunction();
       mfem::DenseMatrix fluid_state_at_integration_point_locations, integration_point_locations_in_physical_frame;
 
@@ -418,7 +411,7 @@ mfem::DenseMatrix DGEulerOperations::integralForVarianceReducedNumberDensity(mfe
             = primitive_state(euler::PrimitiveVariables::X_BULK_VELOCITY) *primitive_state(euler::PrimitiveVariables::X_BULK_VELOCITY)
             + primitive_state(euler::PrimitiveVariables::Y_BULK_VELOCITY) *primitive_state(euler::PrimitiveVariables::Y_BULK_VELOCITY)
             + primitive_state(euler::PrimitiveVariables::Z_BULK_VELOCITY) *primitive_state(euler::PrimitiveVariables::Z_BULK_VELOCITY);
-          temperature_integral(element,species_id) += weight * primitive_state(euler::PrimitiveVariables::NUMBER_DENSITY) * (primitive_state(euler::PrimitiveVariables::TEMPERATURE) + current_species.mass/(3 * constants::boltzmann_constant) * bulk_velocity_mag_squared);
+          temperature_integral.at(current_species)(element) += weight * primitive_state(euler::PrimitiveVariables::NUMBER_DENSITY) * (primitive_state(euler::PrimitiveVariables::TEMPERATURE) + current_species.mass/(3 * constants::boltzmann_constant) * bulk_velocity_mag_squared);
         }
       }
     }
@@ -426,20 +419,17 @@ mfem::DenseMatrix DGEulerOperations::integralForVarianceReducedNumberDensity(mfe
   }
 
 
-mfem::DenseMatrix DGEulerOperations::getCellAveragedNumberDensity(const LowFidelityState& current_state) const
+std::unordered_map<Species,mfem::Vector> DGEulerOperations::getCellAveragedNumberDensity(const LowFidelityState& current_state) const
 {
-  int num_species = current_state.numSpecies(); 
   mfem::FiniteElementSpace finite_element_space = charge_discretization_.getFeSpace();
   mfem::Mesh& mesh = *finite_element_space.GetMesh();
-  mfem::DenseMatrix number_density_integral;
-
-  number_density_integral.SetSize(mesh.GetNE(), num_species);
-  number_density_integral = 0.0;
+  std::unordered_map<Species,mfem::Vector> number_density_integral;
 
   for (int ispecies = 0; ispecies < current_state.numSpecies(); ++ispecies) {
     const LowFidelitySpeciesState& current_species_state = current_state.getSpeciesState(ispecies);
     Species current_species = current_species_state.getSpecies();
-    int species_id = current_species.id;
+    number_density_integral.insert({current_species, mfem::Vector(mesh.GetNE())});
+    number_density_integral.at(current_species) = 0.0;
     const mfem::GridFunction& current_species_grid_function = current_species_state.getGridFunction();
     mfem::DenseMatrix fluid_state_at_integration_point_locations, integration_point_locations_in_physical_frame;
 
@@ -466,26 +456,24 @@ mfem::DenseMatrix DGEulerOperations::getCellAveragedNumberDensity(const LowFidel
         fluid_state_at_integration_point_locations.GetColumn(ipoint, fluid_state);
         mfem::Vector primitive_state = euler::convertFromConservativeToPrimitive(fluid_state, current_species);
         const double weight = integration_point.weight * element_transformation->Weight();
-        number_density_integral(element,species_id) += weight * primitive_state(euler::PrimitiveVariables::NUMBER_DENSITY) / element_volume;
+        number_density_integral.at(current_species)(element) += weight * primitive_state(euler::PrimitiveVariables::NUMBER_DENSITY) / element_volume;
       }
     }
   }
   return number_density_integral;
 }
 
-mfem::DenseTensor DGEulerOperations::getCellAveragedBulkVelocity(const LowFidelityState& current_state) const
+std::unordered_map<Species,mfem::DenseMatrix> DGEulerOperations::getCellAveragedBulkVelocity(const LowFidelityState& current_state) const
 {
-  int num_species = current_state.numSpecies(); 
   mfem::FiniteElementSpace finite_element_space = charge_discretization_.getFeSpace();
   mfem::Mesh& mesh = *finite_element_space.GetMesh();
-  mfem::DenseTensor bulk_velocity_integral;
-  bulk_velocity_integral.SetSize(3,mesh.GetNE(), num_species);
-  bulk_velocity_integral = 0.0;
+  std::unordered_map<Species, mfem::DenseMatrix> bulk_velocity_integral;
 
   for (int ispecies = 0; ispecies < current_state.numSpecies(); ++ispecies) {
     const LowFidelitySpeciesState& current_species_state = current_state.getSpeciesState(ispecies);
     Species current_species = current_species_state.getSpecies();
-    int species_id = current_species.id;
+    bulk_velocity_integral.insert({current_species, mfem::DenseMatrix(3,mesh.GetNE())});
+    bulk_velocity_integral.at(current_species) = 0.0;
     const mfem::GridFunction& current_species_grid_function = current_species_state.getGridFunction();
     mfem::DenseMatrix fluid_state_at_integration_point_locations, integration_point_locations_in_physical_frame;
 
@@ -512,7 +500,7 @@ mfem::DenseTensor DGEulerOperations::getCellAveragedBulkVelocity(const LowFideli
         fluid_state_at_integration_point_locations.GetColumn(ipoint, fluid_state);
         mfem::Vector primitive_state = euler::convertFromConservativeToPrimitive(fluid_state, current_species);
         const double weight = integration_point.weight * element_transformation->Weight();
-        mfem::Vector velocity_in_element(bulk_velocity_integral(species_id).GetColumn(element), 3);
+        mfem::Vector velocity_in_element(bulk_velocity_integral.at(current_species).GetColumn(element), 3);
         velocity_in_element(0) += weight * primitive_state(euler::PrimitiveVariables::X_BULK_VELOCITY) / element_volume;
         velocity_in_element(1) += weight * primitive_state(euler::PrimitiveVariables::Y_BULK_VELOCITY) / element_volume;
         velocity_in_element(2) += weight * primitive_state(euler::PrimitiveVariables::Z_BULK_VELOCITY) / element_volume;
@@ -522,19 +510,17 @@ mfem::DenseTensor DGEulerOperations::getCellAveragedBulkVelocity(const LowFideli
   return bulk_velocity_integral;
 }
 
-mfem::DenseMatrix DGEulerOperations::getCellAveragedTemperature(const LowFidelityState& current_state) const
+std::unordered_map<Species,mfem::Vector> DGEulerOperations::getCellAveragedTemperature(const LowFidelityState& current_state) const
 {
-  int num_species = current_state.numSpecies(); 
   mfem::FiniteElementSpace finite_element_space = charge_discretization_.getFeSpace();
   mfem::Mesh& mesh = *finite_element_space.GetMesh();
-  mfem::DenseMatrix temperature_integral;
-  temperature_integral.SetSize(mesh.GetNE(), num_species);
-  temperature_integral = 0.0;
+  std::unordered_map<Species, mfem::Vector> temperature_integral;
 
   for (int ispecies = 0; ispecies < current_state.numSpecies(); ++ispecies) {
     const LowFidelitySpeciesState& current_species_state = current_state.getSpeciesState(ispecies);
     Species current_species = current_species_state.getSpecies();
-    int species_id = current_species.id;
+    temperature_integral.insert({current_species, mfem::Vector(mesh.GetNE())});
+    temperature_integral.at(current_species) = 0.0;
     const mfem::GridFunction& current_species_grid_function = current_species_state.getGridFunction();
     mfem::DenseMatrix fluid_state_at_integration_point_locations, integration_point_locations_in_physical_frame;
 
@@ -561,7 +547,7 @@ mfem::DenseMatrix DGEulerOperations::getCellAveragedTemperature(const LowFidelit
         fluid_state_at_integration_point_locations.GetColumn(ipoint, fluid_state);
         mfem::Vector primitive_state = euler::convertFromConservativeToPrimitive(fluid_state, current_species);
         const double weight = integration_point.weight * element_transformation->Weight();
-        temperature_integral(element,species_id) += weight * primitive_state(euler::PrimitiveVariables::TEMPERATURE) / element_volume;
+        temperature_integral.at(current_species)(element) += weight * primitive_state(euler::PrimitiveVariables::TEMPERATURE) / element_volume;
       }
     }
   }

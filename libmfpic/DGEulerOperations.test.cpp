@@ -690,17 +690,17 @@ TEST(DGEulerOperations, LowFidelityMomentsAreCorrectForMaxwellianIn3D) {
   list_of_parameters.push_back(std::make_unique<ConstantSourceParameters>(species, number_density, temperature,bulk_velocity));
   LowFidelityState low_fidelity_state = buildEulerState(dg_discretization, list_of_parameters);
 
-  mfem::DenseMatrix computed_number_density = dg_euler_operations.getCellAveragedNumberDensity(low_fidelity_state);
-  mfem::DenseTensor computed_bulk_velocity = dg_euler_operations.getCellAveragedBulkVelocity(low_fidelity_state);
-  mfem::DenseMatrix computed_temperature = dg_euler_operations.getCellAveragedTemperature(low_fidelity_state);
+  std::unordered_map<Species, mfem::Vector> computed_number_density = dg_euler_operations.getCellAveragedNumberDensity(low_fidelity_state);
+  std::unordered_map<Species, mfem::DenseMatrix> computed_bulk_velocity = dg_euler_operations.getCellAveragedBulkVelocity(low_fidelity_state);
+  std::unordered_map<Species, mfem::Vector> computed_temperature = dg_euler_operations.getCellAveragedTemperature(low_fidelity_state);
 
   for (int elem_id = 0; elem_id < num_elems; ++elem_id)
   {
-    EXPECT_DOUBLE_EQ(computed_number_density(elem_id,0),number_density);
-    EXPECT_DOUBLE_EQ(computed_bulk_velocity(0,elem_id,0),bulk_velocity(0));
-    EXPECT_DOUBLE_EQ(computed_bulk_velocity(1,elem_id,0),bulk_velocity(1));
-    EXPECT_DOUBLE_EQ(computed_bulk_velocity(2,elem_id,0),bulk_velocity(2));
-    EXPECT_DOUBLE_EQ(computed_temperature(elem_id,0),temperature);
+    EXPECT_DOUBLE_EQ(computed_number_density.at(species)(elem_id),number_density);
+    EXPECT_DOUBLE_EQ(computed_bulk_velocity.at(species)(0,elem_id),bulk_velocity(0));
+    EXPECT_DOUBLE_EQ(computed_bulk_velocity.at(species)(1,elem_id),bulk_velocity(1));
+    EXPECT_DOUBLE_EQ(computed_bulk_velocity.at(species)(2,elem_id),bulk_velocity(2));
+    EXPECT_DOUBLE_EQ(computed_temperature.at(species)(elem_id),temperature);
   }
 }
 

@@ -1243,6 +1243,7 @@ TEST(ParticleOperations, ParticleMomentsCorrectForKnownParticles) {
 
 TEST(ParticleOperations, VarianceReducedMomentsAreExactForMaxwellianIn3D) {
   Species species{.charge = -constants::elementary_charge, .mass = constants::electron_mass};
+  const std::unordered_map<std::string, Species> species_map{{"one", species}};
   constexpr double number_density = 1e22;
   constexpr double temperature = 300;
   mfem::Vector bulk_velocity({293.0,581.0,902.0});
@@ -1290,20 +1291,20 @@ TEST(ParticleOperations, VarianceReducedMomentsAreExactForMaxwellianIn3D) {
     charge_discretization,
     empty_particle_boundary_factory_list,
     default_reflecting_particle_boundary_factory,
-    1
+    species_map
   );
 
-  mfem::DenseMatrix variance_reduced_number_density = particle_operations.getVarianceReducedNumberDensity(particles,low_fidelity_state,dg_euler_operations);
-  mfem::DenseTensor variance_reduced_bulk_velocity = particle_operations.getVarianceReducedBulkVelocity(particles,low_fidelity_state,dg_euler_operations);
-  mfem::DenseMatrix variance_reduced_temperature = particle_operations.getVarianceReducedTemperature(particles,low_fidelity_state,dg_euler_operations);
+  std::unordered_map<Species, mfem::Vector> variance_reduced_number_density = particle_operations.getVarianceReducedNumberDensity(particles,low_fidelity_state,dg_euler_operations);
+  std::unordered_map<Species, mfem::DenseMatrix> variance_reduced_bulk_velocity = particle_operations.getVarianceReducedBulkVelocity(particles,low_fidelity_state,dg_euler_operations);
+  std::unordered_map<Species, mfem::Vector> variance_reduced_temperature = particle_operations.getVarianceReducedTemperature(particles,low_fidelity_state,dg_euler_operations);
 
   for (int elem_id = 0; elem_id < num_elems; ++elem_id)
   {
-    EXPECT_DOUBLE_EQ(variance_reduced_number_density(elem_id,0),number_density);
-    EXPECT_DOUBLE_EQ(variance_reduced_bulk_velocity(0,elem_id,0),bulk_velocity(0));
-    EXPECT_DOUBLE_EQ(variance_reduced_bulk_velocity(1,elem_id,0),bulk_velocity(1));
-    EXPECT_DOUBLE_EQ(variance_reduced_bulk_velocity(2,elem_id,0),bulk_velocity(2));
-    EXPECT_DOUBLE_EQ(variance_reduced_temperature(elem_id,0),temperature);
+    EXPECT_DOUBLE_EQ(variance_reduced_number_density.at(species)(elem_id),number_density);
+    EXPECT_DOUBLE_EQ(variance_reduced_bulk_velocity.at(species)(0,elem_id),bulk_velocity(0));
+    EXPECT_DOUBLE_EQ(variance_reduced_bulk_velocity.at(species)(1,elem_id),bulk_velocity(1));
+    EXPECT_DOUBLE_EQ(variance_reduced_bulk_velocity.at(species)(2,elem_id),bulk_velocity(2));
+    EXPECT_DOUBLE_EQ(variance_reduced_temperature.at(species)(elem_id),temperature);
   }
 }
 
@@ -1311,6 +1312,7 @@ TEST(ParticleOperations, VarianceReducedMomentsAreExactForMaxwellianIn3D) {
 TEST(ParticleOperations, VarianceReducedMomentsAndPICMomentsConvergeForKappa) {
 
   Species species{.charge = -constants::elementary_charge, .mass = constants::electron_mass};
+  const std::unordered_map<std::string, Species> species_map{{"one", species}};
   constexpr double number_density = 1e22;
   constexpr double temperature = 300;
   mfem::Vector bulk_velocity({1.0, 0.0, 0.0});
@@ -1346,7 +1348,7 @@ TEST(ParticleOperations, VarianceReducedMomentsAndPICMomentsConvergeForKappa) {
       charge_discretization,
       empty_particle_boundary_factory_list,
       default_reflecting_particle_boundary_factory,
-      1
+      species_map
     );
 
 
@@ -1367,13 +1369,13 @@ TEST(ParticleOperations, VarianceReducedMomentsAndPICMomentsConvergeForKappa) {
   for (int num_particles : num_particles_list) {
     ParticleContainer particles = takePrefix(particles_all, num_particles);
 
-    mfem::DenseMatrix variance_reduced_number_density = particle_operations.getVarianceReducedNumberDensity(particles,low_fidelity_state,dg_euler_operations);
-    mfem::DenseTensor variance_reduced_bulk_velocity = particle_operations.getVarianceReducedBulkVelocity(particles,low_fidelity_state,dg_euler_operations);
-    mfem::DenseMatrix variance_reduced_temperature = particle_operations.getVarianceReducedTemperature(particles,low_fidelity_state,dg_euler_operations);
+    std::unordered_map<Species, mfem::Vector> variance_reduced_number_density = particle_operations.getVarianceReducedNumberDensity(particles,low_fidelity_state,dg_euler_operations);
+    std::unordered_map<Species, mfem::DenseMatrix> variance_reduced_bulk_velocity = particle_operations.getVarianceReducedBulkVelocity(particles,low_fidelity_state,dg_euler_operations);
+    std::unordered_map<Species, mfem::Vector> variance_reduced_temperature = particle_operations.getVarianceReducedTemperature(particles,low_fidelity_state,dg_euler_operations);
 
-    mfem::DenseMatrix pic_number_density = particle_operations.getNumberDensity(particles);
-    mfem::DenseTensor pic_bulk_velocity = particle_operations.getBulkVelocity(particles);
-    mfem::DenseMatrix pic_temperature = particle_operations.getTemperature(particles);
+    std::unordered_map<Species, mfem::Vector> pic_number_density = particle_operations.getNumberDensity(particles);
+    std::unordered_map<Species, mfem::DenseMatrix> pic_bulk_velocity = particle_operations.getBulkVelocity(particles);
+    std::unordered_map<Species, mfem::Vector> pic_temperature = particle_operations.getTemperature(particles);
 
     double max_rel_error_number_density = 0.0;
     double max_rel_error_x_bulk_velocity = 0.0;
@@ -1389,32 +1391,32 @@ TEST(ParticleOperations, VarianceReducedMomentsAndPICMomentsConvergeForKappa) {
 
     for (int elem_id = 0; elem_id < num_elems; ++elem_id)
     {
-      double vr = variance_reduced_number_density(elem_id,0);
-      double pic = pic_number_density(elem_id,0);
+      double vr = variance_reduced_number_density.at(species)(elem_id);
+      double pic = pic_number_density.at(species)(elem_id);
       double denom = std::max(std::abs(pic), 1e-300);
       double rel_error_number_density = std::abs(vr - pic) / denom;
       max_rel_error_number_density = std::max(max_rel_error_number_density, rel_error_number_density);
 
-      vr = variance_reduced_bulk_velocity(0,elem_id,0);
-      pic = pic_bulk_velocity(0,elem_id,0);
+      vr = variance_reduced_bulk_velocity.at(species)(0,elem_id);
+      pic = pic_bulk_velocity.at(species)(0,elem_id);
       denom = std::max(std::abs(pic), 1e-300);
       double rel_error_x_bulk_velocity = std::abs(vr - pic) / denom;
       max_rel_error_x_bulk_velocity = std::max(max_rel_error_x_bulk_velocity, rel_error_x_bulk_velocity);
 
-      vr = variance_reduced_bulk_velocity(1,elem_id,0);
-      pic = pic_bulk_velocity(1,elem_id,0);
+      vr = variance_reduced_bulk_velocity.at(species)(1,elem_id);
+      pic = pic_bulk_velocity.at(species)(1,elem_id);
       denom = std::max(std::abs(pic), 1e-300);
       double rel_error_y_bulk_velocity = std::abs(vr - pic) / denom;
       max_rel_error_y_bulk_velocity = std::max(max_rel_error_y_bulk_velocity, rel_error_y_bulk_velocity);
 
-      vr = variance_reduced_bulk_velocity(2,elem_id,0);
-      pic = pic_bulk_velocity(2,elem_id,0);
+      vr = variance_reduced_bulk_velocity.at(species)(2,elem_id);
+      pic = pic_bulk_velocity.at(species)(2,elem_id);
       denom = std::max(std::abs(pic), 1e-300);
       double rel_error_z_bulk_velocity = std::abs(vr - pic) / denom;
       max_rel_error_z_bulk_velocity = std::max(max_rel_error_z_bulk_velocity, rel_error_z_bulk_velocity);
 
-      vr = variance_reduced_temperature(elem_id,0);
-      pic = pic_temperature(elem_id,0);
+      vr = variance_reduced_temperature.at(species)(elem_id);
+      pic = pic_temperature.at(species)(elem_id);
       denom = std::max(std::abs(pic), 1e-300);
       double rel_error_temperature = std::abs(vr - pic) / denom;
       max_rel_error_temperature = std::max(max_rel_error_temperature, rel_error_temperature);
@@ -1439,6 +1441,7 @@ TEST(ParticleOperations, VarianceReducedMomentsAndPICMomentsConvergeForKappa) {
 
 TEST(ParticleOperations, VarianceReducedMomentsMatchLowFidelityStateWithZeroParticles) {
   Species species{.charge = -constants::elementary_charge, .mass = constants::electron_mass};
+  const std::unordered_map<std::string, Species> species_map{{"one", species}};
   constexpr double number_density = 1e22;
   constexpr double temperature = 300;
   mfem::Vector bulk_velocity({293.0,581.0,902.0});
@@ -1487,20 +1490,20 @@ TEST(ParticleOperations, VarianceReducedMomentsMatchLowFidelityStateWithZeroPart
     charge_discretization,
     empty_particle_boundary_factory_list,
     default_reflecting_particle_boundary_factory,
-    1
+    species_map
   );
 
-  mfem::DenseMatrix variance_reduced_number_density = particle_operations.getVarianceReducedNumberDensity(particles,low_fidelity_state,dg_euler_operations);
-  mfem::DenseTensor variance_reduced_bulk_velocity = particle_operations.getVarianceReducedBulkVelocity(particles,low_fidelity_state,dg_euler_operations);
-  mfem::DenseMatrix variance_reduced_temperature = particle_operations.getVarianceReducedTemperature(particles,low_fidelity_state,dg_euler_operations);
+  std::unordered_map<Species, mfem::Vector> variance_reduced_number_density = particle_operations.getVarianceReducedNumberDensity(particles,low_fidelity_state,dg_euler_operations);
+  std::unordered_map<Species, mfem::DenseMatrix> variance_reduced_bulk_velocity = particle_operations.getVarianceReducedBulkVelocity(particles,low_fidelity_state,dg_euler_operations);
+  std::unordered_map<Species, mfem::Vector>variance_reduced_temperature = particle_operations.getVarianceReducedTemperature(particles,low_fidelity_state,dg_euler_operations);
 
   for (int elem_id = 0; elem_id < num_elems; ++elem_id)
   {
-    EXPECT_DOUBLE_EQ(variance_reduced_number_density(elem_id,0),number_density);
-    EXPECT_DOUBLE_EQ(variance_reduced_bulk_velocity(0,elem_id,0),bulk_velocity(0));
-    EXPECT_DOUBLE_EQ(variance_reduced_bulk_velocity(1,elem_id,0),bulk_velocity(1));
-    EXPECT_DOUBLE_EQ(variance_reduced_bulk_velocity(2,elem_id,0),bulk_velocity(2));
-    EXPECT_DOUBLE_EQ(variance_reduced_temperature(elem_id,0),temperature);
+    EXPECT_DOUBLE_EQ(variance_reduced_number_density.at(species)(elem_id),number_density);
+    EXPECT_DOUBLE_EQ(variance_reduced_bulk_velocity.at(species)(0,elem_id),bulk_velocity(0));
+    EXPECT_DOUBLE_EQ(variance_reduced_bulk_velocity.at(species)(1,elem_id),bulk_velocity(1));
+    EXPECT_DOUBLE_EQ(variance_reduced_bulk_velocity.at(species)(2,elem_id),bulk_velocity(2));
+    EXPECT_DOUBLE_EQ(variance_reduced_temperature.at(species)(elem_id),temperature);
   }
 }
 

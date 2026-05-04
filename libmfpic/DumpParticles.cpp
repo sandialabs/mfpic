@@ -169,15 +169,15 @@ void dumpVarianceReducedParticleMoments(
   const double time) 
 {
 
-  mfem::DenseMatrix variance_reduced_number_density = particle_operations.getVarianceReducedNumberDensity(particles,low_fidelity_state,low_fidelity_operations);
-  mfem::DenseTensor variance_reduced_bulk_velocity = particle_operations.getVarianceReducedBulkVelocity(particles,low_fidelity_state,low_fidelity_operations);
-  mfem::DenseMatrix variance_reduced_temperature = particle_operations.getVarianceReducedTemperature(particles,low_fidelity_state,low_fidelity_operations);
+  std::unordered_map<Species, mfem::Vector> variance_reduced_number_density = particle_operations.getVarianceReducedNumberDensity(particles,low_fidelity_state,low_fidelity_operations);
+  std::unordered_map<Species, mfem::DenseMatrix> variance_reduced_bulk_velocity = particle_operations.getVarianceReducedBulkVelocity(particles,low_fidelity_state,low_fidelity_operations);
+  std::unordered_map<Species, mfem::Vector> variance_reduced_temperature = particle_operations.getVarianceReducedTemperature(particles,low_fidelity_state,low_fidelity_operations);
 
   mfem::Mesh& mesh = particle_operations.getMesh();
   const int nelem = mesh.GetNE();
 
-  for (int s = 0; s < particle_operations.getNumSpecies(); ++s) {
-    std::string filename = file_prefix + "_species_" + std::to_string(s) + ".csv";
+  for (const auto & [species, _] : variance_reduced_number_density) {
+    std::string filename = file_prefix + "_" + species.name + ".csv";
 
     std::ofstream out;
     if (step > 0)
@@ -201,14 +201,14 @@ void dumpVarianceReducedParticleMoments(
       mfem::Vector element_point_view(element_point.GetData(), dim);   
       mesh.GetElementCenter(e, element_point_view);
 
-      const mfem::Vector bulk_velocity_in_element(variance_reduced_bulk_velocity(s).GetColumn(e), 3);
+      const mfem::Vector bulk_velocity_in_element(variance_reduced_bulk_velocity.at(species).GetColumn(e), 3);
 
       out << step << ","
           << time << ","
           << e << ","
           << element_point(0) << "," << element_point(1) << "," << element_point(2) << ","
-          << variance_reduced_number_density(e, s) << ","
-          << variance_reduced_temperature(e, s) << ","
+          << variance_reduced_number_density.at(species)(e) << ","
+          << variance_reduced_temperature.at(species)(e) << ","
           << bulk_velocity_in_element(0) << "," << bulk_velocity_in_element(1) << "," << bulk_velocity_in_element(2) << "\n";
     }
   }
@@ -221,16 +221,15 @@ void dumpLowFidelityMoments(
   const int step,
   const double time) 
 {
-
-  mfem::DenseMatrix number_density = low_fidelity_operations.getCellAveragedNumberDensity(low_fidelity_state);
-  mfem::DenseTensor bulk_velocity = low_fidelity_operations.getCellAveragedBulkVelocity(low_fidelity_state);
-  mfem::DenseMatrix temperature = low_fidelity_operations.getCellAveragedTemperature(low_fidelity_state);
+  std::unordered_map<Species, mfem::Vector> number_density = low_fidelity_operations.getCellAveragedNumberDensity(low_fidelity_state);
+  std::unordered_map<Species, mfem::DenseMatrix> bulk_velocity = low_fidelity_operations.getCellAveragedBulkVelocity(low_fidelity_state);
+  std::unordered_map<Species, mfem::Vector> temperature = low_fidelity_operations.getCellAveragedTemperature(low_fidelity_state);
 
   mfem::Mesh& mesh = low_fidelity_operations.getMesh();
   const int nelem = mesh.GetNE();
 
-  for (int s = 0; s < low_fidelity_state.numSpecies(); ++s) {
-    std::string filename = file_prefix + "_species_" + std::to_string(s) + ".csv";
+  for (const auto & [species, _] : number_density) {
+    std::string filename = file_prefix + "_" + species.name + ".csv";
 
     std::ofstream out;
     if (step > 0)
@@ -254,14 +253,14 @@ void dumpLowFidelityMoments(
       mfem::Vector element_point_view(element_point.GetData(), dim);   
       mesh.GetElementCenter(e, element_point_view);
 
-      const mfem::Vector bulk_velocity_in_element(bulk_velocity(s).GetColumn(e), 3);
+      const mfem::Vector bulk_velocity_in_element(bulk_velocity.at(species).GetColumn(e), 3);
 
       out << step << ","
           << time << ","
           << e << ","
           << element_point(0) << "," << element_point(1) << "," << element_point(2) << ","
-          << number_density(e, s) << ","
-          << temperature(e, s) << ","
+          << number_density.at(species)(e) << ","
+          << temperature.at(species)(e) << ","
           << bulk_velocity_in_element(0) << "," << bulk_velocity_in_element(1) << "," << bulk_velocity_in_element(2) << "\n";
     }
   }

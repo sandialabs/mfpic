@@ -96,7 +96,7 @@ public:
    *
    * @return mfem::DenseMatrix of number density for each particle species, (element, species)
    */
-  mfem::DenseMatrix& getVarianceReducedNumberDensity(
+    std::unordered_map<Species, mfem::Vector>& getVarianceReducedNumberDensity(
     const ParticleContainer& particles,
     const LowFidelityState& low_fidelity_state,
     const DGEulerOperations& low_fidelity_operations
@@ -120,13 +120,7 @@ public:
    *
    * @return mfem::DenseTensor of bulk velocity for each particle species, (dimension, element, species)
    */
-  mfem::DenseTensor& getVarianceReducedBulkVelocity(
-    const ParticleContainer& particles, 
-    const LowFidelityState& low_fidelity_state,
-    const DGEulerOperations& low_fidelity_operations
-  );
-
-  mfem::DenseMatrix& getVarianceReducedTemperature(
+  std::unordered_map<Species, mfem::DenseMatrix>& getVarianceReducedBulkVelocity(
     const ParticleContainer& particles, 
     const LowFidelityState& low_fidelity_state,
     const DGEulerOperations& low_fidelity_operations
@@ -142,6 +136,12 @@ public:
    * @return Map of particle species to temperature, (species, (element))
    */
   std::unordered_map<Species, mfem::Vector>& getTemperature(const ParticleContainer& particles, const bool sum_weights = true, const bool compute_bulk_velocity = true);
+
+  std::unordered_map<Species, mfem::Vector>& getVarianceReducedTemperature(
+    const ParticleContainer& particles, 
+    const LowFidelityState& low_fidelity_state,
+    const DGEulerOperations& low_fidelity_operations
+  );
 
   /**
    * @brief Get mfem mesh associated with the discretization
@@ -184,13 +184,13 @@ private:
   std::unordered_map<Species, mfem::Vector> particle_temperature_;
 
   /// Variance reduced particle number density
-  mfem::DenseMatrix variance_reduced_particle_number_density_;
+  std::unordered_map<Species, mfem::Vector> variance_reduced_particle_number_density_;
 
   /// Variance reduced particle bulk velocity
-  mfem::DenseTensor variance_reduced_particle_bulk_velocity_;
+  std::unordered_map<Species, mfem::DenseMatrix> variance_reduced_particle_bulk_velocity_;
 
   /// Variance reduced particle temperature
-  mfem::DenseMatrix variance_reduced_particle_temperature_;
+  std::unordered_map<Species, mfem::Vector> variance_reduced_particle_temperature_;
 
   /// Particle sum of weights
   std::unordered_map<Species, mfem::Vector> sum_of_weights_;

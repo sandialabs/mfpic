@@ -31,6 +31,9 @@ ParticleOperations::ParticleOperations(
     particle_number_density_.insert({species, mfem::Vector(mesh.GetNE())});
     particle_bulk_velocity_.insert({species, mfem::DenseMatrix(3, mesh.GetNE())});
     particle_temperature_.insert({species, mfem::Vector(mesh.GetNE())});
+    variance_reduced_particle_number_density_.insert({species, mfem::Vector(mesh.GetNE())});
+    variance_reduced_particle_bulk_velocity_.insert({species, mfem::DenseMatrix(3, mesh.GetNE())});
+    variance_reduced_particle_temperature_.insert({species, mfem::Vector(mesh.GetNE())});
     sum_of_weights_.insert({species, mfem::Vector(mesh.GetNE())});
   }
 
@@ -259,27 +262,24 @@ std::unordered_map<Species, mfem::Vector>& ParticleOperations::getNumberDensity(
   return this->particle_number_density_;
 }
 
-<<<<<<< HEAD
-std::unordered_map<Species, mfem::DenseMatrix>& ParticleOperations::getBulkVelocity(const ParticleContainer& particles, const bool sum_weights
-=======
-mfem::DenseMatrix& ParticleOperations::getVarianceReducedNumberDensity(
+std::unordered_map<Species, mfem::Vector>& ParticleOperations::getVarianceReducedNumberDensity(
   const ParticleContainer& particles, 
   const LowFidelityState& low_fidelity_state,
   const DGEulerOperations& low_fidelity_operations
 ) {
 
-  variance_reduced_particle_number_density_ = 0.0;
+  for (auto & species_and_number_density : variance_reduced_particle_number_density_)
+    species_and_number_density.second = 0.0;
 
   mfem::FiniteElementSpace finite_element_space = discretization_.getFeSpace();
   mfem::Mesh &mesh = *finite_element_space.GetMesh();
 
-  mfem::DenseMatrix low_fidelity_integral = low_fidelity_operations.integralForVarianceReducedNumberDensity(finite_element_space, low_fidelity_state);
+  std::unordered_map<Species,mfem::Vector> low_fidelity_integral = low_fidelity_operations.integralForVarianceReducedNumberDensity(finite_element_space, low_fidelity_state);
 
   for (const Particle& particle : particles) {
     if (not particle.is_alive) continue;
 
     const int elem_id = particle.element;
-    const int species_id = particle.species.id;
     const double element_volume = mesh.GetElementVolume(elem_id);
 
     const mfem::Vector particle_position(particle.position.GetData(), dim_);
@@ -287,7 +287,7 @@ mfem::DenseMatrix& ParticleOperations::getVarianceReducedNumberDensity(
     double low_fidelity_particle_distribution_function_value = low_fidelity_operations.evaluateParticleDistributionFunction(low_fidelity_state,particle_position,particle.velocity,particle.element,particle.species);
     double noise_reducing_factor = (1 - low_fidelity_particle_distribution_function_value / particle.particle_distribution_function_value);
 
-    variance_reduced_particle_number_density_(elem_id, species_id) += (particle.weight * noise_reducing_factor) / element_volume;
+    variance_reduced_particle_number_density_.at(particle.species)(elem_id) += (particle.weight * noise_reducing_factor) / element_volume;
   }
 
   for (int elem_id = 0; elem_id < finite_element_space.GetNE(); ++elem_id)
@@ -297,16 +297,15 @@ mfem::DenseMatrix& ParticleOperations::getVarianceReducedNumberDensity(
     {
       const LowFidelitySpeciesState& current_species_state = low_fidelity_state.getSpeciesState(ispecies);
       Species current_species = current_species_state.getSpecies();
-      int species_id = current_species.id;
-      variance_reduced_particle_number_density_(elem_id, species_id) += low_fidelity_integral(elem_id,species_id) / element_volume;
+      variance_reduced_particle_number_density_.at(current_species)(elem_id) += low_fidelity_integral.at(current_species)(elem_id) / element_volume;
     }
   } 
 
   return this->variance_reduced_particle_number_density_;
 }
 
-mfem::DenseTensor& ParticleOperations::getBulkVelocity(const ParticleContainer& particles, const bool sum_weights
->>>>>>> b91093f (Initial implementation of variance reduced number density and bulk velocity)
+
+std::unordered_map<Species, mfem::DenseMatrix>& ParticleOperations::getBulkVelocity(const ParticleContainer& particles, const bool sum_weights
 ) {
 
   for (auto & species_and_bulk_velocity : particle_bulk_velocity_)
@@ -329,24 +328,23 @@ mfem::DenseTensor& ParticleOperations::getBulkVelocity(const ParticleContainer& 
   return this->particle_bulk_velocity_;
 }
 
-std::unordered_map<Species, mfem::Vector>& ParticleOperations::getTemperature(const ParticleContainer& particles, const bool sum_weights, const bool compute_bulk_velocity
+std::unordered_map<Species, mfem::DenseMatrix>& ParticleOperations::getVarianceReducedBulkVelocity(
+  const ParticleContainer& particles, 
+  const LowFidelityState& low_fidelity_state,
+  const DGEulerOperations& low_fidelity_operations
 ) {
 
-<<<<<<< HEAD
-  for (auto & species_and_temperature : particle_temperature_)
-    species_and_temperature.second = 0.0;
-=======
-  variance_reduced_particle_bulk_velocity_ = 0.0;
+  for (auto & species_and_bulk_velocity : variance_reduced_particle_bulk_velocity_)
+    species_and_bulk_velocity.second = 0.0;
 
   mfem::FiniteElementSpace finite_element_space = discretization_.getFeSpace();
   mfem::Mesh &mesh = *finite_element_space.GetMesh();
-  mfem::DenseTensor low_fidelity_integral = low_fidelity_operations.integralForVarianceReducedBulkVelocity(finite_element_space, low_fidelity_state);
+  std::unordered_map<Species, mfem::DenseMatrix> low_fidelity_integral = low_fidelity_operations.integralForVarianceReducedBulkVelocity(finite_element_space, low_fidelity_state);
 
   for (const Particle& particle : particles) {
     if (not particle.is_alive) continue;
 
     const int elem_id = particle.element;
-    const int species_id = particle.species.id;
     const double element_volume = mesh.GetElementVolume(elem_id);
 
     const mfem::Vector particle_position(particle.position.GetData(), dim_);
@@ -354,10 +352,10 @@ std::unordered_map<Species, mfem::Vector>& ParticleOperations::getTemperature(co
     double low_fidelity_particle_distribution_function_value = low_fidelity_operations.evaluateParticleDistributionFunction(low_fidelity_state,particle_position,particle.velocity,particle.element,particle.species);
     double noise_reducing_factor = (1 - low_fidelity_particle_distribution_function_value / particle.particle_distribution_function_value);
 
-    double number_density = variance_reduced_particle_number_density_(elem_id,species_id);
+    double number_density = variance_reduced_particle_number_density_.at(particle.species)(elem_id);
 
-    mfem::Vector velocity_in_element(variance_reduced_particle_bulk_velocity_(species_id).GetColumn(elem_id), 3);
-    mfem::Vector low_fidelity_integral_in_element(low_fidelity_integral(species_id).GetColumn(elem_id), 3);
+    mfem::Vector velocity_in_element(variance_reduced_particle_bulk_velocity_.at(particle.species).GetColumn(elem_id), 3);
+    mfem::Vector low_fidelity_integral_in_element(low_fidelity_integral.at(particle.species).GetColumn(elem_id), 3);
 
     velocity_in_element(0) += (particle.weight * particle.velocity(0) * noise_reducing_factor) / (number_density * element_volume);
     velocity_in_element(1) += (particle.weight * particle.velocity(1) * noise_reducing_factor) / (number_density * element_volume);
@@ -371,10 +369,9 @@ std::unordered_map<Species, mfem::Vector>& ParticleOperations::getTemperature(co
     {
       const LowFidelitySpeciesState& current_species_state = low_fidelity_state.getSpeciesState(ispecies);
       Species current_species = current_species_state.getSpecies();
-      int species_id = current_species.id;
-      mfem::Vector low_fidelity_integral_in_element(low_fidelity_integral(species_id).GetColumn(elem_id), 3);
-      mfem::Vector velocity_in_element(variance_reduced_particle_bulk_velocity_(species_id).GetColumn(elem_id), 3);
-      double number_density = variance_reduced_particle_number_density_(elem_id,species_id);
+      mfem::Vector low_fidelity_integral_in_element(low_fidelity_integral.at(current_species).GetColumn(elem_id), 3);
+      mfem::Vector velocity_in_element(variance_reduced_particle_bulk_velocity_.at(current_species).GetColumn(elem_id), 3);
+      double number_density = variance_reduced_particle_number_density_.at(current_species)(elem_id);
 
       velocity_in_element(0) += low_fidelity_integral_in_element(0) / (number_density * element_volume);
       velocity_in_element(1) += low_fidelity_integral_in_element(1) / (number_density * element_volume);
@@ -385,11 +382,11 @@ std::unordered_map<Species, mfem::Vector>& ParticleOperations::getTemperature(co
   return this->variance_reduced_particle_bulk_velocity_;
 }
 
-mfem::DenseMatrix& ParticleOperations::getTemperature(const ParticleContainer& particles, const bool sum_weights, const bool compute_bulk_velocity
+std::unordered_map<Species, mfem::Vector>& ParticleOperations::getTemperature(const ParticleContainer& particles, const bool sum_weights, const bool compute_bulk_velocity
 ) {
 
-  particle_temperature_ = 0.0;
->>>>>>> a98cdd9 (1D Maxwellian test of variance reduced particle moments)
+  for (auto & species_and_temperature : particle_temperature_)
+    species_and_temperature.second = 0.0;
 
   if (sum_weights) this->sumParticleWeights_(particles);
   if (compute_bulk_velocity) this->getBulkVelocity(particles, false);
@@ -402,16 +399,11 @@ mfem::DenseMatrix& ParticleOperations::getTemperature(const ParticleContainer& p
     const double sum_weights = sum_of_weights_.at(species)(elem_id);
     if (sum_weights <= 0.0) continue;
 
-<<<<<<< HEAD
     const mfem::Vector bulk_velocity_in_element(particle_bulk_velocity_.at(species).GetColumn(elem_id), 3);
-=======
-    mfem::Vector bulk_velocity_in_element(particle_bulk_velocity_(species_id).GetColumn(elem_id), 3);
->>>>>>> 49877f8 (Accounting for bias in Temperature and more than one macro particles)
     mfem::Vector fluctuation_velocity = particle.velocity;
     fluctuation_velocity -= bulk_velocity_in_element;
 
     const double norm_squared = fluctuation_velocity * fluctuation_velocity;
-<<<<<<< HEAD
 
     // this only holds for constant weights
     const double number_of_samples = sum_weights / particle.weight;
@@ -420,32 +412,27 @@ mfem::DenseMatrix& ParticleOperations::getTemperature(const ParticleContainer& p
     const double bias_corrected_weight = particle.weight * number_of_samples / (number_of_samples - 1.);
 
     particle_temperature_.at(species)(elem_id) += norm_squared * bias_corrected_weight * particle.species.mass / (3.0 * constants::boltzmann_constant * sum_weights);
-=======
-    const double number_of_macro_particles = sum_weights / particle.weight;
-    if (number_of_macro_particles > 1)
-    {
-      particle_temperature_(elem_id, species_id) += number_of_macro_particles / (number_of_macro_particles-1) * norm_squared * particle.weight * particle.species.mass / (3.0 * constants::boltzmann_constant * sum_weights);
-    }
->>>>>>> 49877f8 (Accounting for bias in Temperature and more than one macro particles)
   }
 
   return this->particle_temperature_;
 }
 
-mfem::DenseMatrix& ParticleOperations::getVarianceReducedTemperature(
+std::unordered_map<Species,mfem::Vector>& ParticleOperations::getVarianceReducedTemperature(
   const ParticleContainer& particles, 
   const LowFidelityState& low_fidelity_state,
   const DGEulerOperations& low_fidelity_operations
 ) {
 
-  variance_reduced_particle_temperature_= 0.0;
+  for (auto & species_and_temperature : variance_reduced_particle_temperature_)
+    species_and_temperature.second = 0.0;
+
   mfem::FiniteElementSpace finite_element_space = discretization_.getFeSpace();
   mfem::Mesh &mesh = *finite_element_space.GetMesh();
 
   //TODO: Store and reuse from previous moments
-  mfem::DenseMatrix low_fidelity_number_density_integral = low_fidelity_operations.integralForVarianceReducedNumberDensity(finite_element_space, low_fidelity_state);
-  mfem::DenseTensor low_fidelity_bulk_velocity_integral = low_fidelity_operations.integralForVarianceReducedBulkVelocity(finite_element_space, low_fidelity_state);
-  mfem::DenseMatrix low_fidelity_temperature_integral = low_fidelity_operations.integralForVarianceReducedTemperature(finite_element_space, low_fidelity_state);
+  std::unordered_map<Species,mfem::Vector> low_fidelity_number_density_integral = low_fidelity_operations.integralForVarianceReducedNumberDensity(finite_element_space, low_fidelity_state);
+  std::unordered_map<Species,mfem::DenseMatrix> low_fidelity_bulk_velocity_integral = low_fidelity_operations.integralForVarianceReducedBulkVelocity(finite_element_space, low_fidelity_state);
+  std::unordered_map<Species,mfem::Vector> low_fidelity_temperature_integral = low_fidelity_operations.integralForVarianceReducedTemperature(finite_element_space, low_fidelity_state);
 
   this->sumParticleWeights_(particles);
   mfem::Vector more_than_one_macro_particle(finite_element_space.GetNE());
@@ -455,23 +442,22 @@ mfem::DenseMatrix& ParticleOperations::getVarianceReducedTemperature(
     if (not particle.is_alive) continue;
 
     const int elem_id = particle.element;
-    const int species_id = particle.species.id;
     const double element_volume = mesh.GetElementVolume(elem_id);
 
     const mfem::Vector particle_position(particle.position.GetData(), dim_);
     double low_fidelity_particle_distribution_function_value = low_fidelity_operations.evaluateParticleDistributionFunction(low_fidelity_state,particle_position,particle.velocity,particle.element,particle.species);
     double noise_reducing_factor = (1 - low_fidelity_particle_distribution_function_value / particle.particle_distribution_function_value);
 
-    double number_density = variance_reduced_particle_number_density_(elem_id,species_id);
-    double x_bulk_velocity = variance_reduced_particle_bulk_velocity_(0,elem_id,species_id);
-    double y_bulk_velocity = variance_reduced_particle_bulk_velocity_(1,elem_id,species_id);
-    double z_bulk_velocity = variance_reduced_particle_bulk_velocity_(2,elem_id,species_id);
+    double number_density = variance_reduced_particle_number_density_.at(particle.species)(elem_id);
+    double x_bulk_velocity = variance_reduced_particle_bulk_velocity_.at(particle.species)(0,elem_id);
+    double y_bulk_velocity = variance_reduced_particle_bulk_velocity_.at(particle.species)(1,elem_id);
+    double z_bulk_velocity = variance_reduced_particle_bulk_velocity_.at(particle.species)(2,elem_id);
 
     mfem::Vector fluctuation_velocity = particle.velocity;
     fluctuation_velocity(0) -= x_bulk_velocity;
     fluctuation_velocity(1) -= y_bulk_velocity;
     fluctuation_velocity(2) -= z_bulk_velocity;
-    const double sum_weights = sum_of_weights_(elem_id, species_id);
+    const double sum_weights = sum_of_weights_.at(particle.species)(elem_id);
     const double number_of_macro_particles = sum_weights / particle.weight;
 
     const double norm_squared = fluctuation_velocity * fluctuation_velocity;
@@ -479,7 +465,7 @@ mfem::DenseMatrix& ParticleOperations::getVarianceReducedTemperature(
 
     if (number_of_macro_particles > 1)
     {
-      variance_reduced_particle_temperature_(elem_id, species_id) += number_of_macro_particles / (number_of_macro_particles - 1) * m_over_3kb * norm_squared * particle.weight * noise_reducing_factor / (number_density * element_volume) ;
+      variance_reduced_particle_temperature_.at(particle.species)(elem_id) += number_of_macro_particles / (number_of_macro_particles - 1) * m_over_3kb * norm_squared * particle.weight * noise_reducing_factor / (number_density * element_volume) ;
     }
     else
     {
@@ -494,22 +480,21 @@ mfem::DenseMatrix& ParticleOperations::getVarianceReducedTemperature(
     {
       const LowFidelitySpeciesState& current_species_state = low_fidelity_state.getSpeciesState(ispecies);
       Species current_species = current_species_state.getSpecies();
-      int species_id = current_species.id;
       const double m_over_3kb = current_species.mass / (3.0 * constants::boltzmann_constant);
-      double number_density = variance_reduced_particle_number_density_(elem_id,species_id);
-      double x_bulk_velocity = variance_reduced_particle_bulk_velocity_(0,elem_id,species_id);
-      double y_bulk_velocity = variance_reduced_particle_bulk_velocity_(1,elem_id,species_id);
-      double z_bulk_velocity = variance_reduced_particle_bulk_velocity_(2,elem_id,species_id);
+      double number_density = variance_reduced_particle_number_density_.at(current_species)(elem_id);
+      double x_bulk_velocity = variance_reduced_particle_bulk_velocity_.at(current_species)(0,elem_id);
+      double y_bulk_velocity = variance_reduced_particle_bulk_velocity_.at(current_species)(1,elem_id);
+      double z_bulk_velocity = variance_reduced_particle_bulk_velocity_.at(current_species)(2,elem_id);
       double bulk_velocity_mag_squared = x_bulk_velocity * x_bulk_velocity + y_bulk_velocity * y_bulk_velocity + z_bulk_velocity * z_bulk_velocity;
 
       const double bulk_velocity_dot_low_fidelity_bulk_velocity_integral 
-      = x_bulk_velocity * low_fidelity_bulk_velocity_integral(0,elem_id,species_id)
-      + y_bulk_velocity * low_fidelity_bulk_velocity_integral(1,elem_id,species_id)
-      + z_bulk_velocity * low_fidelity_bulk_velocity_integral(2,elem_id,species_id);
+      = x_bulk_velocity * low_fidelity_bulk_velocity_integral.at(current_species)(0,elem_id)
+      + y_bulk_velocity * low_fidelity_bulk_velocity_integral.at(current_species)(1,elem_id)
+      + z_bulk_velocity * low_fidelity_bulk_velocity_integral.at(current_species)(2,elem_id);
 
-      variance_reduced_particle_temperature_(elem_id, species_id) 
-        += more_than_one_macro_particle(elem_id) * low_fidelity_temperature_integral(elem_id,species_id) / (number_density * element_volume)
-        + m_over_3kb * bulk_velocity_mag_squared * low_fidelity_number_density_integral(elem_id,species_id) / (number_density * element_volume)
+      variance_reduced_particle_temperature_.at(current_species)(elem_id) 
+        += more_than_one_macro_particle(elem_id) * low_fidelity_temperature_integral.at(current_species)(elem_id) / (number_density * element_volume)
+        + m_over_3kb * bulk_velocity_mag_squared * low_fidelity_number_density_integral.at(current_species)(elem_id) / (number_density * element_volume)
         - m_over_3kb * 2.0 * bulk_velocity_dot_low_fidelity_bulk_velocity_integral / (number_density * element_volume);
     }
   } 
