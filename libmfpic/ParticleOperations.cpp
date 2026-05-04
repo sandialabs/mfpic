@@ -6,9 +6,8 @@
 #include <libmfpic/ParticleContainer.hpp>
 #include <libmfpic/ParticleOperations.hpp>
 #include <libmfpic/PeriodicParticleBoundary.hpp>
-
 #include <libmfpic/Species.hpp>
-#include <mfem/linalg/densemat.hpp>
+
 #include <mfem/mfem.hpp>
 
 #include <limits>
@@ -306,7 +305,10 @@ std::unordered_map<Species, mfem::Vector>& ParticleOperations::getTemperature(co
     const double norm_squared = fluctuation_velocity * fluctuation_velocity;
 
     // this only holds for constant weights
-    const double bias_corrected_weight = particle.weight * sum_weights / (sum_weights - particle.weight);
+    const double number_of_samples = sum_weights / particle.weight;
+    if (number_of_samples <= 1.) continue;
+
+    const double bias_corrected_weight = particle.weight * number_of_samples / (number_of_samples - 1.);
 
     particle_temperature_.at(species)(elem_id) += norm_squared * bias_corrected_weight * particle.species.mass / (3.0 * constants::boltzmann_constant * sum_weights);
   }
