@@ -305,7 +305,10 @@ std::unordered_map<Species, mfem::Vector>& ParticleOperations::getTemperature(co
 
     const double norm_squared = fluctuation_velocity * fluctuation_velocity;
 
-    particle_temperature_.at(species)(elem_id) += norm_squared * particle.weight * particle.species.mass / (3.0 * constants::boltzmann_constant * sum_weights);
+    // this only holds for constant weights
+    const double bias_corrected_weight = particle.weight * sum_weights / (sum_weights - particle.weight);
+
+    particle_temperature_.at(species)(elem_id) += norm_squared * bias_corrected_weight * particle.species.mass / (3.0 * constants::boltzmann_constant * sum_weights);
   }
 
   return this->particle_temperature_;

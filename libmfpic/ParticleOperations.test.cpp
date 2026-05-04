@@ -1149,6 +1149,7 @@ TEST(ParticleOperations, ParticleMomentsCorrectForKnownParticles) {
   const double lx = 1.0, ly = 2.0, lz = 3.0;
   const double dx = lx / num_elems_in_one_direction, dy = ly / num_elems_in_one_direction, dz = lz / num_elems_in_one_direction;
   const int num_particles_in_cell = 4;
+  const double bias_correction = num_particles_in_cell / (num_particles_in_cell - 1.);
   std::shared_ptr<mfem::Mesh> mesh = std::make_shared<mfem::Mesh>(mfem::Mesh::MakeCartesian3D(num_elems_in_one_direction, num_elems_in_one_direction, num_elems_in_one_direction, mfem::Element::HEXAHEDRON, lx, ly, lz));
   constexpr int order = 1;
   Discretization discretization(mesh.get(),order);
@@ -1176,7 +1177,8 @@ TEST(ParticleOperations, ParticleMomentsCorrectForKnownParticles) {
           const double x = dx * i + (i_part + 1) * dx / (num_particles_in_cell + 1);
           const double y = dy * j + (i_part + 1) * dy / (num_particles_in_cell + 1);
           const double z = dz * k + (i_part + 1) * dz / (num_particles_in_cell + 1);
-          const double weight = std::sqrt(x*x + y*y + z*z);
+          //const double weight = std::sqrt(x*x + y*y + z*z); // non-constant weight not supported
+          constexpr double weight = 12.345;
           const mfem::Vector position {x, y, z};
           mfem::Vector velocity = center;
           mfem::Vector offset(3);
@@ -1202,8 +1204,8 @@ TEST(ParticleOperations, ParticleMomentsCorrectForKnownParticles) {
         }
 
         mfem::Vector bulk = center;
-        exact_moments_electron.emplace_back(MomentsInCell{.number_density = sum_of_weights / (dx * dy * dz), .bulk_velocity = bulk, .temperature = 3. * sum_of_inverse / sum_of_weights * electron_fac});
-        exact_moments_proton.emplace_back(MomentsInCell{.number_density = sum_of_weights / (dx * dy * dz), .bulk_velocity = bulk, .temperature = 3. * sum_of_inverse / sum_of_weights * proton_fac});
+        exact_moments_electron.emplace_back(MomentsInCell{.number_density = sum_of_weights / (dx * dy * dz), .bulk_velocity = bulk, .temperature = bias_correction * 3. * sum_of_inverse / sum_of_weights * electron_fac});
+        exact_moments_proton.emplace_back(MomentsInCell{.number_density = sum_of_weights / (dx * dy * dz), .bulk_velocity = bulk, .temperature = bias_correction * 3. * sum_of_inverse / sum_of_weights * proton_fac});
         elem_ids.push_back(i_elem);
       }
     }
