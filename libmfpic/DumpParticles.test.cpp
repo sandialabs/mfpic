@@ -162,7 +162,7 @@ const Species default_species{.charge = 1.0, .mass = 1.0};
 const std::vector<std::shared_ptr<ParticleBoundaryFactory>> empty_particle_boundary_factory_list;
 const std::shared_ptr<ParticleBoundaryFactory> default_reflecting_particle_boundary_factory
   = std::make_shared<ReflectingParticleBoundaryFactory>();
-constexpr int one_species = 1, two_species = 2;
+const std::unordered_map<std::string, Species> one_species {{"one", default_species}};
 
 TEST(DumpParticles, CSVCorrectForOneSpecies)
 {
@@ -205,9 +205,9 @@ TEST(DumpParticles, CSVCorrectForOneSpecies)
   const int steps = 10;
   const double dt = 0.25;
 
-  mfem::DenseMatrix& computed_number_density = particle_operations.getNumberDensity(particles);
-  mfem::DenseTensor& computed_bulk_velocity  = particle_operations.getBulkVelocity(particles);
-  mfem::DenseMatrix& computed_temperature  = particle_operations.getTemperature(particles);
+  auto& computed_number_density = particle_operations.getNumberDensity(particles);
+  auto& computed_bulk_velocity  = particle_operations.getBulkVelocity(particles);
+  auto& computed_temperature    = particle_operations.getTemperature(particles);
 
   for (int step = 0; step < steps; ++step)
     dumpParticleMoments(particle_operations,particles, prefix, step, dt * step);
@@ -233,10 +233,10 @@ TEST(DumpParticles, CSVCorrectForOneSpecies)
         const double csv_bulk_velocity_1 = stringToDouble(toks[9]);
         const double csv_bulk_velocity_2 = stringToDouble(toks[10]);
 
-        EXPECT_NEAR(csv_number_density, computed_number_density(e, s), 1e-12);
-        EXPECT_NEAR(csv_temperature,  computed_temperature(e, s),  1e-12);
+        EXPECT_NEAR(csv_number_density, computed_number_density.at(default_species)(e), 1e-12);
+        EXPECT_NEAR(csv_temperature,  computed_temperature.at(default_species)(e),  1e-12);
 
-        const mfem::Vector computed_bulk_velocity_in_element(computed_bulk_velocity(s).GetColumn(e), 3);
+        const mfem::Vector computed_bulk_velocity_in_element(computed_bulk_velocity.at(default_species).GetColumn(e), 3);
         EXPECT_NEAR(csv_bulk_velocity_0, computed_bulk_velocity_in_element(0), 1e-12);
         EXPECT_NEAR(csv_bulk_velocity_1, computed_bulk_velocity_in_element(1), 1e-12);
         EXPECT_NEAR(csv_bulk_velocity_2, computed_bulk_velocity_in_element(2), 1e-12);
@@ -264,7 +264,8 @@ TEST(DumpParticles, CSVCorrectForTwoSpecies)
     .temperature = temperature,
   };
   constexpr int num_particles = 100;
-  constexpr int num_species = 2; 
+  constexpr int num_species = 2;
+  const std::unordered_map<std::string, Species> two_species {{"one", species_1}, {"two", species_2}};
 
   std::mt19937 generator;
 
@@ -295,14 +296,15 @@ TEST(DumpParticles, CSVCorrectForTwoSpecies)
   const int steps = 10;
   const double dt = 0.25;
 
-  mfem::DenseMatrix& computed_number_density = particle_operations.getNumberDensity(particles);
-  mfem::DenseTensor& computed_bulk_velocity  = particle_operations.getBulkVelocity(particles);
-  mfem::DenseMatrix& computed_temperature  = particle_operations.getTemperature(particles);
+  auto& computed_number_density = particle_operations.getNumberDensity(particles);
+  auto& computed_bulk_velocity  = particle_operations.getBulkVelocity(particles);
+  auto& computed_temperature    = particle_operations.getTemperature(particles);
 
   for (int step = 0; step < steps; ++step)
     dumpParticleMoments(particle_operations,particles, prefix, step, dt * step);
 
   for (int s = 0; s < num_species; ++s) {
+    const Species & species = (s == 0) ? species_1 : species_2;
     const auto file = prefix + "_species_" + std::to_string(s) + ".csv";
     const auto lines = readLines(file);
     ASSERT_EQ(lines.size(), static_cast<size_t>(1 + num_elems*steps));
@@ -323,10 +325,10 @@ TEST(DumpParticles, CSVCorrectForTwoSpecies)
         const double csv_bulk_velocity_1 = stringToDouble(toks[9]);
         const double csv_bulk_velocity_2 = stringToDouble(toks[10]);
 
-        EXPECT_NEAR(csv_number_density, computed_number_density(e, s), 1e-12);
-        EXPECT_NEAR(csv_temperature,  computed_temperature(e, s),  1e-12);
+        EXPECT_NEAR(csv_number_density, computed_number_density.at(species)(e), 1e-12);
+        EXPECT_NEAR(csv_temperature,  computed_temperature.at(species)(e),  1e-12);
 
-        const mfem::Vector computed_bulk_velocity_in_element(computed_bulk_velocity(s).GetColumn(e), 3);
+        const mfem::Vector computed_bulk_velocity_in_element(computed_bulk_velocity.at(species).GetColumn(e), 3);
         EXPECT_NEAR(csv_bulk_velocity_0, computed_bulk_velocity_in_element(0), 1e-12);
         EXPECT_NEAR(csv_bulk_velocity_1, computed_bulk_velocity_in_element(1), 1e-12);
         EXPECT_NEAR(csv_bulk_velocity_2, computed_bulk_velocity_in_element(2), 1e-12);

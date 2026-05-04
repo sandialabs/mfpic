@@ -7,6 +7,7 @@
 #include <libmfpic/ParticleOperations.hpp>
 
 #include <hdf5.h>
+#include <unordered_map>
 
 namespace mfpic {
 
@@ -99,14 +100,15 @@ void dumpParticleMoments(
   const int step,
   const double time) 
 {
-  mfem::DenseMatrix number_density = particle_operations.getNumberDensity(particles);
-  mfem::DenseTensor bulk_velocity = particle_operations.getBulkVelocity(particles,true);
-  mfem::DenseMatrix temperature = particle_operations.getTemperature(particles,false,false);
+  std::unordered_map<Species, mfem::Vector> number_density     = particle_operations.getNumberDensity(particles);
+  std::unordered_map<Species, mfem::DenseMatrix> bulk_velocity = particle_operations.getBulkVelocity(particles,true);
+  std::unordered_map<Species, mfem::Vector> temperature        = particle_operations.getTemperature(particles,false,false);
 
   mfem::Mesh& mesh = particle_operations.getMesh();
   const int nelem = mesh.GetNE();
 
-  for (int s = 0; s < particle_operations.getNumSpecies(); ++s) {
+  int s = 0; // TODO BWR i dont like this...
+  for (const auto & [species, _] : number_density) {
     std::string filename = file_prefix + "_species_" + std::to_string(s) + ".csv";
 
     std::ofstream out;
@@ -131,16 +133,17 @@ void dumpParticleMoments(
       mfem::Vector element_point_view(element_point.GetData(), dim);   
       mesh.GetElementCenter(e, element_point_view);
 
-      const mfem::Vector bulk_velocity_in_element(bulk_velocity(s).GetColumn(e), 3);
+      const mfem::Vector bulk_velocity_in_element(bulk_velocity.at(species).GetColumn(e), 3);
 
       out << step << ","
           << time << ","
           << e << ","
           << element_point(0) << "," << element_point(1) << "," << element_point(2) << ","
-          << number_density(e, s) << ","
-          << temperature(e, s) << ","
+          << number_density.at(species)(e) << ","
+          << temperature.at(species)(e) << ","
           << bulk_velocity_in_element(0) << "," << bulk_velocity_in_element(1) << "," << bulk_velocity_in_element(2) << "\n";
     }
+    s++;
   }
 }
 

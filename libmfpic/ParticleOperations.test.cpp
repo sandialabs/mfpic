@@ -13,6 +13,7 @@
 
 #include <gtest/gtest.h>
 #include <mfem/mesh/element.hpp>
+#include <unordered_map>
 
 namespace {
 
@@ -32,7 +33,7 @@ const Species default_species{.charge = 1.0, .mass = 1.0};
 const std::vector<std::shared_ptr<ParticleBoundaryFactory>> empty_particle_boundary_factory_list;
 const std::shared_ptr<ParticleBoundaryFactory> default_reflecting_particle_boundary_factory
   = std::make_shared<ReflectingParticleBoundaryFactory>();
-constexpr int one_species = 1, two_species = 2;
+const std::unordered_map<std::string, Species> one_species {{"one", default_species}};
 
 struct MomentsInCell {
   double number_density;
@@ -993,7 +994,7 @@ TEST(ParticleOperations, VarianceReducedChargeIsExactForMaxwellianIn3D) {
     charge_discretization,
     empty_particle_boundary_factory_list,
     default_reflecting_particle_boundary_factory,
-    1
+    one_species
   );
   IntegratedCharge variance_reduced_charge_state = particle_operations.assembleVarianceReducedCharge(particles,low_fidelity_state,dg_euler_operations);
 
@@ -1050,7 +1051,7 @@ TEST(ParticleOperations, VarianceReducedChargeAndPICChargeConvergeForKappa) {
       charge_discretization,
       empty_particle_boundary_factory_list,
       default_reflecting_particle_boundary_factory,
-      1
+      one_species
     );
 
   double prev_max_rel_error = std::numeric_limits<double>::infinity();
@@ -1128,9 +1129,9 @@ TEST(ParticleOperations, ParticleMomentsCorrectForMaxwellian) {
   );
 
   mfem::Vector computed_bulk_velocity;
-  particle_operations.getBulkVelocity(particles)(0).GetColumn(0, computed_bulk_velocity);
-  double computed_number_density = particle_operations.getNumberDensity(particles)(0,0);
-  double computed_temperature = particle_operations.getTemperature(particles)(0,0);
+  particle_operations.getBulkVelocity(particles).at(default_species).GetColumn(0, computed_bulk_velocity);
+  double computed_number_density = particle_operations.getNumberDensity(particles).at(default_species)(0);
+  double computed_temperature = particle_operations.getTemperature(particles).at(default_species)(0);
 
   EXPECT_NEAR(computed_number_density, number_density, 1e-10);
 
@@ -1154,6 +1155,8 @@ TEST(ParticleOperations, ParticleMomentsCorrectForKnownParticles) {
 
   Species electron {.mass = constants::electron_mass};
   Species proton {.mass = constants::proton_mass};
+
+  const std::unordered_map<std::string, Species> two_species {{"electron", electron}, {"proton", proton}};
 
   ParticleContainer particles;
   std::vector<MomentsInCell> exact_moments_electron;
@@ -1213,11 +1216,11 @@ TEST(ParticleOperations, ParticleMomentsCorrectForKnownParticles) {
     two_species
   );
 
-  auto check_moments = [&] (MomentsInCell exact, int species_id, int cell_id) {
+  auto check_moments = [&] (MomentsInCell exact, const Species & species, int cell_id) {
 
-    MomentsInCell computed {.number_density = particle_operations.getNumberDensity(particles)(cell_id, species_id),
-                            .bulk_velocity = mfem::Vector(particle_operations.getBulkVelocity(particles)(species_id).GetColumn(cell_id),3),
-                            .temperature = particle_operations.getTemperature(particles)(cell_id, species_id) };
+    MomentsInCell computed {.number_density = particle_operations.getNumberDensity(particles).at(species)(cell_id),
+                            .bulk_velocity = mfem::Vector(particle_operations.getBulkVelocity(particles).at(species).GetColumn(cell_id),3),
+                            .temperature = particle_operations.getTemperature(particles).at(species)(cell_id) };
 
     EXPECT_NEAR(exact.number_density, computed.number_density, 1e-12);
 
@@ -1229,8 +1232,8 @@ TEST(ParticleOperations, ParticleMomentsCorrectForKnownParticles) {
   };
 
   for (int i_elem = 0; i_elem < num_elems; ++i_elem) {
-    check_moments(exact_moments_electron[i_elem], 0, elem_ids[i_elem]);
-    check_moments(exact_moments_proton[i_elem], 1, elem_ids[i_elem]);
+    check_moments(exact_moments_electron[i_elem], electron, elem_ids[i_elem]);
+    check_moments(exact_moments_proton[i_elem], proton, elem_ids[i_elem]);
   }
 
 };
