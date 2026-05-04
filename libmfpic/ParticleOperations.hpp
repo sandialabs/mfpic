@@ -91,7 +91,7 @@ public:
    * @param[in] particles   \ref ParticleContainer
    * @param[in] sum_weights Optional flag that resums the weights. Default is true.
    *
-   * @return Map of particle species to bulk velocity (species, (dimension, species))
+   * @return Map of particle species to bulk velocity (species, (dimension, element))
    */
   std::unordered_map<Species, mfem::DenseMatrix>& getBulkVelocity(const ParticleContainer& particles, const bool sum_weights = true);
 
