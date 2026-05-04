@@ -76,7 +76,7 @@ void runSimulation(int argc, char* argv[]) {
     electrostatic_discretization,
     particle_boundary_factories,
     default_particle_boundary_factory,
-    num_species
+    species_map
   );
 
   std::default_random_engine generator;

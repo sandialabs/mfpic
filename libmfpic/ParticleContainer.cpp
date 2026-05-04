@@ -58,13 +58,13 @@ void ParticleContainer::sortByElementThenSpecies() {
   const int num_elements = particle_with_max_element.element + 1;
 
   const int num_species = numSpecies();
-  auto flattenElementSpeciesIndex = [num_species](int element, int species_index) {
+  auto flatten_element_species_index = [num_species](int element, int species_index) {
     return element * num_species + species_index;
   };
 
   std::vector<int> num_particles_in_element_and_species(num_elements * num_species, 0);
   for (const Particle& particle : particle_list_) {
-    num_particles_in_element_and_species[flattenElementSpeciesIndex(
+    num_particles_in_element_and_species[flatten_element_species_index(
       particle.element,
       getParticleSpeciesIndex(particle)
     )] += 1;
@@ -80,7 +80,7 @@ void ParticleContainer::sortByElementThenSpecies() {
   std::vector<Particle> sorted_particles(numParticles());
   std::vector<int> new_particle_indices = element_species_bins_;
   for (const Particle& particle : particle_list_) {
-    const int new_particle_index = new_particle_indices[flattenElementSpeciesIndex(
+    const int new_particle_index = new_particle_indices[flatten_element_species_index(
       particle.element,
       getParticleSpeciesIndex(particle)
     )]++;
