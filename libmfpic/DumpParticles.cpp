@@ -156,6 +156,7 @@ void dumpParticleMoments(
           << temperature.at(species)(e) << ","
           << bulk_velocity_in_element(0) << "," << bulk_velocity_in_element(1) << "," << bulk_velocity_in_element(2) << "\n";
     }
+    s++;
   }
 }
 
