@@ -9,16 +9,17 @@
 #include <mfem/fem/fespace.hpp>
 #include <mfem/fem/gridfunc.hpp>
 #include <mfem/fem/hyperbolic.hpp>
+#include <mfem/fem/lininteg.hpp>
 #include <mfem/linalg/densemat.hpp>
 
 namespace mfpic {
 
-  DGEulerAssembly::DGEulerAssembly(
-    mfem::FiniteElementSpace &finite_element_space,
-    const Species& species) :
-      DGEulerAssembly(CreateDGEulerAssembly_(finite_element_space, species)) {}
+DGEulerAssembly::DGEulerAssembly(
+  mfem::FiniteElementSpace &finite_element_space,
+  const Species& species) :
+    DGEulerAssembly(CreateDGEulerAssembly_(finite_element_space, species)) {}
 
-void DGEulerAssembly::computeSources(
+void DGEulerAssembly::computeElectromagneticSources(
   const LowFidelitySpeciesState& species_state,
   const ElectromagneticFieldsEvaluator &field_evaluator,
   mfem::Vector &rhs,
@@ -35,14 +36,27 @@ void DGEulerAssembly::computeSources(
   rhs += source_form;
 }
 
-  void DGEulerAssembly::computeIntegratedKineticEnergy(const LowFidelitySpeciesState& species_state, mfem::Vector& rhs) const {
-    const mfem::GridFunction& state_evaluator = species_state.getGridFunction();
+void DGEulerAssembly::computeVolumetricSources(
+  const LowFidelitySpeciesState& ,
+  mfem::Vector &rhs) const {
 
-    mfem::LinearForm form(&getFiniteElementSpace());
-    form.AddDomainIntegrator(new EulerKineticEnergyIntegrator(state_evaluator));
-    form.Assemble();
+  if (not hasVolumetricSource()) return;
 
-    rhs += form;
-  }
+  mfem::LinearForm source_form(&getFiniteElementSpace());
+  source_form.AddDomainIntegrator(createVolumetricSourceIntegrator());
+  source_form.Assemble();
+
+  rhs += source_form;
+}
+
+void DGEulerAssembly::computeIntegratedKineticEnergy(const LowFidelitySpeciesState& species_state, mfem::Vector& rhs) const {
+  const mfem::GridFunction& state_evaluator = species_state.getGridFunction();
+
+  mfem::LinearForm form(&getFiniteElementSpace());
+  form.AddDomainIntegrator(new EulerKineticEnergyIntegrator(state_evaluator));
+  form.Assemble();
+
+  rhs += form;
+}
 
 } // namespace mfpic

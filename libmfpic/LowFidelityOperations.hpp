@@ -25,6 +25,11 @@ public:
     const ElectromagneticFieldsEvaluator& field_provider
   ) const = 0;
 
+  virtual LowFidelityState addVolumetricSource(
+    double dt,
+    const LowFidelityState& state
+  ) const = 0;
+
   virtual IntegratedCharge assembleCharge(
     const LowFidelityState& state
   ) const = 0;

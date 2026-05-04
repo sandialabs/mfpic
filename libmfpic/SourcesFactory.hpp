@@ -187,4 +187,15 @@ std::vector<std::unique_ptr<SourceParameters>> buildListOfSourceParametersFromYA
   const YAML::Node& sources_node,
   const std::unordered_map<std::string, Species>& species_map);
 
+/**
+ * @brief build a list of coefficients from a vector of \ref SourceParameters
+ *
+ * @param list_of_parameters a list of parameters defining the sources or initial conditions
+ * @returns std::vector<std::pair<Species, std::unique_ptr<mfem::VectorCoefficient>>> - a list of \ref Species and vector coefficient pairs 
+ *
+ * @note Appropriate for Euler fluids. The \ref SourceParameters passed in must support \ref getEulerVectorCoefficient .
+ */
+std::vector<std::pair<Species, std::unique_ptr<mfem::VectorCoefficient>>> buildListOfSpeciesAndEulerSourceCoefficients(
+  const std::vector<std::unique_ptr<SourceParameters>>& list_of_parameters);
+
 }

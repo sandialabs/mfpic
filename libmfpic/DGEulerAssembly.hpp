@@ -13,9 +13,11 @@ struct Species;
 
 /** @brief Discontinous Galerkin operators for the Euler equations, which are of the form
  * \f[
- * \frac{\partial U}{\partial t} + \nabla \cdot F\left(U\right) = S\left(U\right)
+ * \frac{\partial U}{\partial t} + \nabla \cdot F\left(U\right) = S_{Maxwell}\left(U\right) + S_{Volumetric}\left(U\right)
  * \f]
- * where \f$F(U)\f$ is the hyperbolic flux function and \f$S(U)\f$ is the source term.
+ * where \f$F(U)\f$ is the hyperbolic flux function, 
+ * \f$S_{Maxwell}\left(U\right)\f$ is the electromagnetic source term, and 
+ * \f$S_{Volumetric}\left(U\right)\f$ are other volumetric sources such as particle collisions or creation.
  *
  * @note the weak divergence operator is preassembled upon creation
  */
@@ -35,7 +37,7 @@ public:
   
  /**
   * @brief Compute the electromagnetic source terms for the residual.
-  * Adds \f$(S(U),v)\f$ to the vector \p rhs .
+  * Adds \f$(S_{Maxwell}(U),v)\f$ to the vector \p rhs .
   *
   * @note Does not apply \f$M^{-1}\f$.
   *
@@ -46,11 +48,24 @@ public:
   *  if false, then total energy needs to be postprocessed to be correct,
   *  if true, source will be applied to total energy but may cause errors in internal energy
   */
-  void computeSources(
+  void computeElectromagneticSources(
     const LowFidelitySpeciesState& species_state,
     const ElectromagneticFieldsEvaluator& field_evaluator,
     mfem::Vector& rhs,
     const bool include_energy_source) const;
+
+  /**
+  * @brief Compute the volumetric source terms for the residual.
+  * Adds \f$(S_{Volumetric}(U),v)\f$ to the vector \p rhs .
+  *
+  * @note Does not apply \f$M^{-1}\f$.
+  *
+  * @param species_state - current solution vector
+  * @param[inout] rhs rhs storage
+  */
+  void computeVolumetricSources(
+    const LowFidelitySpeciesState& species_state,
+    mfem::Vector& rhs) const override;
 
  /**
   * @brief Compute the integrated kinetic energy \f$(\mathcal{K},v)\f$ where

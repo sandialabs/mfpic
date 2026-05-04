@@ -28,7 +28,7 @@ public:
   );
 
   /**
-   * @brief Update the state by forcing only with the source terms
+   * @brief Update the state by forcing only with the electromagnetic coupling terms
    *
    * @param dt Timestep
    * @param state State including dofs and species list
@@ -65,6 +65,18 @@ public:
     double dt,
     const LowFidelityState& state,
     const ElectromagneticFieldsEvaluator& field_evaluator
+  ) const override;
+
+  /**
+   * @brief Update the state due to volumetric sources
+   *
+   * @param dt Timestep
+   * @param state State including dofs and species list 
+   */
+
+  virtual LowFidelityState addVolumetricSource(
+    double dt,
+    const LowFidelityState& state
   ) const override;
 
   /**

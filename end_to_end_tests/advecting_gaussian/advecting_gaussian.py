@@ -50,16 +50,16 @@ def exact_mass_density(x, t):
     return N2_species.mass * number_density
 
 
-def format_mesh_folder_name(refinement_level):
-    return f"MeshOutput{refinement_level:02}"
+def format_mesh_folder_name(refinement_level, time_integrator):
+    return f"{time_integrator.replace(" ", "_")}/MeshOutput{refinement_level:02}"
 
 
-def get_input_deck(refinement_level):
+def get_input_deck(refinement_level, time_integrator):
     num_elements = base_num_elements * refinement_level
     dx = domain_length / num_elements
     dt, num_time_steps = utils.compute_timestepping_that_satisfies_cfl(max_cfl, dx, max_wavespeed, final_time)
 
-    mesh_folder_name = format_mesh_folder_name(refinement_level)
+    mesh_folder_name = format_mesh_folder_name(refinement_level, time_integrator)
 
     input_deck_contents = f"""
 Mesh:
@@ -71,6 +71,7 @@ Mesh:
 Time Stepping:
   Number of Time Steps: {num_time_steps}
   Time Step Size: {dt}
+  Type: {time_integrator}
 
 Species:
   neutral_electron:
@@ -100,9 +101,12 @@ Output:
     return input_deck_contents
 
 
-def run(mfpic_executable):
+def run(mfpic_executable, time_integrator):
+    output_directory = f"{time_integrator.replace(" ", "_")}"
+    os.makedirs(output_directory, exist_ok=True)
+
     for refinement_level in refinement_levels:
-        input_deck_contents = get_input_deck(refinement_level)
+        input_deck_contents = get_input_deck(refinement_level, time_integrator)
         yaml = "advecting_gaussian.yaml"
         with open(yaml, "w") as input_deck:
             input_deck.write(input_deck_contents)
@@ -114,6 +118,8 @@ def run(mfpic_executable):
         verification.check_fluid_energy_positive_and_constant('Total_Fluid_Energy')
         verification.check_fluid_energy_positive_and_constant('Total_Fluid_Kinetic_Energy')
 
+        os.rename('output_lf_0.csv', f"{output_directory}/output_lf_0_{refinement_level:02}.csv")
+
 
 def compute_error(data, points, exact_solution):
     numerical_solution = verification.create_1D_interpolater(data, points)
@@ -122,39 +128,37 @@ def compute_error(data, points, exact_solution):
     return error
 
 
-def analyze():
+def analyze(time_integrator):
     errors = []
     h_list = []
     for refinement_level in refinement_levels:
-        print(f"refinement_level = {refinement_level}")
-        mesh_folder_name = format_mesh_folder_name(refinement_level)
-        print("read mesh data")
+        mesh_folder_name = format_mesh_folder_name(refinement_level, time_integrator)
         _, mesh_data = read_mesh_data.read_mesh_data(mesh_folder_name)
         points = mesh_data[-1]["points"]
         x_points = points[:,0]
         dx = x_points[1] - x_points[0]
-        print(f"dx = {dx}")
         h_list.append(dx)
 
         fluid_data = np.transpose(mesh_data[-1]["species_0_lf_0"])
-        print("compute error")
         error = compute_error(fluid_data[0], x_points, exact_mass_density)
-        print(f"error = {error}")
         errors.append(error)
 
     rates = verification.compute_convergence_rates(errors, h_list)
     print(f"rates = {rates}")
 
-    verification.plot_errors_and_expected_convergence_rate(h_list, errors, 1.0)
+    output_directory = f"{time_integrator.replace(" ", "_")}"
+    os.makedirs(output_directory, exist_ok=True)
+    figure_name = f"{output_directory}/error_convergence.png"
+    verification.plot_errors_and_expected_convergence_rate(h_list, errors, 1.0, figure_name)
 
     expected_convergence_rate = basis_order + 1
     tolerance = 0.1
     assert(np.all(rates > expected_convergence_rate - tolerance))
 
 
-def plot():
+def plot(time_integrator):
     for refinement_level in refinement_levels:
-        mesh_folder_name = format_mesh_folder_name(refinement_level)
+        mesh_folder_name = format_mesh_folder_name(refinement_level, time_integrator)
         timesteps, mesh_data = read_mesh_data.read_mesh_data(mesh_folder_name)
 
         points = mesh_data[0]["points"]
@@ -162,7 +166,7 @@ def plot():
         num_cells = int(0.5 * x_points.shape[0])
         x_plot = np.linspace(0, domain_length, 10 * num_cells)
 
-        figures_directory = f"Figures{refinement_level:02}"
+        figures_directory = f"{time_integrator.replace(" ", "_")}/Figures{refinement_level:02}"
         os.makedirs(figures_directory, exist_ok=True)
         for i, time in enumerate(timesteps):
             fluid_data = np.transpose(mesh_data[i]["species_0_lf_0"])
@@ -178,13 +182,17 @@ def plot():
             fig.savefig(f"{figures_directory}/MassDensity{i:02}.png")
             plt.close(fig)
 
-
 if __name__ == "__main__":
     import sys
 
+    time_integrators = ["Forward Euler", "Verlet"]
     if "run" in sys.argv[1:]:
-        run(sys.argv[2])
+        mfpic_executable = sys.argv[2]
+        for time_integrator in time_integrators:
+            run(mfpic_executable, time_integrator)
     elif "plot" in sys.argv[1:]:
-        plot()
+        for time_integrator in time_integrators:
+            plot(time_integrator)
     else:
-        analyze()
+        for time_integrator in time_integrators:
+            analyze(time_integrator)

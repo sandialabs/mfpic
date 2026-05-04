@@ -16,8 +16,8 @@ void VerletTimeIntegrator::advanceTimestep(
   const ParticleOperations& particle_operations,
   ElectrostaticFieldState& particle_field_state,
   ElectrostaticFieldOperations& field_operations,
-  double dt
-) {
+  double dt) const
+{
   IntegratedCharge particle_charge(discretization_);
 
   for (int i = 0; i < std::ssize(low_fidelity_operations); i++) {
@@ -43,6 +43,8 @@ void VerletTimeIntegrator::advanceTimestep(
     const LowFidelityOperations& operations = *low_fidelity_operations[i];
     LowFidelityState& low_fidelity_state = low_fidelity_states[i];
     low_fidelity_state = operations.accelerate(dt/2, low_fidelity_state, field_state);
+
+    low_fidelity_state = operations.addVolumetricSource(dt, low_fidelity_state);
   }
 
   particle_container = particle_operations.accelerate(dt/2, particle_container, particle_field_state);

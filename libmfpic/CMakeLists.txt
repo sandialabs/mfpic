@@ -21,6 +21,7 @@ add_library(libmfpic
   Errors.cpp
   Euler.cpp
   EulerFlux.cpp
+  ForwardEulerTimeIntegrator.cpp
   KineticFluxBC.cpp
   IntegratedCharge.cpp
   LowFidelityState.cpp
