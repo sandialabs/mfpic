@@ -8,8 +8,6 @@
 #include <libmfpic/PeriodicParticleBoundary.hpp>
 #include <libmfpic/Species.hpp>
 
-#include <libmfpic/Species.hpp>
-#include <mfem/linalg/densemat.hpp>
 #include <mfem/mfem.hpp>
 
 #include <limits>
