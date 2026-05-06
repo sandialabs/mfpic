@@ -73,6 +73,14 @@ public:
   LowFidelitySpeciesState& getSpeciesState(const int i_species) { return species_states_[i_species]; }
   const LowFidelitySpeciesState& getSpeciesState(const int i_species) const { return species_states_[i_species]; }
 
+  /**
+   * @brief Add scale * state to this object
+   * 
+   * @param scale - value to scale incoming state by
+   * @param state - state to sum into this object
+   */
+  void addScaledState(const double scale, const LowFidelityState& state);
+
 private:
   std::vector<LowFidelitySpeciesState> species_states_;
 };
