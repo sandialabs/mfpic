@@ -67,11 +67,11 @@ public:
     const std::vector<std::pair<Species, std::unique_ptr<mfem::VectorCoefficient>>>& species_coefficient_list);
 
   /// Number of species in the state
-  int numSpecies() const { return std::ssize(species_states_); };
+  int numSpecies() const;
   std::vector<Species> getSpeciesList() const;
 
-  LowFidelitySpeciesState& getSpeciesState(const int i_species) { return species_states_[i_species]; }
-  const LowFidelitySpeciesState& getSpeciesState(const int i_species) const { return species_states_[i_species]; }
+  LowFidelitySpeciesState& getSpeciesState(const int i_species);
+  const LowFidelitySpeciesState& getSpeciesState(const int i_species) const;
 
   /**
    * @brief Add scale * state to this object

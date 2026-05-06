@@ -36,6 +36,8 @@ LowFidelityState::LowFidelityState(
   }
 }
 
+int LowFidelityState::numSpecies() const { return std::ssize(species_states_); }
+
 std::vector<Species> LowFidelityState::getSpeciesList() const {
   std::vector<Species> species_list;
   for (const LowFidelitySpeciesState& species_state : species_states_) {
@@ -43,6 +45,9 @@ std::vector<Species> LowFidelityState::getSpeciesList() const {
   }
   return species_list;
 }
+
+LowFidelitySpeciesState& LowFidelityState::getSpeciesState(const int i_species) { return species_states_[i_species]; }
+const LowFidelitySpeciesState& LowFidelityState::getSpeciesState(const int i_species) const { return species_states_[i_species]; }
 
 void LowFidelityState::addScaledState(const double scale, const LowFidelityState& state_to_sum) {
   assert(numSpecies() == state.numSpecies());
