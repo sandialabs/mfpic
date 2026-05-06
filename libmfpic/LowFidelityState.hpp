@@ -48,6 +48,9 @@ private:
 class LowFidelityState {
 
 public:
+  using iterator = std::vector<LowFidelitySpeciesState>::iterator;
+  using const_iterator = std::vector<LowFidelitySpeciesState>::const_iterator;
+
   /**
    * @brief Construct a LowFidelityState initialized to zero
    *
@@ -65,6 +68,15 @@ public:
   LowFidelityState(
     Discretization& discretization,
     const std::vector<std::pair<Species, std::unique_ptr<mfem::VectorCoefficient>>>& species_coefficient_list);
+
+    /// Returns an iterator to the beginning of the species states
+  iterator begin();
+  /// Returns an iterator to the beginning of species states
+  const_iterator begin() const;
+  /// Returns an iterator to the end of the species states.
+  iterator end();
+  /// Returns an iterator to the end of the species states.
+  const_iterator end() const;
 
   /// Number of species in the state
   int numSpecies() const;

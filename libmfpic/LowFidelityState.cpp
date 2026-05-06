@@ -2,6 +2,8 @@
 
 #include <libmfpic/Discretization.hpp>
 
+#include <ranges>
+
 namespace mfpic {
 
 LowFidelitySpeciesState::LowFidelitySpeciesState(Discretization& discretization, const Species& species)
@@ -36,6 +38,11 @@ LowFidelityState::LowFidelityState(
   }
 }
 
+LowFidelityState::iterator LowFidelityState::begin() { return species_states_.begin(); }
+LowFidelityState::const_iterator LowFidelityState::begin() const { return species_states_.begin(); }
+LowFidelityState::iterator LowFidelityState::end() { return species_states_.end(); }
+LowFidelityState::const_iterator LowFidelityState::end() const { return species_states_.end(); }
+
 int LowFidelityState::numSpecies() const { return std::ssize(species_states_); }
 
 std::vector<Species> LowFidelityState::getSpeciesList() const {
@@ -52,10 +59,7 @@ const LowFidelitySpeciesState& LowFidelityState::getSpeciesState(const int i_spe
 void LowFidelityState::addScaledState(const double scale, const LowFidelityState& state_to_sum) {
   assert(numSpecies() == state.numSpecies());
 
-  for (int i_species = 0; i_species < numSpecies(); ++i_species) {
-    LowFidelitySpeciesState& species_state = getSpeciesState(i_species);
-    const LowFidelitySpeciesState& species_state_to_sum = state_to_sum.getSpeciesState(i_species);
-
+  for (auto&& [species_state, species_state_to_sum] : std::views::zip(*this, state_to_sum)) {
     mfem::GridFunction& species_grid_function = species_state.getGridFunction();
     const mfem::GridFunction& species_grid_function_to_sum = species_state_to_sum.getGridFunction();
 
