@@ -68,6 +68,18 @@ public:
   ) const override;
 
   /**
+   * @brief compute the rhs that would update a state with both fluxes and field source terms simultaneously
+   * 
+   * @param state - State to be fluxed and accelerated
+   * @param field_evaluator - fields that will accelerate state
+   * @return LowFidelityState - rhs that can be used to update the state
+   */
+  virtual LowFidelityState computeRHS(
+    const LowFidelityState& state,
+    const ElectromagneticFieldsEvaluator& field_evaluator
+  ) const override;
+
+  /**
    * @brief Update the state due to volumetric sources
    *
    * @param dt Timestep
