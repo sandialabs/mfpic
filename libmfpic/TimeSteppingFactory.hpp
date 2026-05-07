@@ -11,7 +11,7 @@ namespace mfpic {
 class Discretization;
 class TimeIntegrator;
 
-enum class TimeIntegratorType { verlet, forward_euler };
+enum class TimeIntegratorType { verlet, forward_euler, ssperk32 };
 
 struct TimeSteppingParameters {
   double timestep_size;

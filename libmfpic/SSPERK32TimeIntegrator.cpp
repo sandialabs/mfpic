@@ -1,4 +1,4 @@
-#include <libmfpic/ForwardEulerTimeIntegrator.hpp>
+#include <libmfpic/SSPERK32TimeIntegrator.hpp>
 
 #include <libmfpic/ElectrostaticFieldOperations.hpp>
 #include <libmfpic/IntegratedCharge.hpp>
@@ -6,7 +6,7 @@
 
 namespace mfpic {
 
-void ForwardEulerTimeIntegrator::advanceTimestep(
+void SSPERK32TimeIntegrator::advanceTimestep(
   std::vector<LowFidelityState>& low_fidelity_states,
   std::vector<ElectrostaticFieldState>& low_fidelity_field_states,
   const std::vector<std::unique_ptr<LowFidelityOperations>>& low_fidelity_operations,
