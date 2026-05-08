@@ -232,4 +232,61 @@ TEST(ElectrostaticFieldOperations, NoChargeErrorAfterPoissonSolve) {
   EXPECT_NEAR(charge_error_l2_norm, 0., absolute_tolerance);
 }
 
+// 2 eps charge
+// zero on boundaries
+// potential should be -(x - 1/2)^2 + 1/4
+// we then modify the potential by 2x
+TEST(ElectrostaticFieldOperations, QuadraticOffsetGivesConstantChargeError) {
+  constexpr int num_elems = 40;
+  mfem::Mesh mesh = mfem::Mesh::MakeCartesian1D(num_elems);
+
+  constexpr int hgrad_order = 1;
+  Discretization es_discretization(&mesh, hgrad_order);
+
+  std::unordered_map<std::string, int> side_name_to_boundary_attribute = getSideNameToBoundaryAttributeForInlineMeshes(
+    mesh.Dimension());
+
+  const int left_boundary_attribute = side_name_to_boundary_attribute["left"];
+  const int right_boundary_attribute = side_name_to_boundary_attribute["right"];
+  std::unordered_map<int, double> boundary_attribute_to_dirichlet_value{
+    {left_boundary_attribute, 0.},
+    {right_boundary_attribute, 0.}};
+  auto dirichlet_bcs = std::make_unique<DirichletBoundaryConditionsConstant>(
+    boundary_attribute_to_dirichlet_value, es_discretization);
+
+  ElectrostaticFieldOperations es_field_operations(es_discretization, std::move(dirichlet_bcs));
+  ElectrostaticFieldState es_field_state(es_discretization);
+
+  mfem::ConstantCoefficient charge_density(2. * constants::permittivity);
+  mfem::LinearForm integrated_charge_linear_form(&es_discretization.getFeSpace());
+  integrated_charge_linear_form.AddDomainIntegrator(new mfem::DomainLFIntegrator(charge_density));
+  integrated_charge_linear_form.Assemble();
+
+  IntegratedCharge integrated_charge(es_discretization);
+  integrated_charge.setIntegratedCharge(integrated_charge_linear_form);
+
+  es_field_operations.fieldSolve(es_field_state, integrated_charge);
+
+  mfem::GridFunction& potential = es_field_state.getPotential();
+  potential *= 2.;
+
+  mfem::GridFunction charge_error = es_field_operations.chargeError(es_field_state, integrated_charge);
+
+  mfem::GridFunction expected_charge_error(&es_discretization.getFeSpace());
+  expected_charge_error.ProjectCoefficient(charge_density);
+  expected_charge_error *= -1; // potential is 2x what it should be
+
+  mfem::Vector diff = expected_charge_error;
+  diff -= charge_error;
+
+  const int ndofs = diff.Size();
+
+  // TODO BWR does this make sense? both interior and norm - permittivity is kinda small...
+  mfem::Vector diff_interior(diff, ndofs/4, ndofs/2);
+  const double l2_norm = diff_interior.Norml2(); 
+
+  constexpr double absolute_tolerance = 1e-13;
+  EXPECT_NEAR(l2_norm, 0., absolute_tolerance);
+}
+
 }

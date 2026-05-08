@@ -95,6 +95,7 @@ mfem::GridFunction ElectrostaticFieldOperations::chargeError(const Electrostatic
   diff -= charge_from_potential_grid_function;
 
   return diff;
+
 }
 
 ElectrostaticFieldOperations::~ElectrostaticFieldOperations() = default;
