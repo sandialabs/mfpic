@@ -1,5 +1,7 @@
 #include <libmfpic/Constants.hpp>
 #include <libmfpic/ElectrostaticFieldOperations.hpp>
+#include <mfem/fem/bilininteg.hpp>
+#include <mfem/fem/gridfunc.hpp>
 
 namespace mfpic {
 
@@ -8,10 +10,14 @@ ElectrostaticFieldOperations::ElectrostaticFieldOperations(
   std::unique_ptr<DirichletBoundaryConditions> dirichlet_boundary_conditions)
   : dirichlet_boundary_conditions_(std::move(dirichlet_boundary_conditions))
   , electrostatic_bilinear_form_(&electrostatic_discretization.getFeSpace())
+  , mass_form_(&electrostatic_discretization.getFeSpace())
 {
   mfem::ConstantCoefficient permittivity(constants::permittivity);
   electrostatic_bilinear_form_.AddDomainIntegrator(new mfem::DiffusionIntegrator(permittivity));
   electrostatic_bilinear_form_.Assemble();
+
+  mass_form_.AddDomainIntegrator(new mfem::MassIntegrator);
+  mass_form_.Assemble();
 }
 
 void ElectrostaticFieldOperations::fieldSolve(ElectrostaticFieldState& field_state, const IntegratedCharge& charge_state) {
@@ -45,33 +51,42 @@ double ElectrostaticFieldOperations::fieldEnergy(const ElectrostaticFieldState& 
 }
 
 mfem::GridFunction ElectrostaticFieldOperations::chargeError(const ElectrostaticFieldState& field_state, const IntegratedCharge& integrated_charge) {
+
   mfem::GridFunction potential_copy = field_state.getPotential();
 
-  mfem::GridFunction error(potential_copy.FESpace());
+  mfem::GridFunction charge_from_integrated_charge_grid_function(potential_copy.FESpace());
+  mfem::GridFunction charge_from_potential_grid_function(potential_copy.FESpace());
 
-  mfem::Vector charge_deficit(potential_copy.Size());
-  electrostatic_bilinear_form_.Mult(potential_copy, charge_deficit);
-  charge_deficit -= integrated_charge.getIntegratedCharge();
+  auto compute_charge = [&](mfem::Vector& rhs, mfem::GridFunction& result) {
+    mfem::Array<int> ess_bdr;
+    // TODO BWR THIS IS A HACK RIGHT NOW
+    ess_bdr.SetSize(2);
+    ess_bdr = 1;   // mark ALL boundary attributes as essential
+    mfem::Array<int> dirichlet_dof_indices; // TODO BWR not sure about BCs
+    potential_copy.FESpace()->GetEssentialTrueDofs(ess_bdr, dirichlet_dof_indices);
+    mfem::Vector x;
+    mfem::Vector b;
+    mass_form_.FormLinearSystem(dirichlet_dof_indices, 
+                                result, 
+                                rhs, 
+                                mass_matrix_, 
+                                x, 
+                                b);
+    cg_linear_solver_.solve(mass_matrix_, x, b);
+    mass_form_.RecoverFEMSolution(x, rhs, result);
+  };
 
-  mfem::BilinearForm mass_form(potential_copy.FESpace());
-  mass_form.AddDomainIntegrator(new mfem::MassIntegrator);
-  mass_form.Assemble();
-  mass_form.Finalize();
+  mfem::Vector charge_vector(potential_copy.Size());
+  electrostatic_bilinear_form_.Mult(potential_copy, charge_vector);
+  compute_charge(charge_vector, charge_from_potential_grid_function);
 
-  mfem::Array<int> dirichlet_dof_indices; // TODO BWR not sure about BCs
-  mfem::Vector solution_vector;
-  mfem::Vector rhs_vector;
-  mfem::SparseMatrix mass_matrix;
-  mass_form.FormLinearSystem(dirichlet_dof_indices, 
-                             error, 
-                             charge_deficit, 
-                             mass_matrix, 
-                             solution_vector, 
-                             rhs_vector);
-  cg_linear_solver_.solve(mass_matrix, solution_vector, rhs_vector);
-  mass_form.RecoverFEMSolution(solution_vector, charge_deficit, error);
+  mfem::Vector integrated_charge_vector = integrated_charge.getIntegratedCharge();
+  compute_charge(integrated_charge_vector, charge_from_integrated_charge_grid_function);
 
-  return error;
+  mfem::GridFunction diff = charge_from_integrated_charge_grid_function;
+  diff -= charge_from_potential_grid_function;
+
+  return diff;
 
 }
 

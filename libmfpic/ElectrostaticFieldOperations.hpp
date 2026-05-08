@@ -5,6 +5,7 @@
 #include <libmfpic/IntegratedCharge.hpp>
 #include <libmfpic/ElectrostaticFieldState.hpp>
 
+#include <mfem/fem/bilinearform.hpp>
 #include <mfem/mfem.hpp>
 
 namespace mfpic {
@@ -63,6 +64,13 @@ private:
 
   /// -eps Laplace operator assembled into matrix
   mfem::SparseMatrix negative_eps_laplace_matrix_;
+
+  // TODO BWR DOCCO
+  mfem::BilinearForm mass_form_;
+
+  // TODO BWR DOCCO
+
+  mfem::SparseMatrix mass_matrix_;
 };
 
 } // namespace mfpic
