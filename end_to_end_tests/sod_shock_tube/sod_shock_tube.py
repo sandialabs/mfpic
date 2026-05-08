@@ -120,7 +120,7 @@ def run(mfpic_executable, time_integrator):
 
         verification.check_fluid_energy_positive_and_constant('Total_Fluid_Energy')
         os.rename('output_lf_0.csv', f"{output_directory}/output_lf_0_{refinement_level:02}.csv")
-        os.rename(yaml, f"{output_directory}/{yaml}_{refin}")
+        os.rename(yaml, f"{output_directory}/sod_shock_tube_{refinement_level:02}.yaml")
 
         result.check_returncode()
 
