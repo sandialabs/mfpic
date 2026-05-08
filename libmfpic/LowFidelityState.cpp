@@ -57,7 +57,7 @@ LowFidelitySpeciesState& LowFidelityState::getSpeciesState(const int i_species) 
 const LowFidelitySpeciesState& LowFidelityState::getSpeciesState(const int i_species) const { return species_states_[i_species]; }
 
 void LowFidelityState::addScaledState(const double scale, const LowFidelityState& state_to_sum) {
-  assert(numSpecies() == state.numSpecies());
+  assert(numSpecies() == state_to_sum.numSpecies());
 
   for (auto&& [species_state, species_state_to_sum] : std::views::zip(*this, state_to_sum)) {
     mfem::GridFunction& species_grid_function = species_state.getGridFunction();

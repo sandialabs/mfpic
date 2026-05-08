@@ -199,7 +199,7 @@ TEST(LowFidelityState, addScaledState_NonZeroScaleResultsInExpectedState) {
   mfem::GridFunction& species_grid_function_summed_into = species_state_summed_into.getGridFunction();
   constexpr double expected_scale = 1. + scale;
   for (int i = 0; i < species_grid_function_original.Size(); ++i) {
-    EXPECT_EQ(expected_scale * species_grid_function_original[i], species_grid_function_summed_into[i]);
+    EXPECT_DOUBLE_EQ(expected_scale * species_grid_function_original[i], species_grid_function_summed_into[i]);
   }
 }
 
