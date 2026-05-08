@@ -183,7 +183,6 @@ Time Stepping:
 
 **``Type``**: The type of time integrator to use.
     The available options are "Verlet", "Forward Euler", and "SSPERK32".
-    "Forward Euler" and "SSPERK32" should only be used with neutral fluid only simulations.
 
 Example
 ```yaml

@@ -6,6 +6,17 @@
 
 namespace mfpic {
 
+namespace {
+
+constexpr double a10 =  5. /  6.;
+constexpr double a20 = 11. / 24.;
+constexpr double a21 = 11. / 24.;
+
+constexpr double b0 = 24. / 55.;
+constexpr double b1 =  1. /  5.;
+constexpr double b2 =  4. / 11.;
+}
+
 void SSPERK32TimeIntegrator::advanceTimestep(
   std::vector<LowFidelityState>& low_fidelity_states,
   std::vector<ElectrostaticFieldState>& low_fidelity_field_states,
@@ -27,7 +38,7 @@ void SSPERK32TimeIntegrator::advanceTimestep(
 
     LowFidelityState rhs_0 = operations.computeRHS(low_fidelity_state, low_fidelity_field_state);
     LowFidelityState low_fidelity_state_1(low_fidelity_state);
-    low_fidelity_state_1.addScaledState((5. / 6.) * dt, rhs_0);
+    low_fidelity_state_1.addScaledState(a10 * dt, rhs_0);
 
     IntegratedCharge low_fidelity_charge_1(discretization_);
     low_fidelity_charge_1.addCharge(operations.assembleCharge(low_fidelity_state_1));
@@ -37,8 +48,8 @@ void SSPERK32TimeIntegrator::advanceTimestep(
     LowFidelityState rhs_1 = operations.computeRHS(low_fidelity_state_1, low_fidelity_field_state_1);
 
     LowFidelityState low_fidelity_state_2(low_fidelity_state);
-    low_fidelity_state_2.addScaledState((11. / 24.) * dt, rhs_0);
-    low_fidelity_state_2.addScaledState((11. / 24.) * dt, rhs_1);
+    low_fidelity_state_2.addScaledState(a20 * dt, rhs_0);
+    low_fidelity_state_2.addScaledState(a21 * dt, rhs_1);
 
     IntegratedCharge low_fidelity_charge_2(discretization_);
     low_fidelity_charge_2.addCharge(operations.assembleCharge(low_fidelity_state_2));
@@ -47,9 +58,9 @@ void SSPERK32TimeIntegrator::advanceTimestep(
 
     LowFidelityState rhs_2 = operations.computeRHS(low_fidelity_state_2, low_fidelity_field_state_2);
 
-    low_fidelity_state.addScaledState((24. / 55.) * dt, rhs_0);
-    low_fidelity_state.addScaledState((1. / 5.) * dt, rhs_1);
-    low_fidelity_state.addScaledState((4. / 11.) * dt, rhs_2);
+    low_fidelity_state.addScaledState(b0 * dt, rhs_0);
+    low_fidelity_state.addScaledState(b1 * dt, rhs_1);
+    low_fidelity_state.addScaledState(b2 * dt, rhs_2);
 
     IntegratedCharge low_fidelity_charge(discretization_);
     low_fidelity_charge.addCharge(operations.assembleCharge(low_fidelity_state));
