@@ -58,15 +58,10 @@ mfem::GridFunction ElectrostaticFieldOperations::chargeError(const Electrostatic
   mfem::GridFunction charge_from_potential_grid_function(potential_copy.FESpace());
 
   auto compute_charge = [&](mfem::Vector& rhs, mfem::GridFunction& result) {
-    mfem::Array<int> ess_bdr;
-    // TODO BWR THIS IS A HACK RIGHT NOW
-    ess_bdr.SetSize(2);
-    ess_bdr = 1;   // mark ALL boundary attributes as essential
-    mfem::Array<int> dirichlet_dof_indices; // TODO BWR not sure about BCs
-    potential_copy.FESpace()->GetEssentialTrueDofs(ess_bdr, dirichlet_dof_indices);
     mfem::Vector x;
     mfem::Vector b;
-    mass_form_.FormLinearSystem(dirichlet_dof_indices, 
+    mfem::Array<int> no_bcs;
+    mass_form_.FormLinearSystem(no_bcs, 
                                 result, 
                                 rhs, 
                                 mass_matrix_, 
@@ -76,18 +71,30 @@ mfem::GridFunction ElectrostaticFieldOperations::chargeError(const Electrostatic
     mass_form_.RecoverFEMSolution(x, rhs, result);
   };
 
+  auto copy_boundary_dofs = [&](const mfem::Vector& source, mfem::Vector& target) {
+    mfem::Array<int> boundary_attribute_flags;
+    boundary_attribute_flags.SetSize(potential_copy.FESpace()->GetMesh()->bdr_attributes.Max());
+    boundary_attribute_flags = true;
+    mfem::Array<int> all_boundary_dof_indices;
+    potential_copy.FESpace()->GetEssentialTrueDofs(boundary_attribute_flags, all_boundary_dof_indices);
+
+    for (int i = 0; i < all_boundary_dof_indices.Size(); ++i)
+      target(all_boundary_dof_indices[i]) = source(all_boundary_dof_indices[i]);
+  };
+
   mfem::Vector charge_vector(potential_copy.Size());
   electrostatic_bilinear_form_.Mult(potential_copy, charge_vector);
-  compute_charge(charge_vector, charge_from_potential_grid_function);
 
   mfem::Vector integrated_charge_vector = integrated_charge.getIntegratedCharge();
+  copy_boundary_dofs(integrated_charge_vector, charge_vector); // TODO BWR ADD NOTE ABOUT THIS IF WE KEEP THIS
+
+  compute_charge(charge_vector, charge_from_potential_grid_function);
   compute_charge(integrated_charge_vector, charge_from_integrated_charge_grid_function);
 
   mfem::GridFunction diff = charge_from_integrated_charge_grid_function;
   diff -= charge_from_potential_grid_function;
 
   return diff;
-
 }
 
 ElectrostaticFieldOperations::~ElectrostaticFieldOperations() = default;
