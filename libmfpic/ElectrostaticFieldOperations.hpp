@@ -43,6 +43,10 @@ public:
    */
   double fieldEnergy(const ElectrostaticFieldState& field_state) const;
 
+  // TODO BWR DOCCO
+  // TODO BWR cant be const...
+  mfem::GridFunction chargeError(const ElectrostaticFieldState& field_state, const IntegratedCharge& integrated_charge);
+
   /// Dtor.
   virtual ~ElectrostaticFieldOperations();
 
