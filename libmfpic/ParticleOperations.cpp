@@ -493,9 +493,10 @@ std::unordered_map<Species,mfem::Vector>& ParticleOperations::getVarianceReduced
       + z_bulk_velocity * low_fidelity_bulk_velocity_integral.at(current_species)(2,elem_id);
 
       variance_reduced_particle_temperature_.at(current_species)(elem_id) 
-        += more_than_one_macro_particle(elem_id) * low_fidelity_temperature_integral.at(current_species)(elem_id) / (number_density * element_volume)
-        + m_over_3kb * bulk_velocity_mag_squared * low_fidelity_number_density_integral.at(current_species)(elem_id) / (number_density * element_volume)
-        - m_over_3kb * 2.0 * bulk_velocity_dot_low_fidelity_bulk_velocity_integral / (number_density * element_volume);
+        += more_than_one_macro_particle(elem_id) * 
+          (low_fidelity_temperature_integral.at(current_species)(elem_id) / (number_density * element_volume)
+          + m_over_3kb * bulk_velocity_mag_squared * low_fidelity_number_density_integral.at(current_species)(elem_id) / (number_density * element_volume)
+          - m_over_3kb * 2.0 * bulk_velocity_dot_low_fidelity_bulk_velocity_integral / (number_density * element_volume));
     }
   } 
   return this->variance_reduced_particle_temperature_;
@@ -513,6 +514,52 @@ void ParticleOperations::sumParticleWeights_(
       const Species & species = particle.species;
       sum_of_weights_.at(species)(elem_id) += particle.weight;
     }
+}
+
+
+void ParticleOperations::updateParticleDistributionFunctionValue(
+  ParticleContainer& particles,
+  const ParticleContainer& reference_particles)
+{
+  std::unordered_map<Species, mfem::Vector> number_density     = this->getNumberDensity(reference_particles);
+  std::unordered_map<Species, mfem::DenseMatrix> bulk_velocity = this->getBulkVelocity(reference_particles,true);
+  std::unordered_map<Species, mfem::Vector> temperature        = this->getTemperature(reference_particles,false,false);
+
+  for (Particle& particle : particles) {
+    if (not particle.is_alive) continue;
+    const int elem_id = particle.element;
+    const Species & species = particle.species;
+    const mfem::Vector bulk_velocity_in_element(bulk_velocity.at(species).GetColumn(elem_id), 3);
+
+    mfem::Vector primitive_state(5);
+    primitive_state(0) = number_density.at(species)(elem_id);
+    primitive_state(1) = bulk_velocity_in_element(0);
+    primitive_state(2) = bulk_velocity_in_element(1);
+    primitive_state(3) = bulk_velocity_in_element(2);
+    primitive_state(4) = temperature.at(species)(elem_id);
+    double particle_distribution_function_value = euler::evaluateMaxwellian(primitive_state,particle.velocity,species);
+    particle.particle_distribution_function_value = particle_distribution_function_value;
+  }
+}
+
+void ParticleOperations::updateParticleDistributionFunctionValue(
+  ParticleContainer& particles,
+  double number_density,
+  mfem::Vector bulk_velocity,
+  double temperature)
+{
+  for (Particle& particle : particles) {
+    if (not particle.is_alive) continue;
+    const Species & species = particle.species;
+    mfem::Vector primitive_state(5);
+    primitive_state(0) = number_density;
+    primitive_state(1) = bulk_velocity(0);
+    primitive_state(2) = bulk_velocity(1);
+    primitive_state(3) = bulk_velocity(2);
+    primitive_state(4) = temperature;
+    double particle_distribution_function_value = euler::evaluateMaxwellian(primitive_state,particle.velocity,species);
+    particle.particle_distribution_function_value = particle_distribution_function_value;
+  }
 }
 
 } // namespace mfpic

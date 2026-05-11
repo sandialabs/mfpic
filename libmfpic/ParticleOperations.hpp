@@ -143,12 +143,22 @@ public:
     const DGEulerOperations& low_fidelity_operations
   );
 
+  void updateParticleDistributionFunctionValue(ParticleContainer& particles,const ParticleContainer& reference_particles);
+
+  void updateParticleDistributionFunctionValue(
+    ParticleContainer& particles,  
+    double number_density,
+    mfem::Vector bulk_velocity,
+    double temperature
+  );
+
   /**
    * @brief Get mfem mesh associated with the discretization
    *
    * @return mfem::Mesh 
    */
   mfem::Mesh& getMesh() const {return *discretization_.getFeSpace().GetMesh();};
+
 
 private: 
 

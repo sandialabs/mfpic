@@ -78,7 +78,9 @@ void runSimulation(int argc, char* argv[]) {
     species_map
   );
 
-  std::default_random_engine generator;
+  //std::default_random_engine generator;
+  std::random_device rd;
+  std::default_random_engine generator(rd());
   ParticleContainer particle_container = buildParticlesFromYaml(
     main["Particles"]["Initial Conditions"],
     species_map,
@@ -200,12 +202,30 @@ void runSimulation(int argc, char* argv[]) {
     std::cout << "    Maximum CFL: " << cfl << std::endl;
 
     if (main["Particles"]["Sources"].IsDefined()) {
-      particle_container.addParticles(buildParticlesFromYaml(
-        main["Particles"]["Sources"],
-        species_map,
-        generator,
-        mesh
-      ));
+      ParticleContainer source_particles = buildParticlesFromYaml(
+      main["Particles"]["Sources"],
+      species_map,
+      generator,
+      mesh
+      );
+
+      //F updated based on constant values
+      // double source_number_density = 6e19; 
+      // double source_temperature = 116045.18121550081; 
+      // mfem::Vector source_bulk_velocity(3);
+      // source_bulk_velocity = 0.0;
+      // particle_operations.updateParticleDistributionFunctionValue(source_particles,source_number_density, source_bulk_velocity, source_temperature);
+
+      //F Updated based on joint particle moments
+      //ParticleContainer joint_particles; 
+      // joint_particles.addParticles(source_particles);
+      // joint_particles.addParticles(particle_container);
+      // particle_operations.updateParticleDistributionFunctionValue(source_particles,joint_particles);
+
+      //F Updated based on existing particle moments
+      //particle_operations.updateParticleDistributionFunctionValue(source_particles,particle_container);
+
+      particle_container.addParticles(source_particles);
     }
 
     if (i_timestep % output_parameters.output_stride == 0) {
