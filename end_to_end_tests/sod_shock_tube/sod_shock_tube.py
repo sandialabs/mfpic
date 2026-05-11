@@ -263,7 +263,6 @@ if __name__ == "__main__":
     import sys
 
     time_integrators = ["Forward Euler", "Verlet", "SSPERK32"]
-    # time_integrators = ["SSPERK32"]
     if "run" in sys.argv[1:]:
         mfpic_executable = sys.argv[2]
         for time_integrator in time_integrators:
