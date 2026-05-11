@@ -2,8 +2,12 @@
 #include <libmfpic/DirichletBoundaryConditionsConstant.hpp>
 #include <libmfpic/ElectrostaticFieldOperations.hpp>
 #include <libmfpic/ElectrostaticFieldState.hpp>
+#include <libmfpic/MeshFactory.hpp>
 #include <libmfpic/MeshUtilities.hpp>
 #include <libmfpic/Pinning.hpp>
+
+#include <libmfpic/LowFidelityState.hpp>
+#include <libmfpic/MeshDataWriter.hpp>
 
 #include <mfem/mfem.hpp>
 
@@ -287,6 +291,62 @@ TEST(ElectrostaticFieldOperations, QuadraticOffsetGivesConstantChargeError) {
 
   constexpr double absolute_tolerance = 1e-13;
   EXPECT_NEAR(l2_norm, 0., absolute_tolerance);
+}
+
+TEST(ElectrostaticFieldOperations, Periodic) {
+  auto& message = std::cout;
+  MeshParameters mesh_parameters{
+    .mesh_type = "line",
+    .lengths = {1.},
+    .num_elements = {15},
+    .periodic_dims = {0}};
+
+  mfem::Mesh mesh = buildMesh(mesh_parameters);
+
+  constexpr int hgrad_order = 1;
+  Discretization es_discretization(&mesh, hgrad_order);
+
+  auto pinning = std::make_unique<Pinning>();
+  ElectrostaticFieldOperations es_field_operations(es_discretization, std::move(pinning));
+  ElectrostaticFieldState es_field_state(es_discretization);
+
+  mfem::FunctionCoefficient charge_density([](const mfem::Vector& x){
+    return 4. * M_PI * M_PI * constants::permittivity * cos(2. * M_PI * x[0]);
+  });
+  mfem::LinearForm integrated_charge_linear_form(&es_discretization.getFeSpace());
+  integrated_charge_linear_form.AddDomainIntegrator(new mfem::DomainLFIntegrator(charge_density));
+  integrated_charge_linear_form.Assemble();
+
+  IntegratedCharge integrated_charge(es_discretization);
+  integrated_charge.setIntegratedCharge(integrated_charge_linear_form);
+
+  es_field_operations.fieldSolve(es_field_state, integrated_charge);
+
+  mfem::Vector integrated_ghost_charge = es_field_operations.computeIntegratedGhostCharge(es_field_state, integrated_charge);
+
+  mfem::Vector integrated_charge_vector = integrated_charge.getIntegratedCharge();
+  constexpr double solver_tolerance = 1e-12;
+  constexpr double pointwise_tolerance = 10 * solver_tolerance;
+  for (int i = 0; i < integrated_ghost_charge.Size(); ++i) {
+    EXPECT_LT(abs(integrated_ghost_charge(i)), pointwise_tolerance * abs(integrated_charge_vector(i)));
+  }
+
+  mfem::GridFunction ghost_charge_density = es_field_operations.computeGhostChargeDensity(es_field_state, integrated_charge);
+  const double ghost_charge_density_norm = ghost_charge_density.Norml2();
+  constexpr double tolerance = 1e-16;
+  EXPECT_LT(ghost_charge_density_norm, tolerance);
+ 
+  // TODO: this part should be moved into a seperate unit test to check that we get the expected solution with all natural bcs
+  mfem::FunctionCoefficient exact_potential([](const mfem::Vector& x){
+    const double x_pin = 0.;
+    const double pin_value = cos(2. * M_PI * x_pin);
+    return cos(2. * M_PI * x[0]) - pin_value;
+  });
+
+  const mfem::GridFunction& potential = es_field_state.getPotential();
+  const double l2_error = potential.ComputeL2Error(exact_potential);
+
+  message << "l2_error = " << l2_error << std::endl;
 }
 
 }

@@ -48,6 +48,14 @@ public:
   // TODO BWR cant be const...
   mfem::GridFunction chargeError(const ElectrostaticFieldState& field_state, const IntegratedCharge& integrated_charge);
 
+  mfem::Vector computeIntegratedGhostCharge(
+    const ElectrostaticFieldState& field_state,
+    const IntegratedCharge& integrated_charge) const;
+
+  mfem::GridFunction computeGhostChargeDensity(
+    const ElectrostaticFieldState& field_state,
+    const IntegratedCharge& integrated_charge);
+
   /// Dtor.
   virtual ~ElectrostaticFieldOperations();
 

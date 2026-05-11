@@ -16,7 +16,7 @@ ElectrostaticFieldOperations::ElectrostaticFieldOperations(
   electrostatic_bilinear_form_.AddDomainIntegrator(new mfem::DiffusionIntegrator(permittivity));
   electrostatic_bilinear_form_.Assemble();
 
-  mass_form_.AddDomainIntegrator(new mfem::MassIntegrator);
+  mass_form_.AddDomainIntegrator(new mfem::LumpedIntegrator(new mfem::MassIntegrator));
   mass_form_.Assemble();
 }
 
@@ -96,6 +96,46 @@ mfem::GridFunction ElectrostaticFieldOperations::chargeError(const Electrostatic
 
   return diff;
 
+}
+
+mfem::Vector ElectrostaticFieldOperations::computeIntegratedGhostCharge(
+  const ElectrostaticFieldState& es_field_state,
+  const IntegratedCharge& integrated_charge) const
+{
+  const mfem::GridFunction& potential = es_field_state.getPotential();
+  const mfem::Vector integrated_charge_vector = integrated_charge.getIntegratedCharge();
+
+  mfem::Vector integrated_ghost_charge(potential.Size());
+
+  electrostatic_bilinear_form_.FullMult(potential, integrated_ghost_charge);
+  integrated_ghost_charge.Add(-1., integrated_charge_vector);
+
+  return integrated_ghost_charge;
+}
+
+mfem::GridFunction ElectrostaticFieldOperations::computeGhostChargeDensity(
+  const ElectrostaticFieldState& es_field_state,
+  const IntegratedCharge& integrated_charge)
+{
+  mfem::Vector integrated_ghost_charge = computeIntegratedGhostCharge(es_field_state, integrated_charge);
+
+  mfem::GridFunction ghost_charge_density(mass_form_.FESpace());
+
+  mfem::Vector solution_vector;
+  mfem::Vector rhs_vector;
+  mfem::Array<int> no_bcs;
+  mass_form_.FormLinearSystem(
+    no_bcs,
+    ghost_charge_density,
+    integrated_ghost_charge,
+    mass_matrix_,
+    solution_vector,
+    rhs_vector);
+
+  cg_linear_solver_.solve(mass_matrix_, solution_vector, rhs_vector);
+  mass_form_.RecoverFEMSolution(solution_vector, integrated_ghost_charge, ghost_charge_density);
+
+  return ghost_charge_density;
 }
 
 ElectrostaticFieldOperations::~ElectrostaticFieldOperations() = default;
