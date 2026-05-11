@@ -161,11 +161,11 @@ $$
     \text{Time Step Size} = \frac{\text{Final Time}}{\text{Number of Time Steps}}.
 $$
 
-Two different time integrators are available, "Verlet" and "Forward Euler".
+Three different time integrators are available, "Verlet", "Forward Euler", and "SSPERK32".
 The default is "Verlet" and should be the option used almost all of the time.
-"Forward Euler" is only to be used for testing problems without particles.
-"Forward Euler" has an total energy growth problem and an internal energy decay problem, so this integrator should only be used
-for test problems demonstrating these issues.
+"Forward Euler" and "SSPERK32" are only to be used for problems without particles.
+"Forward Euler" and "SSPERK32" have fundamental energy issues when coupling to electrostatic or electromagnetic fields, so these 
+integrators should only be used with charged particles for test problems to demonstrate those issues.
 
 ```yaml
 Time Stepping:
@@ -182,8 +182,7 @@ Time Stepping:
 **``Time Step Size``**: The size of each time step in seconds.
 
 **``Type``**: The type of time integrator to use.
-    The available options are "Verlet" and "Forward Euler".
-    "Forward Euler" should only be used with pure fluid simulations to show total energy and internal energy issues.
+    The available options are "Verlet", "Forward Euler", and "SSPERK32".
 
 Example
 ```yaml

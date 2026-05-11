@@ -2,6 +2,7 @@
 
 #include <libmfpic/Errors.hpp>
 #include <libmfpic/ForwardEulerTimeIntegrator.hpp>
+#include <libmfpic/SSPERK32TimeIntegrator.hpp>
 #include <libmfpic/TimeIntegrator.hpp>
 #include <libmfpic/VerletTimeIntegrator.hpp>
 
@@ -42,8 +43,10 @@ TimeSteppingParameters buildTimeSteppingParametersFromYAML(const YAML::Node& tim
       parameters.time_integrator_type = TimeIntegratorType::verlet;
     } else if (type_string == "Forward Euler") {
       parameters.time_integrator_type = TimeIntegratorType::forward_euler;
+    } else if (type_string == "SSPERK32") {
+      parameters.time_integrator_type = TimeIntegratorType::ssperk32;
     } else {
-      errorWithUserMessage("Time Stepping: Type: must be either \"Verlet\" or \"Forward Euler\".");
+      errorWithUserMessage("Time Stepping: Type: must be either \"Verlet\", \"Forward Euler\", \"SSPERK32\".");
     }
   }
 
@@ -64,6 +67,9 @@ std::unique_ptr<TimeIntegrator> buildTimeIntegrator(
       break;
     case TimeIntegratorType::forward_euler:
       time_integrator = std::make_unique<ForwardEulerTimeIntegrator>(electrostatic_discretization);
+      break;
+    case TimeIntegratorType::ssperk32:
+      time_integrator = std::make_unique<SSPERK32TimeIntegrator>(electrostatic_discretization);
       break;
   }
   return time_integrator;

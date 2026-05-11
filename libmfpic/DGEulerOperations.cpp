@@ -97,6 +97,28 @@ LowFidelityState DGEulerOperations::moveAccelerate(
   return updated_state;
 }
 
+LowFidelityState DGEulerOperations::computeRHS(
+  const LowFidelityState& state,
+  const ElectromagneticFieldsEvaluator& field_evaluator) const
+{
+  LowFidelityState rhs(state);
+  for (int i_species = 0; i_species < state.numSpecies(); ++i_species) {
+    const LowFidelitySpeciesState& species_state = state.getSpeciesState(i_species);
+    const mfem::GridFunction& species_grid_function = species_state.getGridFunction();
+
+    temp_vector_ = 0.;
+    dg_assemblers_[i_species]->computeHyperbolicFluxes(species_grid_function, temp_vector_);
+    constexpr bool include_energy_source = true;
+    dg_assemblers_[i_species]->computeElectromagneticSources(species_state, field_evaluator, temp_vector_, include_energy_source);
+    dg_assemblers_[i_species]->applyInverseMass(temp_vector_, rhs_);
+
+    LowFidelitySpeciesState& rhs_species_state = rhs.getSpeciesState(i_species);
+    mfem::GridFunction& rhs_species_grid_function = rhs_species_state.getGridFunction();
+    rhs_species_grid_function.Set(1., rhs_);
+  }
+  return rhs;
+}
+
   LowFidelityState DGEulerOperations::addVolumetricSource(
     double dt,
     const LowFidelityState& state) const

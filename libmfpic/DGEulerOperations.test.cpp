@@ -15,6 +15,8 @@
 #include <gtest/gtest.h>
 #include <mfem.hpp>
 
+#include <ranges>
+
 namespace {
 
 using namespace mfpic;
@@ -426,6 +428,88 @@ TEST(DGEulerOperations, MoveAccelerate_ConstantEFieldAcceleratesConstantFluidCor
   const double error = grid_function_moved_acclerated.ComputeL2Error(expected_coefficient);
   constexpr double tolerance = 1e-16;
   EXPECT_LT(error, tolerance);
+}
+
+TEST(DGEulerOperations, computeRHS_ConstantStateWithNoFieldsGivesZeroRHS) {
+  constexpr double length = 1.6;
+  MeshParameters mesh_parameters{.mesh_type = "line", .lengths = {length}, .num_elements = {20}, .periodic_dims = {0}};
+  mfem::Mesh mesh = buildMesh(mesh_parameters);
+
+  constexpr int dg_order = 0;
+  const int num_equations = euler::ConservativeVariables::NUM_VARS;
+  Discretization dg_discretization(&mesh, dg_order, FETypes::DG, num_equations);
+
+  constexpr double number_density = 2.1e20;
+  constexpr double temperature = 281.;
+  const mfem::Vector bulk_velocity({2.3, 0., 0.});
+  SourceStateParameters state{.number_density = number_density, .bulk_velocity = bulk_velocity, .temperature = temperature};
+  std::vector<std::unique_ptr<SourceParameters>> list_of_ic_parameters;
+  list_of_ic_parameters.push_back(std::make_unique<ConstantSourceParameters>(electron_species, state));
+
+  const LowFidelityState initial_state = buildEulerState(dg_discretization, list_of_ic_parameters);
+
+  constexpr int es_order = 1;
+  Discretization es_discretization(&mesh, es_order, FETypes::HGRAD);
+  ElectrostaticFieldState es_field_state_zero(es_discretization); 
+
+  const std::vector<Species> species_list = initial_state.getSpeciesList();
+  std::vector<std::vector<std::unique_ptr<DGBC>>> empty_bcs(species_list.size());
+  std::unique_ptr<LowFidelityOperations> dg_euler_operations = buildDGEulerOperations(
+    dg_discretization, es_discretization, species_list, empty_bcs, empty_sources);
+
+  const LowFidelityState rhs = dg_euler_operations->computeRHS(initial_state, es_field_state_zero);
+  const LowFidelitySpeciesState& rhs_species_state = rhs.getSpeciesState(0);
+  const mfem::GridFunction& rhs_grid_function = rhs_species_state.getGridFunction();
+  EXPECT_EQ(0., rhs_grid_function.Norml2());
+}
+
+TEST(DGEulerOperations, computeRHS_ZeroFieldsGivesMoveIncrement) {
+  constexpr double length = 0.9;
+  MeshParameters mesh_parameters{.mesh_type = "line", .lengths = {length}, .num_elements = {20}, .periodic_dims = {0}};
+  mfem::Mesh mesh = buildMesh(mesh_parameters);
+
+  constexpr int dg_order = 0;
+  const int num_equations = euler::ConservativeVariables::NUM_VARS;
+  Discretization dg_discretization(&mesh, dg_order, FETypes::DG, num_equations);
+
+  const mfem::Vector center{0.5 * length};
+  constexpr double standard_deviation = 0.1 * length;
+  const SourceStateParameters offsets{.number_density = 1.8e21, .bulk_velocity = mfem::Vector({10.2, 0., 0.})};
+  const SourceStateParameters heights{.number_density = 9.2e19, .bulk_velocity = mfem::Vector({4.8, 0., 0.})};
+  constexpr double pressure_offset = 29713.;
+  constexpr double pressure_height = 3479.;
+  std::vector<std::unique_ptr<SourceParameters>> list_of_ic_parameters;
+  list_of_ic_parameters.push_back(
+    std::make_unique<GaussianSourceParameters>(
+      electron_species, center, standard_deviation, offsets, heights, pressure_offset, pressure_height));
+
+  const LowFidelityState initial_state = buildEulerState(dg_discretization, list_of_ic_parameters);
+
+  constexpr int es_order = 1;
+  Discretization es_discretization(&mesh, es_order, FETypes::HGRAD);
+  ElectrostaticFieldState es_field_state_zero(es_discretization); 
+
+  const std::vector<Species> species_list = initial_state.getSpeciesList();
+  std::vector<std::vector<std::unique_ptr<DGBC>>> empty_bcs(species_list.size());
+  std::unique_ptr<LowFidelityOperations> dg_euler_operations = buildDGEulerOperations(
+    dg_discretization, es_discretization, species_list, empty_bcs, empty_sources);
+
+  const LowFidelityState rhs = dg_euler_operations->computeRHS(initial_state, es_field_state_zero);
+
+  constexpr double dt = 1.5e-8;
+  const LowFidelityState moved_state = dg_euler_operations->move(dt, initial_state);
+
+  LowFidelityState updated_state(initial_state);
+  updated_state.addScaledState(dt, rhs);
+
+  for (const auto& [moved_species_state, updated_species_state] : std::views::zip(moved_state, updated_state)) {
+    const mfem::GridFunction& moved_grid_function = moved_species_state.getGridFunction();
+    const mfem::GridFunction& updated_grid_function = updated_species_state.getGridFunction();
+
+    for (int i = 0; i < moved_grid_function.Size(); ++i) {
+      EXPECT_DOUBLE_EQ(moved_grid_function[i], updated_grid_function[i]);
+    }
+  }
 }
 
 TEST(DGEulerOperations, evaluateParticleDistributionFunctionCorrectIn1D) {
