@@ -20,6 +20,12 @@
 
 namespace mfpic {
 
+struct VarianceReducedPostprocessors{
+  std::unordered_map<Species, mfem::Vector> noise_reducing_factor;
+  std::unordered_map<Species, mfem::Vector> particle_distribution_function;
+  std::unordered_map<Species, mfem::Vector> low_fidelity_particle_distribution_function;
+};
+
 class ParticleOperations {
 public:
 
@@ -143,6 +149,12 @@ public:
     const DGEulerOperations& low_fidelity_operations
   );
 
+  VarianceReducedPostprocessors getVarianceReducedPostprocessors(
+    const ParticleContainer& particles, 
+    const LowFidelityState& low_fidelity_state,
+    const DGEulerOperations& low_fidelity_operations
+  );
+
   void updateParticleDistributionFunctionValue(ParticleContainer& particles,const ParticleContainer& reference_particles);
 
   void updateParticleDistributionFunctionValue(
@@ -201,6 +213,9 @@ private:
 
   /// Variance reduced particle temperature
   std::unordered_map<Species, mfem::Vector> variance_reduced_particle_temperature_;
+
+  /// Variance reduced postprocessors
+  VarianceReducedPostprocessors variance_reduced_postprocessors_;
 
   /// Particle sum of weights
   std::unordered_map<Species, mfem::Vector> sum_of_weights_;

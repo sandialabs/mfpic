@@ -34,6 +34,9 @@ ParticleOperations::ParticleOperations(
     variance_reduced_particle_number_density_.insert({species, mfem::Vector(mesh.GetNE())});
     variance_reduced_particle_bulk_velocity_.insert({species, mfem::DenseMatrix(3, mesh.GetNE())});
     variance_reduced_particle_temperature_.insert({species, mfem::Vector(mesh.GetNE())});
+    variance_reduced_postprocessors_.noise_reducing_factor.insert({species,mfem::Vector(mesh.GetNE())});
+    variance_reduced_postprocessors_.particle_distribution_function.insert({species,mfem::Vector(mesh.GetNE())});
+    variance_reduced_postprocessors_.low_fidelity_particle_distribution_function.insert({species,mfem::Vector(mesh.GetNE())});
     sum_of_weights_.insert({species, mfem::Vector(mesh.GetNE())});
   }
 
@@ -286,7 +289,6 @@ std::unordered_map<Species, mfem::Vector>& ParticleOperations::getVarianceReduce
 
     double low_fidelity_particle_distribution_function_value = low_fidelity_operations.evaluateParticleDistributionFunction(low_fidelity_state,particle_position,particle.velocity,particle.element,particle.species);
     double noise_reducing_factor = (1 - low_fidelity_particle_distribution_function_value / particle.particle_distribution_function_value);
-
     variance_reduced_particle_number_density_.at(particle.species)(elem_id) += (particle.weight * noise_reducing_factor) / element_volume;
   }
 
@@ -516,6 +518,46 @@ void ParticleOperations::sumParticleWeights_(
     }
 }
 
+
+VarianceReducedPostprocessors ParticleOperations::getVarianceReducedPostprocessors(
+  const ParticleContainer& particles, 
+  const LowFidelityState& low_fidelity_state,
+  const DGEulerOperations& low_fidelity_operations
+) {
+
+  for (auto & species_and_number_density : variance_reduced_postprocessors_.noise_reducing_factor)
+    species_and_number_density.second = 0.0;
+
+  for (auto & species_and_number_density : variance_reduced_postprocessors_.particle_distribution_function)
+    species_and_number_density.second = std::numeric_limits<double>::infinity();
+
+  for (auto & species_and_number_density : variance_reduced_postprocessors_.low_fidelity_particle_distribution_function)
+    species_and_number_density.second = std::numeric_limits<double>::infinity();
+
+  mfem::FiniteElementSpace finite_element_space = discretization_.getFeSpace();
+
+  for (const Particle& particle : particles) {
+    if (not particle.is_alive) continue;
+
+    const int elem_id = particle.element;
+    const mfem::Vector particle_position(particle.position.GetData(), dim_);
+    double low_fidelity_particle_distribution_function_value = low_fidelity_operations.evaluateParticleDistributionFunction(low_fidelity_state,particle_position,particle.velocity,particle.element,particle.species);
+    double noise_reducing_factor = (1 - low_fidelity_particle_distribution_function_value / particle.particle_distribution_function_value);
+
+    variance_reduced_postprocessors_.noise_reducing_factor.at(particle.species)(elem_id) = std::max(
+      std::abs(noise_reducing_factor),
+      variance_reduced_postprocessors_.noise_reducing_factor.at(particle.species)(elem_id));
+
+    variance_reduced_postprocessors_.particle_distribution_function.at(particle.species)(elem_id) = std::min(
+      particle.particle_distribution_function_value,
+      variance_reduced_postprocessors_.particle_distribution_function.at(particle.species)(elem_id));
+
+    variance_reduced_postprocessors_.low_fidelity_particle_distribution_function.at(particle.species)(elem_id) = std::min(
+      low_fidelity_particle_distribution_function_value,
+      variance_reduced_postprocessors_.low_fidelity_particle_distribution_function.at(particle.species)(elem_id));
+  }
+  return this->variance_reduced_postprocessors_;
+}
 
 void ParticleOperations::updateParticleDistributionFunctionValue(
   ParticleContainer& particles,

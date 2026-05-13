@@ -173,6 +173,8 @@ void dumpVarianceReducedParticleMoments(
   std::unordered_map<Species, mfem::DenseMatrix> variance_reduced_bulk_velocity = particle_operations.getVarianceReducedBulkVelocity(particles,low_fidelity_state,low_fidelity_operations);
   std::unordered_map<Species, mfem::Vector> variance_reduced_temperature = particle_operations.getVarianceReducedTemperature(particles,low_fidelity_state,low_fidelity_operations);
 
+  VarianceReducedPostprocessors variance_reduced_postprocessors = particle_operations.getVarianceReducedPostprocessors(particles,low_fidelity_state,low_fidelity_operations);
+
   mfem::Mesh& mesh = particle_operations.getMesh();
   const int nelem = mesh.GetNE();
 
@@ -191,7 +193,7 @@ void dumpVarianceReducedParticleMoments(
 
     const bool need_header = fileIsEmpty(filename);
     if (need_header) {
-      out << "step,time,elem,x,y,z,number_density,temperature,bulk_velocity_0,bulk_velocity_1,bulk_velocity_2\n";
+      out << "step,time,elem,x,y,z,number_density,temperature,bulk_velocity_0,bulk_velocity_1,bulk_velocity_2,f,fNR,noise_reducing_factor\n";
     }
 
     for (int e = 0; e < nelem; ++e) {
@@ -209,7 +211,11 @@ void dumpVarianceReducedParticleMoments(
           << element_point(0) << "," << element_point(1) << "," << element_point(2) << ","
           << variance_reduced_number_density.at(species)(e) << ","
           << variance_reduced_temperature.at(species)(e) << ","
-          << bulk_velocity_in_element(0) << "," << bulk_velocity_in_element(1) << "," << bulk_velocity_in_element(2) << "\n";
+          << bulk_velocity_in_element(0) << "," << bulk_velocity_in_element(1) << "," << bulk_velocity_in_element(2) << ","
+          << variance_reduced_postprocessors.particle_distribution_function.at(species)(e) << ","
+          << variance_reduced_postprocessors.low_fidelity_particle_distribution_function.at(species)(e) << ","
+          << variance_reduced_postprocessors.noise_reducing_factor.at(species)(e) 
+          << "\n";
     }
   }
 }
