@@ -9,7 +9,7 @@ One thing to note is that the terms
 $$
 \begin{gather}
     \dot{\bm{p}} = \frac{q}{m} \rho \bm{E} \\
-    -\varepsilon \Delta \Phi = \rho
+    -\varepsilon \Delta \Phi = \frac{q}{m} \rho
 \end{gather}
 $$
 describe an oscillator, known as the plasma oscillation.
