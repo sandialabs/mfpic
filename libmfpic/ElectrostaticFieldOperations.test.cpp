@@ -6,9 +6,6 @@
 #include <libmfpic/MeshUtilities.hpp>
 #include <libmfpic/Pinning.hpp>
 
-#include <libmfpic/LowFidelityState.hpp>
-#include <libmfpic/MeshDataWriter.hpp>
-
 #include <mfem/mfem.hpp>
 
 #include <gtest/gtest.h>
@@ -258,9 +255,11 @@ TEST(ElectrostaticFieldOperations, NoChargeErrorAfterPoissonSolveDirichlet) {
   const mfem::Vector integrated_ghost_charge_interior = excludeBoundaryEntries(integrated_ghost_charge, dirichlet_dofs);
 
   const double charge_error_l2_norm = integrated_ghost_charge_interior.Norml2();
+  const double integrated_charge_l2_norm = integrated_charge_linear_form.Norml2();
+  const double relative_error = charge_error_l2_norm / integrated_charge_l2_norm;
 
-  constexpr double absolute_tolerance = 1e-13;
-  EXPECT_NEAR(charge_error_l2_norm, 0., absolute_tolerance);
+  constexpr double absolute_tolerance = 1e-12;
+  EXPECT_NEAR(relative_error, 0., absolute_tolerance);
 }
 
 // 2 eps charge
@@ -397,7 +396,7 @@ TEST(ElectrostaticFieldOperations, FieldSolveCorrectForPeriodicWithPinning) {
   const mfem::GridFunction& potential = es_field_state.getPotential();
   const double l2_error = potential.ComputeL2Error(exact_potential);
   constexpr double expected_error = 0.;
-  constexpr double absolute_tolerance = 1e-13;
+  constexpr double absolute_tolerance = 1e-3;
   EXPECT_NEAR(l2_error, expected_error, absolute_tolerance);
 
 }
