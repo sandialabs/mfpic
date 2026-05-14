@@ -25,6 +25,11 @@ public:
     const ElectromagneticFieldsEvaluator& field_provider
   ) const = 0;
 
+  virtual LowFidelityState computeRHS(
+    const LowFidelityState& state,
+    const ElectromagneticFieldsEvaluator& field_provider
+  ) const = 0;
+
   virtual LowFidelityState addVolumetricSource(
     double dt,
     const LowFidelityState& state

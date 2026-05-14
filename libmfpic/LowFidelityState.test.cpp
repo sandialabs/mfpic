@@ -12,6 +12,23 @@ using namespace mfpic;
 const Species electron_species{.charge = -constants::elementary_charge, .mass = constants::electron_mass};
 const Species proton_species{.charge = constants::elementary_charge, .mass = constants::proton_mass};
 
+LowFidelityState constructRandomizedLowFidelityState() {
+  constexpr int num_elems = 10;
+  mfem::Mesh mesh = mfem::Mesh::MakeCartesian1D(num_elems);
+
+  constexpr int dg_order = 0;
+  constexpr int num_equations = euler::ConservativeVariables::NUM_VARS;
+  Discretization dg_discretization(&mesh, dg_order, FETypes::DG, num_equations);
+
+  const std::vector<Species> species_list{electron_species};
+  LowFidelityState state(dg_discretization, species_list);
+  LowFidelitySpeciesState& species_state = state.getSpeciesState(0);
+  mfem::GridFunction& species_grid_function = species_state.getGridFunction();
+  species_grid_function.Randomize();
+
+  return state;
+}
+
 TEST(LowFidelityState, constructLowFidelitySpeciesState) {
   constexpr int num_elems = 10;
   mfem::Mesh mesh = mfem::Mesh::MakeCartesian1D(num_elems);
@@ -134,22 +151,11 @@ TEST(LowFidelityState, constructLowFidelityStateWithVectorCoefficients) {
 }
 
 TEST(LowFidelityState, copyConstructorAllocatesNewMemoryLowFidelityState) {
-  constexpr int num_elems = 10;
-  mfem::Mesh mesh = mfem::Mesh::MakeCartesian1D(num_elems);
-
-  constexpr int dg_order = 0;
-  constexpr int num_equations = euler::ConservativeVariables::NUM_VARS;
-  Discretization dg_discretization(&mesh, dg_order, FETypes::DG, num_equations);
-
-  const Species species{.charge = -constants::elementary_charge, .mass = constants::electron_mass};
-  const std::vector<Species> species_list{species};
-
-  LowFidelityState state_orginal(dg_discretization, species_list);
-  LowFidelitySpeciesState& species_state_original = state_orginal.getSpeciesState(0);
+  LowFidelityState state_original = constructRandomizedLowFidelityState();
+  LowFidelitySpeciesState& species_state_original = state_original.getSpeciesState(0);
   mfem::GridFunction& species_grid_function_original = species_state_original.getGridFunction();
-  species_grid_function_original.Randomize();
 
-  LowFidelityState state_copy(state_orginal);
+  LowFidelityState state_copy(state_original);
   LowFidelitySpeciesState& species_state_copy = state_copy.getSpeciesState(0);
   mfem::GridFunction& species_grid_function_copy = species_state_copy.getGridFunction();
 
@@ -159,6 +165,41 @@ TEST(LowFidelityState, copyConstructorAllocatesNewMemoryLowFidelityState) {
 
   for (int i = 0; i < species_grid_function_original.Size(); ++i) {
     EXPECT_EQ(species_grid_function_original[i], species_grid_function_copy[i]);
+  }
+}
+
+TEST(LowFidelityState, addScaledState_ScaleZeroResultsInSameState) {
+  LowFidelityState state_original = constructRandomizedLowFidelityState();
+
+  LowFidelityState state_summed_into(state_original);
+  LowFidelityState state_to_sum(state_original);
+  constexpr double scale = 0.;
+  state_summed_into.addScaledState(scale, state_to_sum);
+
+  LowFidelitySpeciesState& species_state_original = state_original.getSpeciesState(0);
+  mfem::GridFunction& species_grid_function_original = species_state_original.getGridFunction();
+  LowFidelitySpeciesState& species_state_summed_into = state_summed_into.getSpeciesState(0);
+  mfem::GridFunction& species_grid_function_summed_into = species_state_summed_into.getGridFunction();
+  for (int i = 0; i < species_grid_function_original.Size(); ++i) {
+    EXPECT_EQ(species_grid_function_original[i], species_grid_function_summed_into[i]);
+  }
+}
+
+TEST(LowFidelityState, addScaledState_NonZeroScaleResultsInExpectedState) {
+  LowFidelityState state_original = constructRandomizedLowFidelityState();
+
+  LowFidelityState state_summed_into(state_original);
+  LowFidelityState state_to_sum(state_original);
+  constexpr double scale = 1.234;
+  state_summed_into.addScaledState(scale, state_to_sum);
+
+  LowFidelitySpeciesState& species_state_original = state_original.getSpeciesState(0);
+  mfem::GridFunction& species_grid_function_original = species_state_original.getGridFunction();
+  LowFidelitySpeciesState& species_state_summed_into = state_summed_into.getSpeciesState(0);
+  mfem::GridFunction& species_grid_function_summed_into = species_state_summed_into.getGridFunction();
+  constexpr double expected_scale = 1. + scale;
+  for (int i = 0; i < species_grid_function_original.Size(); ++i) {
+    EXPECT_DOUBLE_EQ(expected_scale * species_grid_function_original[i], species_grid_function_summed_into[i]);
   }
 }
 

@@ -38,6 +38,7 @@ add_library(libmfpic
   ReflectingParticleBoundary.cpp
   RunSimulation.cpp
   SourcesFactory.cpp
+  SSPERK32TimeIntegrator.cpp
   TextDataWriter.cpp
   TimeSteppingFactory.cpp
   VerletTimeIntegrator.cpp

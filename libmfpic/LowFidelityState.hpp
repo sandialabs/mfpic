@@ -48,6 +48,9 @@ private:
 class LowFidelityState {
 
 public:
+  using iterator = std::vector<LowFidelitySpeciesState>::iterator;
+  using const_iterator = std::vector<LowFidelitySpeciesState>::const_iterator;
+
   /**
    * @brief Construct a LowFidelityState initialized to zero
    *
@@ -66,12 +69,29 @@ public:
     Discretization& discretization,
     const std::vector<std::pair<Species, std::unique_ptr<mfem::VectorCoefficient>>>& species_coefficient_list);
 
+    /// Returns an iterator to the beginning of the species states
+  iterator begin();
+  /// Returns an iterator to the beginning of species states
+  const_iterator begin() const;
+  /// Returns an iterator to the end of the species states.
+  iterator end();
+  /// Returns an iterator to the end of the species states.
+  const_iterator end() const;
+
   /// Number of species in the state
-  int numSpecies() const { return std::ssize(species_states_); };
+  int numSpecies() const;
   std::vector<Species> getSpeciesList() const;
 
-  LowFidelitySpeciesState& getSpeciesState(const int i_species) { return species_states_[i_species]; }
-  const LowFidelitySpeciesState& getSpeciesState(const int i_species) const { return species_states_[i_species]; }
+  LowFidelitySpeciesState& getSpeciesState(const int i_species);
+  const LowFidelitySpeciesState& getSpeciesState(const int i_species) const;
+
+  /**
+   * @brief Add scale * state to this object
+   * 
+   * @param scale - value to scale incoming state by
+   * @param state - state to sum into this object
+   */
+  void addScaledState(const double scale, const LowFidelityState& state);
 
 private:
   std::vector<LowFidelitySpeciesState> species_states_;
