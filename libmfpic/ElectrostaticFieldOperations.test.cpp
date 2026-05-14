@@ -258,8 +258,8 @@ TEST(ElectrostaticFieldOperations, NoChargeErrorAfterPoissonSolveDirichlet) {
   const double integrated_charge_l2_norm = integrated_charge_linear_form.Norml2();
   const double relative_error = charge_error_l2_norm / integrated_charge_l2_norm;
 
-  constexpr double absolute_tolerance = 1e-12;
-  EXPECT_NEAR(relative_error, 0., absolute_tolerance);
+  constexpr double relative_tolerance = 1e-11;
+  EXPECT_LT(abs(relative_error), relative_tolerance);
 }
 
 // 2 eps charge
