@@ -5,6 +5,7 @@
 #include <libmfpic/IntegratedCharge.hpp>
 #include <libmfpic/ElectrostaticFieldState.hpp>
 
+#include <mfem/fem/bilinearform.hpp>
 #include <mfem/mfem.hpp>
 
 namespace mfpic {
@@ -30,7 +31,7 @@ public:
    *  However no meaningful internal data should be changed.
    * 
    * @param field_state - where to store new field state, also initial guess for linear solver
-   * @param charge_state - integrated charge for right hand side of system, \int_{\Omega} \rho \phi dV
+   * @param charge_state - integrated charge for right hand side of system, \int_{\Omega} \rho \psi dV
    */
   virtual void fieldSolve(ElectrostaticFieldState& field_state, const IntegratedCharge& charge_state);
 
@@ -42,6 +43,35 @@ public:
    * @return The electrostatic field energy in the domain.
    */
   double fieldEnergy(const ElectrostaticFieldState& field_state) const;
+
+  /**
+   * @brief Compute the integrated ghost charge \f$-L_{\eps} \phi - \rho_I\f$
+   * where \f$L_{\eps}\f$ is the Laplacian matrix weighted by the permittivy and \f$\rho_I\f$ is the
+   * given integrated charge
+   *
+   * @param field_state \ref ElectrostaticFieldState supplying the potential \f$\phi\f$
+   * @param integrated_charge \ref IntegratedCharge \f$\rho_I\f$
+   *
+   * @returns Integrated ghost charge
+   */
+
+  mfem::Vector computeIntegratedGhostCharge(
+    const ElectrostaticFieldState& field_state,
+    const IntegratedCharge& integrated_charge) const;
+
+  /**
+   * @brief Compute the ghost charge density \f$M^{-1}\left(-L_{\eps} \phi - \rho_I\right)\f$
+   * where \f$L_{\eps}\f$ is the Laplacian matrix weighted by the permittivy, \f$\rho_I\f$ is the
+   * given integrated charge, and \f$M\f$ is the mass matrix
+   *
+   * @param field_state \ref ElectrostaticFieldState supplying the potential \f$\phi\f$
+   * @param integrated_charge \ref IntegratedCharge \f$\rho_I\f$
+   *
+   * @returns Ghost charge density
+   */
+  mfem::GridFunction computeGhostChargeDensity(
+    const ElectrostaticFieldState& field_state,
+    const IntegratedCharge& integrated_charge);
 
   /// Dtor.
   virtual ~ElectrostaticFieldOperations();
@@ -59,6 +89,12 @@ private:
 
   /// -eps Laplace operator assembled into matrix
   mfem::SparseMatrix negative_eps_laplace_matrix_;
+
+  /// bilinear mass form for computing ghost charge
+  mfem::BilinearForm mass_form_;
+
+  /// mass operator assembled into matrix
+  mfem::SparseMatrix mass_matrix_;
 };
 
 } // namespace mfpic
