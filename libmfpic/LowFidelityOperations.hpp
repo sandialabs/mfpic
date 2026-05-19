@@ -2,9 +2,12 @@
 
 #include <libmfpic/IntegratedCharge.hpp>
 #include <libmfpic/ElectromagneticFieldsEvaluator.hpp>
+#include <libmfpic/ElectrostaticFieldState.hpp>
 #include <libmfpic/LowFidelityState.hpp>
 
 namespace mfpic {
+
+// class ElectrostaticFieldState;
 
 class LowFidelityOperations {
 public:
@@ -29,6 +32,11 @@ public:
     const LowFidelityState& state,
     const ElectromagneticFieldsEvaluator& field_provider
   ) const = 0;
+
+  virtual std::pair<LowFidelityState, ElectrostaticFieldState> plasmaOscillate(
+    const double dt,
+    const LowFidelityState& state,
+    const ElectrostaticFieldState& field_state) const = 0;
 
   virtual LowFidelityState addVolumetricSource(
     double dt,

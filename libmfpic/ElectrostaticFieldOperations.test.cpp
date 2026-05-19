@@ -191,6 +191,34 @@ TEST(ElectrostaticFieldOperations, LinearPotentialFieldEnergy) {
   ASSERT_DOUBLE_EQ(field_energy, expected_field_energy);
 }
 
+TEST(ElectrostaticFieldOperations, LinearPotentialSameFieldEnergyWithEFieldGridFunction) {
+  constexpr int num_elems = 4;
+  mfem::Mesh mesh = mfem::Mesh::MakeCartesian1D(num_elems);
+
+  constexpr int hgrad_order = 1;
+  Discretization es_discretization(&mesh, hgrad_order);
+  std::unique_ptr<Pinning> pinning;
+  ElectrostaticFieldOperations es_field_operations(es_discretization, std::move(pinning));
+
+  constexpr double gradient = 1000.0;
+
+  ElectrostaticFieldState es_field_state_potential(es_discretization);
+  mfem::GridFunction& potential = es_field_state_potential.getPotential();
+  mfem::FunctionCoefficient linear_function([=](const mfem::Vector& position) -> double { return gradient * position[0]; });
+  potential.ProjectCoefficient(linear_function);
+
+  ElectrostaticFieldState es_field_state_e_field(es_discretization);
+  mfem::GridFunction& e_field = es_field_state_e_field.getEFieldGridFunction();
+  const mfem::Vector e_field_vector({gradient, 0., 0.});
+  mfem::VectorConstantCoefficient e_field_coefficient(e_field_vector);
+  e_field.ProjectCoefficient(e_field_coefficient);
+
+  const double field_energy_potential = es_field_operations.fieldEnergy(es_field_state_potential);
+  const double field_energy_e_field = es_field_operations.fieldEnergy(es_field_state_e_field);
+
+  EXPECT_DOUBLE_EQ(field_energy_potential, field_energy_e_field);
+}
+
 mfem::Vector excludeBoundaryEntries(const mfem::Vector& full_vector, mfem::Array<int>& boundary_dofs) {
   mfem::Array<int> marker(full_vector.Size());
   marker = 0;

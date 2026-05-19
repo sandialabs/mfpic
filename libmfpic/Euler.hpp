@@ -56,6 +56,7 @@ double getNumberDensityFromConservativeState(const mfem::Vector& conservative_st
 mfem::Vector getMomentumDensityFromConservativeState(const mfem::Vector& conservative_state);
 mfem::Vector getBulkVelocityFromConservativeState(const mfem::Vector& conservative_state);
 double getKineticEnergyDensityFromConservativeState(const mfem::Vector& conservative_state);
+double getInternalEnergyDensityFromConservativeState(const mfem::Vector& conservative_state);
 double getTemperatureFromConservativeState(const mfem::Vector& conservative_state, const Species& species);
 double getPressureFromConservativeState(const mfem::Vector& conservative_state, const Species& species);
 

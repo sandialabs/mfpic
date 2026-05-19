@@ -114,6 +114,13 @@ double getKineticEnergyDensityFromConservativeState(const mfem::Vector& conserva
   return kineticEnergyDensity(mass_density, momentum_density);
 }
 
+double getInternalEnergyDensityFromConservativeState(const mfem::Vector& conservative_state) {
+  const double total_energy_density = conservative_state[ConservativeVariables::TOTAL_ENERGY_DENSITY];
+  const double kinetic_energy_density = getKineticEnergyDensityFromConservativeState(conservative_state);
+  const double internal_energy_density = total_energy_density - kinetic_energy_density;
+  return internal_energy_density;
+}
+
 double getTemperatureFromConservativeState(const mfem::Vector& conservative_state, const Species& species) {
   const double number_density = getNumberDensityFromConservativeState(conservative_state, species);
   const double pressure_value = getPressureFromConservativeState(conservative_state, species);
@@ -122,9 +129,7 @@ double getTemperatureFromConservativeState(const mfem::Vector& conservative_stat
 }
 
 double getPressureFromConservativeState(const mfem::Vector& conservative_state, const Species& species) {
-  const double total_energy_density = conservative_state[ConservativeVariables::TOTAL_ENERGY_DENSITY];
-  const double kinetic_energy_density = getKineticEnergyDensityFromConservativeState(conservative_state);
-  const double internal_energy_density = total_energy_density - kinetic_energy_density;
+  const double internal_energy_density = getInternalEnergyDensityFromConservativeState(conservative_state);
   const double pressure_value = pressure(species, internal_energy_density);
   return pressure_value;
 }

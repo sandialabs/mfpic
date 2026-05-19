@@ -1,7 +1,9 @@
+#include <libmfpic/Constants.hpp>
 #include <libmfpic/DGAssembly.hpp>
 #include <libmfpic/DGEulerAssembly.hpp>
 #include <libmfpic/DGEulerOperations.hpp>
 #include <libmfpic/ElectromagneticFieldsEvaluator.hpp>
+#include <libmfpic/ElectrostaticFieldState.hpp>
 #include <libmfpic/Euler.hpp>
 #include <libmfpic/LowFidelityState.hpp>
 #include <libmfpic/MFEMHelpers.hpp>
@@ -117,6 +119,121 @@ LowFidelityState DGEulerOperations::computeRHS(
     rhs_species_grid_function.Set(1., rhs_);
   }
   return rhs;
+}
+
+std::pair<LowFidelityState, ElectrostaticFieldState> DGEulerOperations::plasmaOscillate(
+  const double dt,
+  const LowFidelityState& state,
+  const ElectrostaticFieldState& field_state) const
+{
+  LowFidelityState updated_state(state);
+  ElectrostaticFieldState updated_field_state(field_state);
+
+  assert(state.numSpecies() == 2);
+
+  const LowFidelitySpeciesState& species_state_0 = state.getSpeciesState(0);
+  const LowFidelitySpeciesState& species_state_1 = state.getSpeciesState(1);
+  const mfem::GridFunction& euler_grid_function_0 = species_state_0.getGridFunction();
+  const mfem::GridFunction& euler_grid_function_1 = species_state_1.getGridFunction();
+
+  LowFidelitySpeciesState& updated_species_state_0 = updated_state.getSpeciesState(0);
+  LowFidelitySpeciesState& updated_species_state_1 = updated_state.getSpeciesState(1);
+  mfem::GridFunction& updated_euler_grid_function_0 = updated_species_state_0.getGridFunction();
+  mfem::GridFunction& updated_euler_grid_function_1 = updated_species_state_1.getGridFunction();
+
+  const mfem::FiniteElementSpace* euler_fe_space = euler_grid_function_0.FESpace();
+  assert(euler_fe_space->GetMaxElementOrder() == 0);
+
+  const mfem::GridFunction& e_field_grid_function = field_state.getEFieldGridFunction();
+  mfem::GridFunction& updated_e_field_grid_function = updated_field_state.getEFieldGridFunction();
+
+  const mfem::FiniteElementSpace* e_field_fe_space = e_field_grid_function.FESpace();
+  assert(e_field_fe_space->GetMaxElementOrder() == 0);
+
+  const Species species_0 = species_state_0.getSpecies();
+  const Species species_1 = species_state_1.getSpecies();
+
+  const double mass_0 = species_0.mass;
+  const double mass_1 = species_1.mass;
+
+  const double charge_0 = species_0.charge;
+  const double charge_1 = species_1.charge;
+
+  for (int i_element = 0; i_element < euler_fe_space->GetNE(); ++i_element) {
+    mfem::Array<int> index_of_euler_dofs_on_cell;
+    euler_fe_space->GetElementVDofs(i_element, index_of_euler_dofs_on_cell);
+
+    // using the fact dg_order = 0 which implies only one dof per equation on each cell
+    mfem::Vector euler_dofs_on_cell_0;
+    mfem::Vector euler_dofs_on_cell_1;
+    euler_grid_function_0.GetSubVector(index_of_euler_dofs_on_cell, euler_dofs_on_cell_0);
+    euler_grid_function_1.GetSubVector(index_of_euler_dofs_on_cell, euler_dofs_on_cell_1);
+
+    mfem::Array<int> index_of_e_field_dofs_on_cell;
+    e_field_fe_space->GetElementVDofs(i_element, index_of_e_field_dofs_on_cell);
+
+    mfem::Vector En;
+    e_field_grid_function.GetSubVector(index_of_e_field_dofs_on_cell, En);
+
+    // using the fact that the value of dof is the value of the equation over the cell
+    const double rho_0 = euler_dofs_on_cell_0[euler::ConservativeVariables::MASS_DENSITY];
+    const double rho_1 = euler_dofs_on_cell_1[euler::ConservativeVariables::MASS_DENSITY];
+
+    const double internal_energy_density_0 = euler::getInternalEnergyDensityFromConservativeState(euler_dofs_on_cell_0);
+    const double internal_energy_density_1 = euler::getInternalEnergyDensityFromConservativeState(euler_dofs_on_cell_1);
+
+    const mfem::Vector p0n = euler::getMomentumDensityFromConservativeState(euler_dofs_on_cell_0);
+    const mfem::Vector p1n = euler::getMomentumDensityFromConservativeState(euler_dofs_on_cell_1);
+
+    const double denominator = 4. * mass_0 * mass_0 * mass_1 * mass_1 * constants::permittivity
+      + dt * dt * (mass_1 * mass_1 * charge_0 * charge_0 * rho_0 + mass_0 * mass_0 * charge_1 * charge_1 * rho_1);
+
+    const double p0np1_En_numerator = 4. * mass_0 * mass_1 * mass_1 * charge_0 * dt * constants::permittivity * rho_0;
+    const double p0np1_p0n_numerator = 4. * mass_0 * mass_0 * mass_1 * mass_1 * constants::permittivity
+      - dt * dt * (mass_1 * mass_1 * charge_0 * charge_0 * rho_0 - mass_0 * mass_0 * charge_1 * charge_1 * rho_1);
+    const double p0np1_p1n_numerator = -2. * mass_0 * mass_1 * charge_0 * charge_1 * dt * dt * rho_0;
+
+    const double p1np1_En_numerator = 4. * mass_0 * mass_0 * mass_1 * charge_1 * dt * constants::permittivity * rho_1;
+    const double p1np1_p0n_numerator = -2. * mass_0 * mass_1 * charge_0 * charge_1 * dt * dt * rho_1;
+    const double p1np1_p1n_numerator = 4. * mass_0 * mass_0 * mass_1 * mass_1 * constants::permittivity
+      + dt * dt * (mass_1 * mass_1 * charge_0 * charge_0 * rho_0 - mass_0 * mass_0 * charge_1 * charge_1 * rho_1);
+
+    const double Enp1_En_numerator = 4. * mass_0 * mass_0 * mass_1 * mass_1 * constants::permittivity
+      - dt * dt * (mass_1 * mass_1 * charge_0 * charge_0 * rho_0 + mass_0 * mass_0 * charge_1 * charge_1 * rho_1);
+    const double Enp1_p0n_numerator = -4. * mass_0 * mass_1 * mass_1 * charge_0 * dt;
+    const double Enp1_p1n_numerator = -4. * mass_0 * mass_0 * mass_1 * charge_1 * dt;
+
+    mfem::Vector p0np1(En.Size());
+    p0np1.Set(p0np1_En_numerator / denominator, En);
+    p0np1.Add(p0np1_p0n_numerator / denominator, p0n);
+    p0np1.Add(p0np1_p1n_numerator / denominator, p1n);
+
+    mfem::Vector p1np1(En.Size());
+    p1np1.Set(p1np1_En_numerator / denominator, En);
+    p1np1.Add(p1np1_p0n_numerator / denominator, p0n);
+    p1np1.Add(p1np1_p1n_numerator / denominator, p1n);
+
+    mfem::Vector Enp1(En.Size());
+    Enp1.Set(Enp1_En_numerator / denominator, En);
+    Enp1.Add(Enp1_p0n_numerator / denominator, p0n);
+    Enp1.Add(Enp1_p1n_numerator / denominator, p1n);
+
+    const double updated_kinetic_energy_density_0 = euler::kineticEnergyDensity(rho_0, p0np1);
+    const double updated_kinetic_energy_density_1 = euler::kineticEnergyDensity(rho_1, p1np1);
+
+    const double updated_total_energy_density_0 = updated_kinetic_energy_density_0 + internal_energy_density_0;
+    const double updated_total_energy_density_1 = updated_kinetic_energy_density_1 + internal_energy_density_1;
+
+    mfem::Vector updated_euler_dofs_on_cell_0 = euler::constructConservativeState(rho_0, p0np1, updated_total_energy_density_0);
+    mfem::Vector updated_euler_dofs_on_cell_1 = euler::constructConservativeState(rho_1, p1np1, updated_total_energy_density_1);
+
+    updated_euler_grid_function_0.SetSubVector(index_of_euler_dofs_on_cell, updated_euler_dofs_on_cell_0);
+    updated_euler_grid_function_1.SetSubVector(index_of_euler_dofs_on_cell, updated_euler_dofs_on_cell_1);
+
+    updated_e_field_grid_function.SetSubVector(index_of_e_field_dofs_on_cell, Enp1);
+  }
+
+  return std::make_pair(updated_state, updated_field_state);
 }
 
   LowFidelityState DGEulerOperations::addVolumetricSource(
