@@ -1,5 +1,6 @@
 #include <libmfpic/TimeSteppingFactory.hpp>
 
+#include <libmfpic/CrankNicolsonTimeIntegrator.hpp>
 #include <libmfpic/Discretization.hpp>
 #include <libmfpic/ForwardEulerTimeIntegrator.hpp>
 #include <libmfpic/SSPERK32TimeIntegrator.hpp>
@@ -125,6 +126,20 @@ TEST(TimeSteppingFactory, buildTimeSteppingParameters_SSPERK32CanBeSpecified) {
   EXPECT_EQ(TimeIntegratorType::ssperk32, time_stepping_parameters.time_integrator_type);
 }
 
+TEST(TimeSteppingFactory, buildTimeSteppingParameters_CrankNicolsonCanBeSpecified) {
+  const std::string time_stepping_string(
+    "Time Step Size: 0.4\n"
+    "Final Time: 1.4\n"
+    "Type: Crank Nicolson\n"
+  );
+
+  const YAML::Node time_stepping = YAML::Load(time_stepping_string);
+
+  const TimeSteppingParameters time_stepping_parameters = buildTimeSteppingParametersFromYAML(time_stepping);
+
+  EXPECT_EQ(TimeIntegratorType::crank_nicolson, time_stepping_parameters.time_integrator_type);
+}
+
 TEST(TimeSteppingFactory, buildTimeIntegrator_VerletTimeIntegratorCanBeBuilt) {
   TimeSteppingParameters time_stepping_parameters{
     .timestep_size = 0.1,
@@ -167,7 +182,22 @@ TEST(TimeSteppingFactory, buildTimeIntegrator_SSPERK32CanBeBuilt) {
 
   std::unique_ptr<TimeIntegrator> time_integrator = buildTimeIntegrator(
     time_stepping_parameters, es_discretization, push_low_fidelity_with_particle_fields);
-  ASSERT_NO_THROW([[maybe_unused]] auto forward_euler = dynamic_cast<SSPERK32TimeIntegrator&>(*time_integrator));
+  ASSERT_NO_THROW([[maybe_unused]] auto ssperk32 = dynamic_cast<SSPERK32TimeIntegrator&>(*time_integrator));
+}
+
+TEST(TimeSteppingFactory, buildTimeIntegrator_CrankNicolsonCanBeBuilt) {
+  TimeSteppingParameters time_stepping_parameters{
+    .timestep_size = 0.2,
+    .number_of_timesteps = 15,
+    .time_integrator_type = TimeIntegratorType::crank_nicolson};
+  mfem::Mesh mesh = mfem::Mesh::MakeCartesian1D(10);
+  constexpr int es_basis_order = 1;
+  Discretization es_discretization(&mesh, es_basis_order, FETypes::HGRAD);
+  const bool push_low_fidelity_with_particle_fields = false;
+
+  std::unique_ptr<TimeIntegrator> time_integrator = buildTimeIntegrator(
+    time_stepping_parameters, es_discretization, push_low_fidelity_with_particle_fields);
+  ASSERT_NO_THROW([[maybe_unused]] auto crank_nicolson = dynamic_cast<CrankNicolsonTimeIntegrator&>(*time_integrator));
 }
 
 }

@@ -5,6 +5,7 @@ add_library(libmfpic
   BuildParticleBoundariesFromYaml.cpp
   BuildSpeciesMapFromYaml.cpp
   ConjugateGradientLinearSolver.cpp
+  CrankNicolsonTimeIntegrator.cpp
   DGAssembly.cpp
   DGEulerAssembly.cpp
   DGEulerBoundaryConditionsFactory.cpp

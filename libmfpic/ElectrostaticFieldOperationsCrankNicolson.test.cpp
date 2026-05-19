@@ -23,9 +23,6 @@ Species electron_species{.charge = -constants::elementary_charge, .mass = consta
 Species proton_species{.charge = constants::elementary_charge, .mass = constants::proton_mass};
 
 TEST(ElectrostaticFieldOperationsCrankNicolson, test) {
-  auto& message = std::cout;
-  message << std::setprecision(16);
-
   constexpr int num_elems = 4;
   constexpr double length = 1.3;
   mfem::Mesh mesh = mfem::Mesh::MakeCartesian3D(
