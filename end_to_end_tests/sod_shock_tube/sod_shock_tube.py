@@ -111,11 +111,18 @@ def run(mfpic_executable, time_integrator):
         with open(yaml, "w") as input_deck:
             input_deck.write(input_deck_contents)
 
-        result = subprocess.run([mfpic_executable, "-i", yaml])
-        result.check_returncode()
+        result = subprocess.run([mfpic_executable, "-i", yaml], capture_output=True, text=True)
+
+        log_filename = f"{output_directory}/execute_{refinement_level:02}.log"
+        with open(log_filename, "w") as execute_log:
+            execute_log.write(result.stdout)
+            execute_log.write(result.stderr)
 
         verification.check_fluid_energy_positive_and_constant('Total_Fluid_Energy')
         os.rename('output_lf_0.csv', f"{output_directory}/output_lf_0_{refinement_level:02}.csv")
+        os.rename(yaml, f"{output_directory}/sod_shock_tube_{refinement_level:02}.yaml")
+
+        result.check_returncode()
 
 
 def compute_error(data, points, exact_solution):
@@ -255,7 +262,7 @@ def plot(time_integrator):
 if __name__ == "__main__":
     import sys
 
-    time_integrators = ["Forward Euler", "Verlet"]
+    time_integrators = ["Forward Euler", "Verlet", "SSPERK32"]
     if "run" in sys.argv[1:]:
         mfpic_executable = sys.argv[2]
         for time_integrator in time_integrators:
