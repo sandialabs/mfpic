@@ -1,5 +1,7 @@
 #include <libmfpic/Constants.hpp>
 #include <libmfpic/ElectrostaticFieldOperations.hpp>
+#include <libmfpic/MFEMHelpers.hpp>
+
 #include <mfem/fem/bilininteg.hpp>
 #include <mfem/fem/gridfunc.hpp>
 
@@ -47,7 +49,26 @@ void ElectrostaticFieldOperations::fieldSolve(ElectrostaticFieldState& field_sta
 
 double ElectrostaticFieldOperations::fieldEnergy(const ElectrostaticFieldState& field_state) const {
   const mfem::GridFunction& potential = field_state.getPotential();
-  return 0.5 * electrostatic_bilinear_form_.InnerProduct(potential, potential);
+  double field_energy;
+  if (potential.Norml2() > 0) {
+    field_energy = 0.5 * electrostatic_bilinear_form_.InnerProduct(potential, potential);
+  } else { // if potential and e_field are both zero then this computation will give zero field energy
+    const mfem::GridFunction& e_field = field_state.getEFieldGridFunction();
+
+    auto e_field_coefficient = std::make_unique<mfem::VectorGridFunctionCoefficient>(&e_field);
+    auto field_energy_function = [](const mfem::Vector& E){ return 0.5 * constants::permittivity * (E * E); };
+    TransformedVectorCoefficient field_energy_coefficient(std::move(e_field_coefficient), field_energy_function);
+
+    const mfem::FiniteElementSpace* e_field_fe_space = e_field.FESpace();
+    mfem::Mesh& mesh = *(e_field_fe_space->GetMesh());
+    Discretization identity_test_function_discretization = getIdentityTestFunctionDiscretization(mesh);
+    mfem::LinearForm field_energy_by_cell(&identity_test_function_discretization.getFeSpace());
+    field_energy_by_cell.AddDomainIntegrator(new mfem::DomainLFIntegrator(field_energy_coefficient));
+    field_energy_by_cell.Assemble();
+
+    field_energy = field_energy_by_cell.Sum();
+  }
+  return field_energy;
 }
 
 mfem::Vector ElectrostaticFieldOperations::computeIntegratedGhostCharge(

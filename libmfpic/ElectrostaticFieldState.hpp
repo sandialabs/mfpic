@@ -34,6 +34,9 @@ public:
   template <class Self>
   auto&& getPotential(this Self&& self) { return self.potential_; }
 
+  mfem::GridFunction& getEFieldGridFunction() { return e_field_; }
+  const mfem::GridFunction& getEFieldGridFunction() const { return e_field_; }
+
   /**
    * @brief get the electric field that corresponds to this field state at a point in the mesh
    *
@@ -57,6 +60,9 @@ public:
 private:
   /// value of electrostatic potential on mesh
   mfem::GridFunction potential_;
+
+  std::shared_ptr<Discretization> e_field_dg_discretization_;
+  mfem::GridFunction e_field_;
 
 };
 

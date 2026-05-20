@@ -79,6 +79,11 @@ public:
     const ElectromagneticFieldsEvaluator& field_evaluator
   ) const override;
 
+  virtual std::pair<LowFidelityState, ElectrostaticFieldState> plasmaOscillate(
+    const double dt,
+    const LowFidelityState& state,
+    const ElectrostaticFieldState& field_state) const override;
+
   /**
    * @brief Update the state due to volumetric sources
    *

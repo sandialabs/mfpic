@@ -161,11 +161,13 @@ $$
     \text{Time Step Size} = \frac{\text{Final Time}}{\text{Number of Time Steps}}.
 $$
 
-Three different time integrators are available, "Verlet", "Forward Euler", and "SSPERK32".
+Four different time integrators are available, "Verlet", "Forward Euler", "SSPERK32", and "Crank Nicolson".
 The default is "Verlet" and should be the option used almost all of the time.
-"Forward Euler" and "SSPERK32" are only to be used for problems without particles.
+"Forward Euler", "SSPERK32", and "Crank Nicolson" are only to be used for problems without particles.
 "Forward Euler" and "SSPERK32" have fundamental energy issues when coupling to electrostatic or electromagnetic fields, so these 
 integrators should only be used with charged particles for test problems to demonstrate those issues.
+The "Crank Nicolson" time stepping algorithm applies Crank Nicolson to the plasma oscillation and forward Euler to the fluid move.
+The "Crank Nicolson" algorithm exactly conserves energy in the plasma oscillation but does not satisfy Gauss's Law.
 
 ```yaml
 Time Stepping:
@@ -182,7 +184,7 @@ Time Stepping:
 **``Time Step Size``**: The size of each time step in seconds.
 
 **``Type``**: The type of time integrator to use.
-    The available options are "Verlet", "Forward Euler", and "SSPERK32".
+    The available options are "Verlet", "Forward Euler", "SSPERK32", and "Crank Nicolson".
 
 Example
 ```yaml
