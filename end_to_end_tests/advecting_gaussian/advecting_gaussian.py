@@ -18,7 +18,6 @@ gaussian_center = 4 * gaussian_standard_deviation
 domain_length = 9 * gaussian_standard_deviation
 
 base_num_elements = 25
-refinement_levels = [16, 32, 64]
 
 N2_species = species.Species(mass=4.65e-26, specific_heat_ratio=1.4)
 number_density_offset = 1e26
@@ -32,7 +31,6 @@ sound_speed = euler.speed_of_sound(N2_species, max_mass_density, pressure)
 mach_number = 2.5
 velocity = mach_number * sound_speed
 
-max_cfl = 0.95
 max_wavespeed = velocity + sound_speed
 
 final_time = 10 * gaussian_standard_deviation / velocity
@@ -55,6 +53,9 @@ def format_mesh_folder_name(refinement_level, time_integrator):
 
 
 def get_input_deck(refinement_level, time_integrator):
+    basis_order = 1 if time_integrator == "SSPERK32" else 0
+    max_cfl = 0.3 if time_integrator == "SSPERK32" else 0.95
+
     num_elements = base_num_elements * refinement_level
     dx = domain_length / num_elements
     dt, num_time_steps = utils.compute_timestepping_that_satisfies_cfl(max_cfl, dx, max_wavespeed, final_time)
@@ -101,7 +102,7 @@ Output:
     return input_deck_contents
 
 
-def run(mfpic_executable, time_integrator):
+def run(mfpic_executable, time_integrator, refinement_levels):
     output_directory = f"{time_integrator.replace(" ", "_")}"
     os.makedirs(output_directory, exist_ok=True)
 
@@ -111,14 +112,20 @@ def run(mfpic_executable, time_integrator):
         with open(yaml, "w") as input_deck:
             input_deck.write(input_deck_contents)
 
-        print(mfpic_executable, "-i", yaml)
-        result = subprocess.run([mfpic_executable, "-i", yaml])
-        result.check_returncode()
+        result = subprocess.run([mfpic_executable, "-i", yaml], capture_output=True, text=True)
+
+        log_filename = f"{output_directory}/execute_{refinement_level:02}.log"
+        with open(log_filename, "w") as execute_log:
+            execute_log.write(result.stdout)
+            execute_log.write(result.stderr)
 
         verification.check_fluid_energy_positive_and_constant('Total_Fluid_Energy')
         verification.check_fluid_energy_positive_and_constant('Total_Fluid_Kinetic_Energy')
 
         os.rename('output_lf_0.csv', f"{output_directory}/output_lf_0_{refinement_level:02}.csv")
+        os.rename(yaml, f"{output_directory}/advecting_gaussian_{refinement_level:02}.yaml")
+
+        result.check_returncode()
 
 
 def compute_error(data, points, exact_solution):
@@ -128,7 +135,7 @@ def compute_error(data, points, exact_solution):
     return error
 
 
-def analyze(time_integrator):
+def analyze(time_integrator, refinement_levels):
     errors = []
     h_list = []
     for refinement_level in refinement_levels:
@@ -143,20 +150,28 @@ def analyze(time_integrator):
         error = compute_error(fluid_data[0], x_points, exact_mass_density)
         errors.append(error)
 
+    output_directory = f"{time_integrator.replace(" ", "_")}"
+    os.makedirs(output_directory, exist_ok=True)
+
     rates = verification.compute_convergence_rates(errors, h_list)
     print(f"rates = {rates}")
 
-    output_directory = f"{time_integrator.replace(" ", "_")}"
-    os.makedirs(output_directory, exist_ok=True)
-    figure_name = f"{output_directory}/error_convergence.png"
-    verification.plot_errors_and_expected_convergence_rate(h_list, errors, 1.0, figure_name)
+    rate_data = np.zeros((len(refinement_levels), 4))
+    rate_data[:, 0] = refinement_levels
+    rate_data[:, 1] = h_list
+    rate_data[:, 2] = errors
+    rate_data[1:, 3] = rates
+    np.savetxt(f"{output_directory}/convergence_rates.txt", rate_data, header = "Refinement_Level H Error Rate")
 
-    expected_convergence_rate = basis_order + 1
+    expected_convergence_rate = 2 if time_integrator == "SSPERK32" else 1
+    figure_name = f"{output_directory}/error_convergence.png"
+    verification.plot_errors_and_expected_convergence_rate(h_list, errors, expected_convergence_rate, figure_name)
+
     tolerance = 0.1
     assert(np.all(rates > expected_convergence_rate - tolerance))
 
 
-def plot(time_integrator):
+def plot(time_integrator, refinement_levels):
     for refinement_level in refinement_levels:
         mesh_folder_name = format_mesh_folder_name(refinement_level, time_integrator)
         timesteps, mesh_data = read_mesh_data.read_mesh_data(mesh_folder_name)
@@ -185,14 +200,18 @@ def plot(time_integrator):
 if __name__ == "__main__":
     import sys
 
-    time_integrators = ["Forward Euler", "Verlet"]
+    time_integrators = ["Forward Euler", "Verlet", "SSPERK32"]
+    refinement_levels = {}
+    refinement_levels["Forward Euler"] = [8, 16, 32]
+    refinement_levels["Verlet"] = [8, 16, 32]
+    refinement_levels["SSPERK32"] = [2, 4, 8]
     if "run" in sys.argv[1:]:
         mfpic_executable = sys.argv[2]
         for time_integrator in time_integrators:
-            run(mfpic_executable, time_integrator)
+            run(mfpic_executable, time_integrator, refinement_levels[time_integrator])
     elif "plot" in sys.argv[1:]:
         for time_integrator in time_integrators:
-            plot(time_integrator)
+            plot(time_integrator, refinement_levels[time_integrator])
     else:
         for time_integrator in time_integrators:
-            analyze(time_integrator)
+            analyze(time_integrator, refinement_levels[time_integrator])
