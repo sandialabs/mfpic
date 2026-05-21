@@ -33,6 +33,8 @@ public:
     const ElectrostaticFieldOperations& electrostatic_field_operations,
     const std::vector<LowFidelityState>& low_fidelity_states,
     const std::vector<std::unique_ptr<LowFidelityOperations>>& low_fidelity_operations,
+    const double timestep_size,
+    const double smallest_cell_lengthscale,
     const int i_time_step,
     const double time);
 
