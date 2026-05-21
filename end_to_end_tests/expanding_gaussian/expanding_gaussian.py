@@ -17,7 +17,7 @@ domain_length = 0.02
 gaussian_standard_deviation = 0.0005
 gaussian_center = 0.015
 
-num_elements = 600
+num_elements = 300
 dx = domain_length / num_elements
 
 proton_mass = 1836 * electron_mass
@@ -38,14 +38,11 @@ pressure_height = pressure_peak - pressure_offset
 electron_mass_density_peak = number_density_peak * electron_species.mass
 sound_speed = euler.speed_of_sound(electron_species, electron_mass_density_peak, pressure_peak)
 
-final_time = 2e-6
+final_time = 4e-6
 
-max_cfl = 0.3
+max_cfl = 0.25
 max_wavespeed = sound_speed
 dt, num_time_steps = utils.compute_timestepping_that_satisfies_cfl(max_cfl, dx, max_wavespeed, final_time)
-
-# dt = 6.291840740927167e-11
-# num_time_steps = 63409
 
 basis_order = 0
 
@@ -127,48 +124,61 @@ def run(mfpic_executable, time_integrator):
 
 
 def analyze():
-    forward_euler_data = np.genfromtxt('Forward_Euler/output_lf_0.csv', names=True)
+    ssperk32_data = np.genfromtxt('SSPERK32/output_lf_0.csv', names=True)
     verlet_data = np.genfromtxt('Verlet/output_lf_0.csv', names=True)
 
-    time = forward_euler_data['Time']
+    time = ssperk32_data['Time']
 
-    field_energy_forward_euler = forward_euler_data['Field_Energy']
-    fluid_energy_forward_euler = forward_euler_data['Total_Fluid_Energy']
-    total_energy_forward_euler = field_energy_forward_euler + fluid_energy_forward_euler
-    fluid_kinetic_energy_forward_euler = forward_euler_data['Total_Fluid_Kinetic_Energy']
-    fluid_internal_energy_forward_euler = fluid_energy_forward_euler - fluid_kinetic_energy_forward_euler
+    field_energy_ssperk32 = ssperk32_data['Field_Energy']
+    fluid_energy_ssperk32 = ssperk32_data['Total_Fluid_Energy']
+    total_energy_ssperk32 = field_energy_ssperk32 + fluid_energy_ssperk32
+    fluid_kinetic_energy_ssperk32 = ssperk32_data['Total_Fluid_Kinetic_Energy']
+    fluid_internal_energy_ssperk32 = fluid_energy_ssperk32 - fluid_kinetic_energy_ssperk32
+    cfl_ssperk32 = ssperk32_data['CFL']
 
     field_energy_verlet = verlet_data['Field_Energy']
     fluid_energy_verlet = verlet_data['Total_Fluid_Energy']
     total_energy_verlet = field_energy_verlet + fluid_energy_verlet
     fluid_kinetic_energy_verlet = verlet_data['Total_Fluid_Kinetic_Energy']
     fluid_internal_energy_verlet = fluid_energy_verlet - fluid_kinetic_energy_verlet
+    cfl_verlet = verlet_data['CFL']
 
     figures_directory = "Figures"
     os.makedirs(figures_directory, exist_ok=True)
 
     fig, ax = plt.subplots()
-    ax.plot(time, total_energy_forward_euler, label="Forward Euler")
-    ax.plot(time, total_energy_verlet, label="Verlet")
+    ax.plot(time, total_energy_ssperk32, label='SSPERK32')
+    ax.plot(time, total_energy_verlet, label='Verlet')
     ax.legend()
-    ax.set_title(f"Total Energy over Time")
+    ax.set_title(f"Total Energy")
     ax.set_xlabel("time")
     ax.set_ylabel("Energy")
-    fig.savefig(f"{figures_directory}/TotalEnergy.png")
+    fig.tight_layout()
+    fig.savefig(f"{figures_directory}/TotalEnergy.pdf")
     plt.close(fig)
 
     fig, ax = plt.subplots()
-    ax.plot(time, fluid_internal_energy_forward_euler, label="Forward Euler")
+    ax.plot(time, cfl_ssperk32, label='SSPERK32')
+    ax.plot(time, cfl_verlet, label='Verlet')
+    ax.hlines(1., 0., 1., transform=ax.get_yaxis_transform(), colors='k', linestyles='dashed')
+    ax.legend()
+    ax.set_title(f"CFL")
+    ax.set_xlabel("time")
+    ax.set_ylabel("CFL")
+    fig.tight_layout()
+    fig.savefig(f"{figures_directory}/CFL.pdf")
+    plt.close(fig)
+
+    fig, ax = plt.subplots()
+    ax.plot(time, fluid_internal_energy_ssperk32, label="SSPERK32")
     ax.plot(time, fluid_internal_energy_verlet, label="Verlet")
     ax.legend()
     ax.set_title(f"Fluid Internal Energy over Time")
     ax.set_xlabel("time")
     ax.set_ylabel("Internal Energy")
-    fig.savefig(f"{figures_directory}/InternalEnergy.png")
+    fig.tight_layout()
+    fig.savefig(f"{figures_directory}/InternalEnergy.pdf")
     plt.close(fig)
-
-    # assert(total_energy_forward_euler[-1] > total_energy_verlet[-1])
-    # assert(fluid_internal_energy_forward_euler[-1] < fluid_internal_energy_verlet[-1])
 
 
 def plot(time_integrator):
@@ -342,8 +352,7 @@ def plot(time_integrator):
 if __name__ == "__main__":
     import sys
 
-    time_integrators = ["Forward Euler", "Verlet"]
-    # time_integrators = ["Verlet"]
+    time_integrators = ["SSPERK32", "Verlet"]
     if "run" in sys.argv[1:]:
         for time_integrator in time_integrators:
             run(sys.argv[2], time_integrator)
