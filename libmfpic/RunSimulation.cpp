@@ -147,6 +147,14 @@ void runSimulation(int argc, char* argv[]) {
   }
   mesh_data_writer.output(particle_electrostatic_field_state, low_fidelity_field_states, low_fidelity_states, 0, 0.);
 
+
+  TimeSteppingParameters time_stepping_parameters = buildTimeSteppingParametersFromYAML(main["Time Stepping"]);
+  std::unique_ptr<TimeIntegrator> time_integrator = buildTimeIntegrator(
+    time_stepping_parameters,
+    electrostatic_discretization,
+    push_low_fidelity_with_particle_fields);
+  const double smallest_cell_lengthscale = getSmallestCellLengthscale(*mesh);
+
   const int num_low_fidelity_models = std::ssize(low_fidelity_states);
   TextDataWriter text_data_writer(num_low_fidelity_models);
   text_data_writer.output(
@@ -155,15 +163,10 @@ void runSimulation(int argc, char* argv[]) {
     *electrostatic_field_operations,
     low_fidelity_states,
     low_fidelity_operations,
+    time_stepping_parameters.timestep_size,
+    smallest_cell_lengthscale,
     0,
     0.);
-
-  TimeSteppingParameters time_stepping_parameters = buildTimeSteppingParametersFromYAML(main["Time Stepping"]);
-  std::unique_ptr<TimeIntegrator> time_integrator = buildTimeIntegrator(
-    time_stepping_parameters,
-    electrostatic_discretization,
-    push_low_fidelity_with_particle_fields);
-  const double smallest_cell_lengthscale = getSmallestCellLengthscale(*mesh);
   for (int i_timestep = 1; i_timestep <= time_stepping_parameters.number_of_timesteps; ++i_timestep) {
     const double timestep_size = time_stepping_parameters.timestep_size;
     const double begin_time = (i_timestep - 1) * timestep_size;
@@ -216,6 +219,8 @@ void runSimulation(int argc, char* argv[]) {
         *electrostatic_field_operations,
         low_fidelity_states,
         low_fidelity_operations,
+        timestep_size,
+        smallest_cell_lengthscale,
         i_timestep,
         end_time);
     }

@@ -9,6 +9,7 @@
 #include <libmfpic/LowFidelityOperations.hpp>
 #include <libmfpic/LowFidelityState.hpp>
 #include <libmfpic/MeshFactory.hpp>
+#include <libmfpic/MeshUtilities.hpp>
 #include <libmfpic/Pinning.hpp>
 #include <libmfpic/SourcesFactory.hpp>
 
@@ -74,12 +75,16 @@ TEST(TextDataWriter, constructorAndOutput) {
 
   constexpr int i_timestep = 2;
   constexpr double time = 1.3;
+  constexpr double timestep_size = 0.65;
+  const double smallest_cell_lengthscale = getSmallestCellLengthscale(mesh);
   text_data_writer.output(
     particle_electrostatic_field_state,
     low_fidelity_field_states,
     electrostatic_field_operations,
     low_fidelity_states,
     low_fidelity_operations,
+    timestep_size,
+    smallest_cell_lengthscale,
     i_timestep,
     time);
 
