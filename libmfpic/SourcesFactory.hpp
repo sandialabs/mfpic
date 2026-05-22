@@ -168,6 +168,14 @@ struct PeriodicPerturbationSourceParameters : public SourceParameters {
   virtual SourceStateParameters sourceStateParametersAtPoint(const mfem::Vector& x) const override;
 };
 
+struct FromFileSourceParameters : public SourceParameters {
+  FromFileSourceParameters(
+    const Species& species,
+    int num_particles = 0);
+
+  virtual SourceStateParameters sourceStateParametersAtPoint(const mfem::Vector& x) const override;
+};
+
 /**
  * @brief build SourceStateParameters that defines a state from YAML
  * 

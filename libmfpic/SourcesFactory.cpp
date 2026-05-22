@@ -139,6 +139,26 @@ SourceStateParameters PeriodicPerturbationSourceParameters::sourceStateParameter
   };
 }
 
+FromFileSourceParameters::FromFileSourceParameters(
+  const Species& species,
+  const int num_particles)
+  : SourceParameters(species, num_particles)
+{}
+
+SourceStateParameters FromFileSourceParameters::sourceStateParametersAtPoint(const mfem::Vector& x) const {
+  double number_density;
+  mfem::Vector velocity{0.0, 0.0, 0.0};
+  double temperature = 11600.0;
+
+#include "source.txt"
+
+  return SourceStateParameters{
+    .number_density = number_density,
+    .bulk_velocity = velocity,
+    .temperature = temperature,
+  };
+}
+
 SourceStateParameters buildSourceStateParametersFromYAML(const YAML::Node& state_node) {
   const double number_density = state_node["Number Density"].as<double>();
   if (number_density <= 0.0) {
@@ -299,6 +319,12 @@ std::vector<std::unique_ptr<SourceParameters>> buildListOfSourceParametersFromYA
             wavevector,
             base,
             perturbations,
+            num_particles_per_species));
+        }
+      } else if (source["From File"]){
+        for (const std::string& species_name : species_names) {
+          list_of_parameters.push_back(std::make_unique<FromFileSourceParameters>(
+            species_map.at(species_name),
             num_particles_per_species));
         }
       } else {
