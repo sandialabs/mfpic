@@ -78,7 +78,7 @@ def analyze():
     fig, ax = plt.subplots()
     ax.hist2d(electron_x, electron_y, bins = [x_bins, y_bins], weights = electron_weights)
     ax.set_axis_off()
-    fig.savefig(f"{image_file_basename}_{timestep}.png")
+    fig.savefig(f"{image_file_basename}_{timestep}.png", dpi=300, bbox_inches="tight")
     plt.close('all')
 
   reversed_images = [Image.open(f"{image_file_basename}_{frame}.png").convert("RGBA") for frame in reversed(range(num_time_steps + 1))]
