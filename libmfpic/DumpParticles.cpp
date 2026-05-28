@@ -25,6 +25,7 @@ void dumpParticles(const ParticleContainer& particles, double simulation_time, c
 
   std::vector<double> x, y, z, vx, vy, vz, weight, particle_distribution_function_value;
   std::vector<int> element;
+  std::vector<std::string> species_name; 
   for (const Particle& particle : particles) {
     if (particle.is_alive) {
       x.push_back(particle.position[0]);
@@ -36,6 +37,7 @@ void dumpParticles(const ParticleContainer& particles, double simulation_time, c
       weight.push_back(particle.weight);
       element.push_back(particle.element);
       particle_distribution_function_value.push_back(particle.particle_distribution_function_value);
+      species_name.push_back(particle.species.name);  
     }
   }
 
@@ -82,6 +84,17 @@ void dumpParticles(const ParticleContainer& particles, double simulation_time, c
   dataset = H5Dcreate(step_group, "element", H5T_NATIVE_INT, dataspace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   H5Dwrite(dataset, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, element.data());
   H5Dclose(dataset);
+
+  hid_t strtype = H5Tcopy(H5T_C_S1);
+  H5Tset_size(strtype, H5T_VARIABLE);
+  std::vector<const char*> cstrs;
+  cstrs.reserve(species_name.size());
+  for (auto &s : species_name) { cstrs.push_back(s.c_str()); }
+  dataset = H5Dcreate(step_group, "species_name", strtype, dataspace,
+                         H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+  H5Dwrite(dataset, strtype, H5S_ALL, H5S_ALL, H5P_DEFAULT, cstrs.data());
+  H5Dclose(dataset);
+  H5Tclose(strtype);
 
   H5Sclose(dataspace);
   H5Gclose(step_group);
