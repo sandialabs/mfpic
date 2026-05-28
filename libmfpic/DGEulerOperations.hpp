@@ -127,6 +127,8 @@ public:
   */
   virtual double computeTotalKineticEnergy(const LowFidelityState& state) const override;
 
+  virtual double computeTotalCharge(const LowFidelityState& state) const override;
+
   /**
   * @brief Evaluates the particle distribution function for the low fidelity state at a given position and velocity.
   *

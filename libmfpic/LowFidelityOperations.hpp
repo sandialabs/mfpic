@@ -50,6 +50,7 @@ public:
 
   virtual double computeTotalEnergy(const LowFidelityState& state) const = 0;
   virtual double computeTotalKineticEnergy(const LowFidelityState& state) const = 0;
+  virtual double computeTotalCharge(const LowFidelityState& state) const = 0;
 
   virtual ~LowFidelityOperations() = default;
 };

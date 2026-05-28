@@ -64,6 +64,7 @@ void runSimulation(int argc, char* argv[]) {
     std::move(dirichlet_bcs)
   );
   ElectrostaticFieldState particle_electrostatic_field_state(electrostatic_discretization);
+  ElectrostaticFieldState variance_reduced_particle_electrostatic_field_state(electrostatic_discretization);
 
   std::unordered_map<std::string, Species> species_map = buildSpeciesMapFromYaml(main["Species"]);
 
@@ -146,22 +147,42 @@ void runSimulation(int argc, char* argv[]) {
     output_parameters = buildOutputParametersFromYAML(main["Output"]);
 
   MeshDataWriter mesh_data_writer(output_parameters.mesh_output_folder_name, *mesh);
+  MeshDataWriter variance_reduced_mesh_data_writer(output_parameters.mesh_output_folder_name + "_VR", *mesh);
 
   {
     IntegratedCharge integrated_charge = particle_operations.assembleCharge(particle_container);
     electrostatic_field_operations->fieldSolve(particle_electrostatic_field_state, integrated_charge);
+  }
+
+  {
+    //assume only one low fidelity state
+    IntegratedCharge variance_reduced_integrated_charge = particle_operations.assembleVarianceReducedCharge(particle_container,low_fidelity_states[0],*low_fidelity_operations[0]);
+    electrostatic_field_operations->fieldSolve(variance_reduced_particle_electrostatic_field_state, variance_reduced_integrated_charge);
   }
   
   for (int i = 0; i < std::ssize(low_fidelity_field_states); ++i) {
     IntegratedCharge integrated_charge = low_fidelity_operations[i]->assembleCharge(low_fidelity_states[i]);
     electrostatic_field_operations->fieldSolve(low_fidelity_field_states[i], integrated_charge);
   }
+
+
   mesh_data_writer.output(particle_electrostatic_field_state, low_fidelity_field_states, low_fidelity_states, 0, 0.);
+  variance_reduced_mesh_data_writer.output(variance_reduced_particle_electrostatic_field_state, low_fidelity_field_states, low_fidelity_states, 0, 0.);
 
   const int num_low_fidelity_models = std::ssize(low_fidelity_states);
-  TextDataWriter text_data_writer(num_low_fidelity_models);
+  TextDataWriter text_data_writer(num_low_fidelity_models,"output");
   text_data_writer.output(
     particle_electrostatic_field_state,
+    low_fidelity_field_states,
+    *electrostatic_field_operations,
+    low_fidelity_states,
+    low_fidelity_operations,
+    0,
+    0.);
+
+  TextDataWriter variance_reduced_text_data_writer(num_low_fidelity_models,"vr_output");
+  variance_reduced_text_data_writer.output(
+    variance_reduced_particle_electrostatic_field_state,
     low_fidelity_field_states,
     *electrostatic_field_operations,
     low_fidelity_states,
@@ -241,6 +262,9 @@ void runSimulation(int argc, char* argv[]) {
         dumpLowFidelityMoments(low_fidelity_states[i],*ops,low_fidelity_prefix, i_timestep, end_time);
       }
 
+      IntegratedCharge integrated_charge = particle_operations.assembleCharge(particle_container);
+      integrated_charge.subtractMean();
+      electrostatic_field_operations->fieldSolve(particle_electrostatic_field_state, integrated_charge);
       mesh_data_writer.output(
         particle_electrostatic_field_state,
         low_fidelity_field_states,
@@ -248,8 +272,27 @@ void runSimulation(int argc, char* argv[]) {
         i_timestep,
         end_time);
 
+      IntegratedCharge variance_reduced_integrated_charge = particle_operations.assembleVarianceReducedCharge(particle_container,low_fidelity_states[0],*low_fidelity_operations[0]);
+      variance_reduced_integrated_charge.subtractMean();
+      electrostatic_field_operations->fieldSolve(variance_reduced_particle_electrostatic_field_state, variance_reduced_integrated_charge);
+      variance_reduced_mesh_data_writer.output(
+        variance_reduced_particle_electrostatic_field_state,
+        low_fidelity_field_states,
+        low_fidelity_states,
+        i_timestep,
+        end_time);
+
       text_data_writer.output(
         particle_electrostatic_field_state,
+        low_fidelity_field_states,
+        *electrostatic_field_operations,
+        low_fidelity_states,
+        low_fidelity_operations,
+        i_timestep,
+        end_time);
+
+      variance_reduced_text_data_writer.output(
+        variance_reduced_particle_electrostatic_field_state,
         low_fidelity_field_states,
         *electrostatic_field_operations,
         low_fidelity_states,

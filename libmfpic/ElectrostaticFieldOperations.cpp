@@ -34,6 +34,7 @@ void ElectrostaticFieldOperations::fieldSolve(ElectrostaticFieldState& field_sta
   dirichlet_boundary_conditions_->applyBoundaryConditions(potential);
 
   mfem::Vector integrated_charge_vector = charge_state.getIntegratedCharge();
+  field_state.setIntegratedCharge(integrated_charge_vector);
 
   mfem::Array<int> dirichlet_dof_indices = dirichlet_boundary_conditions_->getDirichletBoundaryDofIndices();
   if (should_enforce_rhs_compatibility_) {
@@ -100,6 +101,15 @@ mfem::GridFunction ElectrostaticFieldOperations::computeGhostChargeDensity(
   mass_form_.RecoverFEMSolution(solution_vector, integrated_ghost_charge, ghost_charge_density);
 
   return ghost_charge_density;
+
+double ElectrostaticFieldOperations::totalCharge(const ElectrostaticFieldState& field_state) const {
+  const mfem::GridFunction& integrated_charge = field_state.getIntegratedCharge();
+  double sum = 0.0;
+  for (int i = 0; i < integrated_charge.Size(); ++i)
+  {
+    sum += integrated_charge(i); 
+  }
+  return sum;
 }
 
 void ElectrostaticFieldOperations::enforceCompatibilityOnIntegratedCharge(mfem::Vector& integrated_charge_vector) const 
@@ -109,5 +119,7 @@ void ElectrostaticFieldOperations::enforceCompatibilityOnIntegratedCharge(mfem::
 }
 
 ElectrostaticFieldOperations::~ElectrostaticFieldOperations() = default;
+
+}
 
 }

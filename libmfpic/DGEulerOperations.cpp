@@ -252,6 +252,16 @@ double DGEulerOperations::computeTotalKineticEnergy(const LowFidelityState& stat
   return total_kinetic_energy;
 }
 
+double DGEulerOperations::computeTotalCharge(const LowFidelityState& state) const {
+  IntegratedCharge integrated_charge = this->assembleCharge(state);
+  mfem::Vector integrated_charge_vector = integrated_charge.getIntegratedCharge();
+  double sum = 0.;
+  for (int i = 0; i < integrated_charge_vector.Size(); ++i) {
+    sum += integrated_charge_vector(i);
+  }
+  return sum;
+}
+
 double DGEulerOperations::evaluateParticleDistributionFunction(
   const LowFidelityState& state,
   const mfem::Vector position,

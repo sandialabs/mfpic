@@ -203,11 +203,35 @@ IntegratedCharge ParticleOperations::assembleVarianceReducedCharge(
   mfem::IntegrationPoint integration_point;
   mfem::Array<int> vector_dofs;
   mfem::FiniteElementSpace finite_element_space = discretization_.getFeSpace();
+  mfem::Mesh &mesh = *finite_element_space.GetMesh();
+  
+  mfem::Vector variance_reduce_check(finite_element_space.GetNDofs());
+  variance_reduce_check = 0.0;
+  for (const Particle& particle : particles) {
+    if (not particle.is_alive) continue;
+    const int elem_id = particle.element;
+    const mfem::FiniteElement *fe = finite_element_space.GetFE(elem_id);
+    const mfem::Vector particle_position(particle.position.GetData(), dim_); 
+    finite_element_space.GetElementVDofs(elem_id, vector_dofs);
+
+    double low_fidelity_particle_distribution_function_value = low_fidelity_operations.evaluateParticleDistributionFunction(
+      low_fidelity_state,
+      particle_position,
+      particle.velocity,
+      particle.element,
+      particle.species);
+    double noise_reducing_factor = (1 - low_fidelity_particle_distribution_function_value / particle.particle_distribution_function_value);
+    for (int i = 0; i < fe->GetDof(); i++)
+    {
+      variance_reduce_check(vector_dofs[i]) = std::max(
+        std::abs(noise_reducing_factor),
+        variance_reduce_check(vector_dofs[i]));
+    }
+  }
 
   IntegratedCharge charge_state(discretization_);
 
   charge_state.setIntegratedChargeValue(0.0);
-  mfem::Mesh &mesh = *finite_element_space.GetMesh();
 
   for (const Particle& particle : particles) {
     if (not particle.is_alive) continue;
@@ -231,14 +255,22 @@ IntegratedCharge ParticleOperations::assembleVarianceReducedCharge(
       particle.velocity,
       particle.element,
       particle_species);
-    double noise_reducing_factor = (1 - low_fidelity_particle_distribution_function_value / particle.particle_distribution_function_value);
-
     for (int i = 0; i < fe->GetDof(); i++) {
+      double noise_reducing_factor = (1 - low_fidelity_particle_distribution_function_value / particle.particle_distribution_function_value);
+      if (variance_reduce_check(vector_dofs[i]) >= 1)
+      {
+        noise_reducing_factor = 1.0;
+      }
       charge_state.addIntegratedChargeValue(vector_dofs[i],particle.weight * particle_charge * psi(i) * noise_reducing_factor);
     }
   }
 
   IntegratedCharge low_fidelity_charge_state = low_fidelity_operations.assembleCharge(low_fidelity_state);
+  for (int i = 0; i < finite_element_space.GetNDofs(); i++)
+  {
+    if (variance_reduce_check(i) >= 1)
+      low_fidelity_charge_state.setIntegratedChargeValue(i,0.0);
+  }
   charge_state.addCharge(low_fidelity_charge_state);
 
   return charge_state;

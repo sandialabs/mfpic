@@ -4,7 +4,8 @@ namespace mfpic {
 
 ElectrostaticFieldState::ElectrostaticFieldState(
   Discretization& electrostatic_discretization)
-  : potential_(&electrostatic_discretization.getFeSpace())
+  : potential_(&electrostatic_discretization.getFeSpace()),
+    integrated_charge_(&electrostatic_discretization.getFeSpace())
 {
   potential_ = 0.;
 }
