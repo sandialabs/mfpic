@@ -65,6 +65,8 @@ double getPressureFromPrimitiveState(const mfem::Vector& primitive_state);
 double getInternalEnergyDensityFromPrimitiveState(const mfem::Vector& primitive_state, const Species& species);
 
 double evaluateMaxwellian(const mfem::Vector& primitive_state, const mfem::Vector& velocity, const Species& species);
+double evaluateProductOf1DKappaDistributions(const mfem::Vector& primitive_state, const mfem::Vector& velocity, const double kappa, const Species& species);
+double evaluateIsotropicKappaDistribution(const mfem::Vector& primitive_state, const mfem::Vector& velocity, const double kappa, const Species& species);
 
 }
 

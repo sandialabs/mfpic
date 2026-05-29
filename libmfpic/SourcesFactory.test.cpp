@@ -594,6 +594,7 @@ TEST(SourcesFactory, GaussianInitialConditionsGivesBackCorrectParameters) {
   constexpr int num_particles_per_species = 513;
   constexpr double center = 0.45;
   constexpr double standard_deviation = 0.014;
+  constexpr double kappa = 2.0;
 
   constexpr double number_density_offset = 1e19;
   constexpr double number_density_height = 5e18;
@@ -609,6 +610,7 @@ TEST(SourcesFactory, GaussianInitialConditionsGivesBackCorrectParameters) {
     "    Gaussian:\n"
     "      Center: [" + std::to_string(center) + "]\n"
     "      Standard Deviation: " + std::to_string(standard_deviation) + "\n"
+    "      Velocity Kappa: " + std::to_string(kappa) + "\n"
     "      Offsets:\n"
     "        Number Density: " + std::to_string(number_density_offset) + "\n"
     "        Pressure: " + std::to_string(pressure_offset) + "\n"
@@ -649,6 +651,8 @@ TEST(SourcesFactory, GaussianInitialConditionsGivesBackCorrectParameters) {
     EXPECT_EQ(bulk_velocity_height[i], parameters.heights.bulk_velocity[i]);
   }
   EXPECT_EQ(pressure_height, parameters.pressure_height);
+
+  EXPECT_EQ(kappa, parameters.kappa);
 }
 
 TEST(SourcesFactory, PeriodicPerturbationInitialConditionsGivesBackCorrectParameters) {

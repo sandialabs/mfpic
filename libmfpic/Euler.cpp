@@ -177,6 +177,109 @@ double evaluateMaxwellian(const mfem::Vector& primitive_state,
 
     return probability_density_function * primitive_state(euler::PrimitiveVariables::NUMBER_DENSITY);
   }
+
+double evaluateProductOf1DKappaDistributions(
+  const mfem::Vector& primitive_state,
+  const mfem::Vector& velocity,
+  const double kappa,
+  const Species& species)
+{
+  const double temperature =
+    primitive_state(euler::PrimitiveVariables::TEMPERATURE);
+
+  const double number_density =
+    primitive_state(euler::PrimitiveVariables::NUMBER_DENSITY);
+
+  if (temperature < 0.0 || species.mass <= 0.0 || kappa <= 0.0) {
+    return std::numeric_limits<double>::quiet_NaN();
+  }
+
+  const double v_thermal_squared =
+    constants::boltzmann_constant * temperature / species.mass;
+
+  if (!std::isfinite(v_thermal_squared)) {
+    return std::numeric_limits<double>::quiet_NaN();
+  }
+
+  const double nu = 2.0 * kappa + 1.0;
+
+  const double scale =
+    std::sqrt(2.0 * kappa * v_thermal_squared / nu);
+
+  if (scale <= 0.0 || !std::isfinite(scale)) {
+    return std::numeric_limits<double>::quiet_NaN();
+  }
+
+  const mfem::Vector bulk_velocity = getBulkVelocityFromPrimitiveState(primitive_state);
+
+  mfem::Vector difference = velocity;
+  difference -= bulk_velocity;
+
+  const double scale_squared = scale * scale;
+  const double log_norm_1d =
+      std::lgamma(0.5 * (nu + 1.0))
+    - std::lgamma(0.5 * nu)
+    - 0.5 * std::log(nu * M_PI)
+    - std::log(scale);
+
+  double log_pdf = std::log(number_density);
+  for (int d = 0; d < 3; ++d) {
+    const double x = difference(d);
+    const double log_shape =
+      -0.5 * (nu + 1.0) * std::log1p((x * x) / (nu * scale_squared));
+
+    log_pdf += log_norm_1d + log_shape;
+  }
+  return std::exp(log_pdf);
+}
+
+double evaluateIsotropicKappaDistribution(
+  const mfem::Vector& primitive_state,
+  const mfem::Vector& velocity,
+  double kappa,
+  const Species& species)
+{
+  const double temperature =
+    primitive_state(euler::PrimitiveVariables::TEMPERATURE);
+
+  const double number_density =
+    primitive_state(euler::PrimitiveVariables::NUMBER_DENSITY);
+
+  if (temperature < 0.0 ||
+      species.mass <= 0.0 ||
+      kappa <= 1.5) {
+    return std::numeric_limits<double>::quiet_NaN();
+  }
+
+  const double nu = 2.0 * kappa - 1.0;
+
+  const double w_squared =
+    ((nu - 2.0) / nu) *
+    constants::boltzmann_constant *
+    temperature / species.mass;
+
+  const mfem::Vector bulk_velocity =
+    getBulkVelocityFromPrimitiveState(
+      primitive_state);
+
+  mfem::Vector difference = velocity;
+  difference -= bulk_velocity;
+
+  const double c_squared =
+    difference * difference;
+
+  const double log_normalization =
+      std::lgamma(0.5 * (nu + 3.0))
+    - std::lgamma(0.5 * nu)
+    - 1.5 * std::log(nu * M_PI)
+    - 1.5 * std::log(w_squared);
+
+  const double log_shape =
+    -0.5 * (nu + 3.0) * std::log1p(c_squared / (nu * w_squared));
+  const double log_pdf = std::log(number_density) + log_normalization + log_shape;
+  return std::exp(log_pdf);
+}
+
 }
 
 }
