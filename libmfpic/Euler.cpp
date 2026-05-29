@@ -243,7 +243,7 @@ double evaluateIsotropicKappaDistribution(
     primitive_state(PrimitiveVariables::TEMPERATURE);
 
   const double number_density =
-    primitive_state(euler::PrimitiveVariables::NUMBER_DENSITY);
+    primitive_state(PrimitiveVariables::NUMBER_DENSITY);
 
   if (temperature < 0.0 ||
       species.mass <= 0.0 ||
