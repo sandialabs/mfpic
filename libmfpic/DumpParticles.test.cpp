@@ -72,6 +72,36 @@ std::pair<double, ParticleContainer> readTimeValueAndParticlesFromStep(int step)
   H5Dread(dataset, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, element.data());
   H5Dclose(dataset);
 
+  std::vector<std::string> species_name(num_particles);
+  {
+    hid_t d = H5Dopen(step_group, "species_name", H5P_DEFAULT);
+
+    hid_t memtype = H5Tcopy(H5T_C_S1);
+    H5Tset_size(memtype, H5T_VARIABLE);
+
+    std::vector<char*> rdata(num_particles, nullptr);
+
+    herr_t status = H5Dread(d, memtype, H5S_ALL, H5S_ALL, H5P_DEFAULT, rdata.data());
+    if (status < 0) {
+      H5Tclose(memtype);
+      H5Dclose(d);
+      H5Gclose(step_group);
+      H5Fclose(file);
+      throw std::runtime_error("Failed to read species_name dataset");
+    }
+
+    for (int i = 0; i < num_particles; i++) {
+      species_name[i] = (rdata[i] ? std::string(rdata[i]) : std::string{});
+    }
+
+    hid_t space = H5Dget_space(d);
+    H5Dvlen_reclaim(memtype, space, H5P_DEFAULT, rdata.data());
+    H5Sclose(space);
+
+    H5Tclose(memtype);
+    H5Dclose(d);
+  }
+
   H5Gclose(step_group);
   H5Fclose(file);
 
@@ -81,6 +111,7 @@ std::pair<double, ParticleContainer> readTimeValueAndParticlesFromStep(int step)
       .position = mfem::Vector({x[i], y[i], z[i]}),
       .velocity = mfem::Vector({vx[i], vy[i], vz[i]}),
       .element = element[i],
+      .species = Species{ .name = species_name[i] },   
       .weight = weight[i],
       .is_alive = true,
       .particle_distribution_function_value = particle_distribution_function_value[i],
@@ -93,6 +124,8 @@ std::pair<double, ParticleContainer> readTimeValueAndParticlesFromStep(int step)
 TEST(DumpParticles, ReadParticlesMatchDumpedParticles) {
   const mfem::Vector position({1.0, 2.0, 3.0});
   const mfem::Vector velocity({4.0, 5.0, 6.0});
+  const std::string expected_species_name = "electron";
+  const Species default_species{.charge = 1.0, .mass = 1.0, .name = expected_species_name};
   constexpr int element = 505;
   constexpr double weight = 1.0e9;
   constexpr double particle_distribution_function_value = 21492e9;
@@ -106,6 +139,7 @@ TEST(DumpParticles, ReadParticlesMatchDumpedParticles) {
       .position = position,
       .velocity = velocity,
       .element = element,
+      .species = default_species,
       .weight = weight,
       .particle_distribution_function_value = particle_distribution_function_value
     });
@@ -118,6 +152,7 @@ TEST(DumpParticles, ReadParticlesMatchDumpedParticles) {
     const double expected_time = i * dt;
     EXPECT_DOUBLE_EQ(expected_time, simulation_time);
     for (const Particle& particle : particles_from_step) {
+      EXPECT_EQ(expected_species_name, particle.species.name);
       EXPECT_DOUBLE_EQ(weight, particle.weight);
       EXPECT_DOUBLE_EQ(particle_distribution_function_value, particle.particle_distribution_function_value);
       EXPECT_EQ(element, particle.element);
