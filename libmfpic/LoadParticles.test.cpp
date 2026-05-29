@@ -215,7 +215,7 @@ TEST(LoadParticles, ParticleVelocitiesMeanAndStdAreCorrectWhenKappaDistributionI
   const mfem::Vector nominal_bulk_velocity({300.0, 600.0, 1000.0});
   constexpr double temperature = 11600.0;
   constexpr int num_particles = 20000;
-  constexpr double kappa = 2.0;
+  constexpr double kappa = 5.0;
   const SourceStateParameters source_state_parameters{
     .number_density = 1.0e18,
     .bulk_velocity = nominal_bulk_velocity,
@@ -248,8 +248,9 @@ TEST(LoadParticles, ParticleVelocitiesMeanAndStdAreCorrectWhenKappaDistributionI
   }
   sample_variance /= num_particles - 1;
   const double expected_sample_variance_maxwellian = 3.0 * constants::boltzmann_constant * temperature / default_species.mass;
-  const double expected_sample_variance_kappa = expected_sample_variance_maxwellian * (kappa / (kappa - 0.5));
-  EXPECT_NEAR(sample_variance, expected_sample_variance_kappa, relative_tolerance * expected_sample_variance_kappa);
+  const double expected_sample_variance_kappa = expected_sample_variance_maxwellian; //* (kappa / (kappa - 0.5));
+  const double relative_error = (sample_variance - expected_sample_variance_kappa)/expected_sample_variance_kappa;
+  EXPECT_NEAR(relative_error, 0.0, relative_tolerance);
 }
 
 TEST(LoadUniformMaxwellianParticles, ParticleDistributionFunctionsAreMaxwellian) {
@@ -280,6 +281,39 @@ TEST(LoadUniformMaxwellianParticles, ParticleDistributionFunctionsAreMaxwellian)
   prim(euler::PrimitiveVariables::TEMPERATURE) = temperature;
   for (const Particle& particle : particles) {
     const double expected_particle_distribution_value = euler::evaluateMaxwellian(prim, particle.velocity, species);
+    EXPECT_DOUBLE_EQ(particle.particle_distribution_function_value, expected_particle_distribution_value);
+  }
+}
+
+TEST(LoadUniformKappaParticles, ParticleDistributionFunctionsAreKappa) {
+  Species species{.charge = -constants::elementary_charge, .mass = constants::electron_mass};
+  constexpr double number_density = 1e22;
+  constexpr double temperature = 300;
+  mfem::Vector bulk_velocity({1.0,2.0,3.0});
+  constexpr int num_particles = 1;
+  std::mt19937 generator;
+  double kappa = 2.0;
+
+  const SourceStateParameters source_state_parameters{
+    .number_density = number_density,
+    .bulk_velocity = bulk_velocity,
+    .temperature = temperature,
+    .kappa = kappa,
+  };
+
+  ParticleContainer particles = loadParticles(
+    ConstantSourceParameters(species, source_state_parameters, num_particles),
+    generator,
+    simple_mesh
+  );
+  mfem::Vector prim(5);
+  prim(euler::PrimitiveVariables::NUMBER_DENSITY) = number_density;
+  prim(euler::PrimitiveVariables::X_BULK_VELOCITY) = bulk_velocity(0);
+  prim(euler::PrimitiveVariables::Y_BULK_VELOCITY) = bulk_velocity(1);
+  prim(euler::PrimitiveVariables::Z_BULK_VELOCITY) = bulk_velocity(2);
+  prim(euler::PrimitiveVariables::TEMPERATURE) = temperature;
+  for (const Particle& particle : particles) {
+    const double expected_particle_distribution_value = euler::evaluateIsotropicKappaDistribution(prim, particle.velocity, kappa, species);
     EXPECT_DOUBLE_EQ(particle.particle_distribution_function_value, expected_particle_distribution_value);
   }
 }

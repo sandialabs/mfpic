@@ -88,4 +88,71 @@ TEST(GenerateKappaVelocity, VelocitiesMeanAndStdAreCorrect) {
   EXPECT_NEAR(sample_variance, expected_sample_variance_kappa, relative_tolerance * expected_sample_variance_kappa);
 }
 
+TEST(GenerateIsotropicKappaVelocity, VelocitiesMeanAndVarianceAreCorrect)
+{
+  const mfem::Vector nominal_bulk_velocity(
+    {300.0, 600.0, 1000.0});
+
+  constexpr double temperature = 11600.0;
+  constexpr double kappa = 2.0;
+  constexpr int num_samples = 20000;
+
+  std::default_random_engine generator;
+
+  std::vector<mfem::Vector> generated_velocities;
+
+  for (int i = 0; i < num_samples; ++i) {
+    generated_velocities.emplace_back(
+      generateIsotropicKappaVelocity(
+        nominal_bulk_velocity,
+        temperature,
+        kappa,
+        mass,
+        generator));
+  }
+
+  // Compute sample mean
+  mfem::Vector actual_bulk_velocity({0.0, 0.0, 0.0});
+
+  for (const auto& velocity : generated_velocities) {
+    actual_bulk_velocity += velocity;
+  }
+
+  actual_bulk_velocity /= num_samples;
+
+  constexpr double relative_tolerance = 0.1;
+
+  for (int i = 0; i < 3; ++i) {
+    EXPECT_NEAR(
+      actual_bulk_velocity[i],
+      nominal_bulk_velocity[i],
+      relative_tolerance *
+      nominal_bulk_velocity[i]);
+  }
+
+  double sample_variance = 0.0;
+
+  for (const auto& velocity : generated_velocities) {
+
+    mfem::Vector relative_velocity = velocity;
+    relative_velocity -= actual_bulk_velocity;
+
+    sample_variance +=
+      relative_velocity * relative_velocity;
+  }
+
+  sample_variance /= (num_samples - 1);
+
+  const double expected_sample_variance =
+    3.0 *
+    constants::boltzmann_constant *
+    temperature / mass;
+
+  EXPECT_NEAR(
+    sample_variance,
+    expected_sample_variance,
+    relative_tolerance *
+    expected_sample_variance);
+}
+
 } // namespace

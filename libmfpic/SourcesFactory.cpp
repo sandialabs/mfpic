@@ -71,10 +71,12 @@ GaussianSourceParameters::GaussianSourceParameters(
   const SourceStateParameters& heights,
   const double pressure_offset,
   const double pressure_height,
-  const int num_particles)
+  const int num_particles,
+  const double kappa)
   : SourceParameters(species, num_particles)
   , center(center)
   , standard_deviation(standard_deviation)
+  , kappa(kappa)
   , offsets(offsets)
   , heights(heights)
   , pressure_offset(pressure_offset)
@@ -103,6 +105,7 @@ SourceStateParameters GaussianSourceParameters::sourceStateParametersAtPoint(con
     .number_density = number_density,
     .bulk_velocity = velocity,
     .temperature = temperature,
+    .kappa = kappa,
   };
 }
 
@@ -269,6 +272,14 @@ std::vector<std::unique_ptr<SourceParameters>> buildListOfSourceParametersFromYA
         if (pressure_offset <= 0 or (pressure_height + pressure_offset) <= 0) {
           errorWithUserMessage(formatParseMessage(gaussian_node, "Pressure must be positive."));
         }
+        double kappa=-1;
+        if (gaussian_node["Velocity Kappa"]) 
+        {
+          kappa = gaussian_node["Velocity Kappa"].as<double>();
+          if (kappa <= 0.5) {
+          errorWithUserMessage(formatParseMessage(gaussian_node["Velocity Kappa"], "kappa must be > 0.5!"));
+          }
+        }
 
         for (const std::string& species_name : species_names) {
           list_of_parameters.push_back(std::make_unique<GaussianSourceParameters>(
@@ -279,7 +290,8 @@ std::vector<std::unique_ptr<SourceParameters>> buildListOfSourceParametersFromYA
             heights,
             pressure_offset,
             pressure_height,
-            num_particles_per_species));
+            num_particles_per_species,
+            kappa));
         }
       } else if (source["Periodic Perturbation"]) {
         const YAML::Node& perturbation_node = source["Periodic Perturbation"];

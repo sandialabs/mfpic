@@ -185,4 +185,302 @@ TEST(Maxwellian, MaxwellianIntegratesToOnein3D)
   EXPECT_NEAR(integral, 1.0, 1e-5);
 }
 
+TEST(KappaDistribution1DProduct, IntegratesToOnein3D)
+{
+  const double kappa = 6.0;
+  constexpr double number_density = 1.0;
+  const mfem::Vector bulk_velocity{5.4, 4.7, 8.3};
+  constexpr double temperature = 305.1;
+  const Species species{.mass = constants::electron_mass};
+  mfem::Vector prim(5);
+  prim(euler::PrimitiveVariables::NUMBER_DENSITY) = number_density;
+  prim(euler::PrimitiveVariables::X_BULK_VELOCITY) = bulk_velocity(0);
+  prim(euler::PrimitiveVariables::Y_BULK_VELOCITY) = bulk_velocity(1);
+  prim(euler::PrimitiveVariables::Z_BULK_VELOCITY) = bulk_velocity(2);
+  prim(euler::PrimitiveVariables::TEMPERATURE) = temperature;
+
+  const double sigma = std::sqrt(constants::boltzmann_constant * temperature / species.mass);
+  const double L = 40.0 * sigma;
+  const int N = 100; 
+  const double dv = 2.0 * L / (N - 1);
+  double integral = 0.0;
+  mfem::Vector v(3);
+  for (int i = 0; i < N; ++i) {
+    v(0) = bulk_velocity(0) + (-L + i * dv);
+    for (int j = 0; j < N; ++j) {
+      v(1) = bulk_velocity(1) + (-L + j * dv);
+      for (int k = 0; k < N; ++k) {
+        v(2) = bulk_velocity(2) + (-L + k * dv);
+        integral += euler::evaluateProductOf1DKappaDistributions(prim, v, kappa, species);
+      }
+    }
+  }
+  integral *= (dv * dv * dv);
+  EXPECT_NEAR(integral, 1.0, 1e-5);
+}
+
+TEST(IsotropicKappaDistribution, IntegratesToOnein3D)
+{
+  const double kappa = 6.0;
+  constexpr double number_density = 1.0;
+  const mfem::Vector bulk_velocity{5.4, 4.7, 8.3};
+  constexpr double temperature = 305.1;
+  const Species species{.mass = constants::electron_mass};
+  mfem::Vector prim(5);
+  prim(euler::PrimitiveVariables::NUMBER_DENSITY) = number_density;
+  prim(euler::PrimitiveVariables::X_BULK_VELOCITY) = bulk_velocity(0);
+  prim(euler::PrimitiveVariables::Y_BULK_VELOCITY) = bulk_velocity(1);
+  prim(euler::PrimitiveVariables::Z_BULK_VELOCITY) = bulk_velocity(2);
+  prim(euler::PrimitiveVariables::TEMPERATURE) = temperature;
+
+  const double nu = 2.0 * kappa - 1.0;
+  const double w_squared = ((nu - 2.0) / nu) * constants::boltzmann_constant * temperature / species.mass;
+  const double sigma = std::sqrt(w_squared);
+  const double L = 40.0 * sigma;
+  const int N = 100; 
+  const double dv = 2.0 * L / (N - 1);
+  double integral = 0.0;
+  mfem::Vector v(3);
+  for (int i = 0; i < N; ++i) {
+    v(0) = bulk_velocity(0) + (-L + i * dv);
+    for (int j = 0; j < N; ++j) {
+      v(1) = bulk_velocity(1) + (-L + j * dv);
+      for (int k = 0; k < N; ++k) {
+        v(2) = bulk_velocity(2) + (-L + k * dv);
+        integral += euler::evaluateIsotropicKappaDistribution(prim, v, kappa, species);
+      }
+    }
+  }
+  integral *= (dv * dv * dv);
+  EXPECT_NEAR(integral, 1.0, 1e-5);
+}
+
+TEST(KappaDistribution1DProduct, ValueAtMean)
+{
+  constexpr double number_density = 1.2e16;
+  constexpr double temperature = 305.1;
+  constexpr double kappa = 2.0;
+
+  const mfem::Vector bulk_velocity{5.4, 4.7, 8.3};
+
+  const Species species{
+    .mass = constants::electron_mass};
+
+  mfem::Vector prim(5);
+
+  prim(euler::PrimitiveVariables::NUMBER_DENSITY)
+    = number_density;
+
+  prim(euler::PrimitiveVariables::X_BULK_VELOCITY)
+    = bulk_velocity(0);
+
+  prim(euler::PrimitiveVariables::Y_BULK_VELOCITY)
+    = bulk_velocity(1);
+
+  prim(euler::PrimitiveVariables::Z_BULK_VELOCITY)
+    = bulk_velocity(2);
+
+  prim(euler::PrimitiveVariables::TEMPERATURE)
+    = temperature;
+
+  const double vth2 =
+    constants::boltzmann_constant *
+    temperature / species.mass;
+
+  const double nu = 2.0 * kappa + 1.0;
+
+  const double scale =
+    std::sqrt(2.0 * kappa * vth2 / nu);
+
+  const double normalization_1d =
+    std::tgamma(0.5 * (nu + 1.0)) /
+    (
+      std::tgamma(0.5 * nu) *
+      std::sqrt(nu * M_PI) *
+      scale
+    );
+
+  const double expected =
+    number_density *
+    std::pow(normalization_1d, 3);
+
+  const double actual =
+    euler::evaluateProductOf1DKappaDistributions(
+      prim,
+      bulk_velocity,
+      kappa,
+      species);
+
+  EXPECT_NEAR(
+    actual,
+    expected,
+    expected * 1e-12);
+}
+
+TEST(IsotropicKappaDistribution, ValueAtMean)
+{
+  constexpr double number_density = 1.2e16;
+  constexpr double temperature = 305.1;
+  constexpr double kappa = 2.0;
+
+  const mfem::Vector bulk_velocity{5.4, 4.7, 8.3};
+
+  const Species species{
+    .mass = constants::electron_mass};
+
+  mfem::Vector prim(5);
+
+  prim(euler::PrimitiveVariables::NUMBER_DENSITY)
+    = number_density;
+
+  prim(euler::PrimitiveVariables::X_BULK_VELOCITY)
+    = bulk_velocity(0);
+
+  prim(euler::PrimitiveVariables::Y_BULK_VELOCITY)
+    = bulk_velocity(1);
+
+  prim(euler::PrimitiveVariables::Z_BULK_VELOCITY)
+    = bulk_velocity(2);
+
+  prim(euler::PrimitiveVariables::TEMPERATURE)
+    = temperature;
+
+  const double w_squared =
+    ((2.0 * kappa - 3.0) / kappa) *
+    constants::boltzmann_constant *
+    temperature / species.mass;
+
+  const double expected =
+    number_density *
+    std::tgamma(kappa + 1.0) /
+    (
+      std::tgamma(kappa - 0.5) *
+      std::pow(M_PI * kappa * w_squared, 1.5)
+    );
+
+  const double actual =
+    euler::evaluateIsotropicKappaDistribution(
+      prim,
+      bulk_velocity,
+      kappa,
+      species);
+
+  EXPECT_NEAR(
+    actual,
+    expected,
+    expected * 1e-12);
+}
+
+TEST(KappaDistribution1DProduct, ApproachesMaxwellian)
+{
+  constexpr double number_density = 1.2e16;
+  constexpr double temperature = 305.1;
+
+  constexpr double kappa = 1e6;
+
+  const mfem::Vector bulk_velocity{
+    5.4, 4.7, 8.3};
+
+  const mfem::Vector velocity{
+    17.0, -4.0, 2.5};
+
+  const Species species{
+    .mass = constants::electron_mass};
+
+  mfem::Vector prim(5);
+
+  prim(euler::PrimitiveVariables::NUMBER_DENSITY)
+    = number_density;
+
+  prim(euler::PrimitiveVariables::X_BULK_VELOCITY)
+    = bulk_velocity(0);
+
+  prim(euler::PrimitiveVariables::Y_BULK_VELOCITY)
+    = bulk_velocity(1);
+
+  prim(euler::PrimitiveVariables::Z_BULK_VELOCITY)
+    = bulk_velocity(2);
+
+  prim(euler::PrimitiveVariables::TEMPERATURE)
+    = temperature;
+
+  const double kappa_value =
+    euler::evaluateProductOf1DKappaDistributions(
+      prim,
+      velocity,
+      kappa,
+      species);
+
+  const double effective_temperature =
+    temperature *
+    (kappa / (kappa - 0.5));
+
+  prim(euler::PrimitiveVariables::TEMPERATURE)
+    = effective_temperature;
+
+  const double maxwellian_value =
+    euler::evaluateMaxwellian(
+      prim,
+      velocity,
+      species);
+
+  EXPECT_NEAR(
+    kappa_value,
+    maxwellian_value,
+    maxwellian_value * 1e-5);
+}
+
+TEST(IsotropicKappaDistribution, ApproachesMaxwellian)
+{
+  constexpr double number_density = 1.2e16;
+  constexpr double temperature = 305.1;
+
+  constexpr double kappa = 1e6;
+
+  const mfem::Vector bulk_velocity{
+    5.4, 4.7, 8.3};
+
+  const mfem::Vector velocity{
+    17.0, -4.0, 2.5};
+
+  const Species species{
+    .mass = constants::electron_mass};
+
+  mfem::Vector prim(5);
+
+  prim(euler::PrimitiveVariables::NUMBER_DENSITY)
+    = number_density;
+
+  prim(euler::PrimitiveVariables::X_BULK_VELOCITY)
+    = bulk_velocity(0);
+
+  prim(euler::PrimitiveVariables::Y_BULK_VELOCITY)
+    = bulk_velocity(1);
+
+  prim(euler::PrimitiveVariables::Z_BULK_VELOCITY)
+    = bulk_velocity(2);
+
+  prim(euler::PrimitiveVariables::TEMPERATURE)
+    = temperature;
+
+  const double kappa_value =
+    euler::evaluateIsotropicKappaDistribution(
+      prim,
+      velocity,
+      kappa,
+      species);
+
+  const double maxwellian_value =
+    euler::evaluateMaxwellian(
+      prim,
+      velocity,
+      species);
+
+  EXPECT_NEAR(
+    kappa_value,
+    maxwellian_value,
+    maxwellian_value * 1e-5);
+}
+
+
 }

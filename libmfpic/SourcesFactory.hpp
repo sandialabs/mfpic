@@ -113,6 +113,7 @@ struct SodSourceParameters : public SourceParameters {
 struct GaussianSourceParameters: public SourceParameters {
   mfem::Vector center;
   double standard_deviation;
+  double kappa; 
 
   // temperature is ignored in these states
   SourceStateParameters offsets;
@@ -129,7 +130,8 @@ struct GaussianSourceParameters: public SourceParameters {
     const SourceStateParameters& heights,
     const double pressure_offset,
     const double pressure_height,
-    const int num_particles = 0);
+    const int num_particles = 0,
+    const double kappa = -1);
 
   /**
    * @brief Evaluate the basic state parameters that represent a distribution that is Gaussian in space.

@@ -58,15 +58,24 @@ ParticleContainer loadParticles(
     SourceStateParameters source_state_parameters = source_parameters.sourceStateParametersAtPoint(random_mesh_position);
 
     const double kappa = source_state_parameters.kappa;
+    mfem::Vector primitive_state(5);
+    primitive_state(0) = source_state_parameters.number_density;
+    primitive_state(1) = source_state_parameters.bulk_velocity(0);
+    primitive_state(2) = source_state_parameters.bulk_velocity(1);
+    primitive_state(3) = source_state_parameters.bulk_velocity(2);
+    primitive_state(4) = source_state_parameters.temperature;
+    double particle_distribution_function_value = 0.0;
+
     mfem::Vector velocity;
     if (kappa > 0.0) {
-      velocity = generateKappaVelocity(
+      velocity = generateIsotropicKappaVelocity(
         source_state_parameters.bulk_velocity,
         source_state_parameters.temperature,
         kappa,
         species.mass,
         generator
       );
+      particle_distribution_function_value = euler::evaluateIsotropicKappaDistribution(primitive_state,velocity,kappa,species);
     }
     else {
       velocity = generateMaxwellianVelocity(
@@ -75,15 +84,8 @@ ParticleContainer loadParticles(
         species.mass,
         generator
       );
+      particle_distribution_function_value = euler::evaluateMaxwellian(primitive_state,velocity,species);
     }
-
-    mfem::Vector primitive_state(5);
-    primitive_state(0) = source_state_parameters.number_density;
-    primitive_state(1) = source_state_parameters.bulk_velocity(0);
-    primitive_state(2) = source_state_parameters.bulk_velocity(1);
-    primitive_state(3) = source_state_parameters.bulk_velocity(2);
-    primitive_state(4) = source_state_parameters.temperature;
-    double particle_distribution_function_value = euler::evaluateMaxwellian(primitive_state,velocity,species);
 
     particles.addParticle(Particle{
       .position = position,
