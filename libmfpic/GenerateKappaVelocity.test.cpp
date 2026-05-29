@@ -130,7 +130,6 @@ TEST(GenerateIsotropicKappaVelocity, VelocitiesMeanAndVarianceAreCorrect)
       nominal_bulk_velocity[i]);
   }
 
-  // Compute total variance <|v-u|^2>
   double sample_variance = 0.0;
 
   for (const auto& velocity : generated_velocities) {
