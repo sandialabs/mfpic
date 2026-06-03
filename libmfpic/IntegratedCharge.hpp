@@ -69,18 +69,6 @@ public:
   */
   double getIntegratedChargeValue(int dof_id);
 
-  /**
-  * @brief Sum the integrated charge vector across DOFs
-  *
-  * @return double - sum value of the integrated charge 
-  */
-  double sumIntegratedCharge();
-
-  /**
-  * @brief Subtract the discrete mean of the integrated charge vector across DOFs
-  */
-  void subtractMean();
-
 private:
 
   /// vector of size number of electrostatic local dofs, that stores integrated charge
