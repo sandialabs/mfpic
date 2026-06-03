@@ -101,6 +101,7 @@ mfem::GridFunction ElectrostaticFieldOperations::computeGhostChargeDensity(
   mass_form_.RecoverFEMSolution(solution_vector, integrated_ghost_charge, ghost_charge_density);
 
   return ghost_charge_density;
+}
 
 double ElectrostaticFieldOperations::totalCharge(const ElectrostaticFieldState& field_state) const {
   const mfem::GridFunction& integrated_charge = field_state.getIntegratedCharge();
@@ -119,7 +120,5 @@ void ElectrostaticFieldOperations::enforceCompatibilityOnIntegratedCharge(mfem::
 }
 
 ElectrostaticFieldOperations::~ElectrostaticFieldOperations() = default;
-
-}
 
 }
