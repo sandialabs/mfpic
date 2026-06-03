@@ -2,10 +2,13 @@
 #include <libmfpic/DirichletBoundaryConditionsConstant.hpp>
 #include <libmfpic/ElectrostaticFieldOperations.hpp>
 #include <libmfpic/ElectrostaticFieldState.hpp>
+#include <libmfpic/IntegratedCharge.hpp>
 #include <libmfpic/MeshFactory.hpp>
 #include <libmfpic/MeshUtilities.hpp>
 #include <libmfpic/Pinning.hpp>
 
+#include <mfem/fem/coefficient.hpp>
+#include <mfem/fem/gridfunc.hpp>
 #include <mfem/mfem.hpp>
 
 #include <gtest/gtest.h>
@@ -398,6 +401,72 @@ TEST(ElectrostaticFieldOperations, FieldSolveCorrectForPeriodicWithPinning) {
   constexpr double expected_error = 0.;
   constexpr double absolute_tolerance = 1e-3;
   EXPECT_NEAR(l2_error, expected_error, absolute_tolerance);
+
+}
+
+TEST(ElectrostaticFieldOperations, CheckCompatabilityEnforcementIsAProjection) {
+
+  MeshParameters mesh_parameters{
+    .mesh_type = "line",
+    .lengths = {1.},
+    .num_elements = {60},
+    .periodic_dims = {0}};
+
+  mfem::Mesh mesh = buildMesh(mesh_parameters);
+
+  constexpr int hgrad_order = 1;
+  Discretization es_discretization(&mesh, hgrad_order);
+  auto pinning = std::make_unique<Pinning>();
+  ElectrostaticFieldOperations es_field_operations(es_discretization, std::move(pinning));
+
+  IntegratedCharge integrated_charge(es_discretization);
+  mfem::Vector integrated_charge_vector = integrated_charge.getIntegratedCharge();
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::uniform_real_distribution<> dis(1.0, 2.0);
+  for (int i = 0; i < integrated_charge_vector.Size(); ++i) {
+    integrated_charge_vector[i] = dis(gen);
+  }
+
+  // check this is a projection, i.e., P^2 = P
+  es_field_operations.enforceCompatabilityOnIntegratedCharge(integrated_charge_vector);
+  const auto first_time = integrated_charge_vector;
+  es_field_operations.enforceCompatabilityOnIntegratedCharge(integrated_charge_vector);
+  mfem::Vector diff = first_time;
+  diff.Add(-1,integrated_charge_vector);
+  EXPECT_NEAR(diff.Norml2(),0.,1e-14);
+
+}
+
+TEST(ElectrostaticFieldOperations, CheckNullSpaceVectorIsOne) {
+
+  MeshParameters mesh_parameters{
+    .mesh_type = "line",
+    .lengths = {1.},
+    .num_elements = {60},
+    .periodic_dims = {0}};
+
+  mfem::Mesh mesh = buildMesh(mesh_parameters);
+
+  constexpr int hgrad_order = 1;
+  Discretization es_discretization(&mesh, hgrad_order);
+  auto pinning = std::make_unique<Pinning>();
+  ElectrostaticFieldOperations es_field_operations(es_discretization, std::move(pinning));
+
+  mfem::GridFunction potential(&es_discretization.getFeSpace());
+  mfem::ConstantCoefficient one(1.0);
+  potential.ProjectCoefficient(one);
+
+  ElectrostaticFieldState es_field_state(es_discretization);
+  es_field_state.setPotential(potential);
+
+  // this is the energy norm so it being zero implies we're in the null space
+  const double field_energy = es_field_operations.fieldEnergy(es_field_state);
+  EXPECT_NEAR(field_energy, 0., 1e-14);
+
+  // after correction should be zero if we started in the null space
+  es_field_operations.enforceCompatabilityOnIntegratedCharge(potential);
+  EXPECT_NEAR(potential.Norml2(), 0., 1e-14);
 
 }
 
