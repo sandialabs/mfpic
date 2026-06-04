@@ -107,7 +107,7 @@ private:
   mfem::GridFunction null_space_;
 
   /// flag that shows if problem setup requires enforcement of rhs compatibility
-  bool should_enforce_rhs_compatibility_;
+  bool should_enforce_rhs_compatibility_ = false;
 };
 
 } // namespace mfpic
