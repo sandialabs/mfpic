@@ -18,14 +18,16 @@ public:
    *
    * @return mfem::Array<int> - list of dof indices to pin
    */
-  mfem::Array<int> getDirichletBoundaryDofIndices() const;
+  mfem::Array<int> getDirichletBoundaryDofIndices() const override;
 
   /**
    * @brief Apply pinning to a GridFunction
    *
    * @param solution - which GridFunction to pin
    */
-  void applyBoundaryConditions(mfem::GridFunction& solution) const;
+  void applyBoundaryConditions(mfem::GridFunction& solution) const override;
+
+  bool requiresRHSCompatibility() const override {return true;};
 
 private:
   int index_of_pinned_node_;

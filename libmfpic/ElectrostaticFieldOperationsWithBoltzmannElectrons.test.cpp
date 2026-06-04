@@ -49,16 +49,31 @@ TEST(ElectrostaticFieldOperationsWithBoltzmannElectrons, BoltzmannElectronsSolve
   constexpr double integrated_charge_value = constants::permittivity;
   integrated_charge.setIntegratedChargeValue(integrated_charge_value);
 
+  std::unordered_map<std::string, int> side_name_to_boundary_attribute = getSideNameToBoundaryAttributeForInlineMeshes(
+  mesh.Dimension());
+
+  const int left_boundary_attribute = side_name_to_boundary_attribute["left"];
+  const int right_boundary_attribute = side_name_to_boundary_attribute["right"];
+  const double left_boundary_value = 2.1;
+  const double right_boundary_value = 3.4;
+  std::unordered_map<int, double> boundary_attribute_to_dirichlet_value{
+    {left_boundary_attribute, left_boundary_value},
+    {right_boundary_attribute, right_boundary_value}};
+  auto dirichlet_bcs = DirichletBoundaryConditionsConstant(
+    boundary_attribute_to_dirichlet_value, es_discretization);
+  auto dirichlet_copy_1 = std::make_unique<DirichletBoundaryConditionsConstant>(dirichlet_bcs);
+  auto dirichlet_copy_2 = std::make_unique<DirichletBoundaryConditionsConstant>(dirichlet_bcs);
+
   mfpic::ElectrostaticFieldOperations operations_without_boltzmann_electrons(
     es_discretization,
-    std::make_unique<Pinning>()
+    std::move(dirichlet_copy_1)
   );
   ElectrostaticFieldState state_without_boltzmann_electrons(es_discretization);
   operations_without_boltzmann_electrons.fieldSolve(state_without_boltzmann_electrons, integrated_charge);
 
-  mfpic::ElectrostaticFieldOperationsWithBoltzmannElectrons operations_with_boltzmann_electrons(
+  ElectrostaticFieldOperationsWithBoltzmannElectrons operations_with_boltzmann_electrons(
     es_discretization,
-    std::make_unique<Pinning>(),
+    std::move(dirichlet_copy_2),
     reference_number_density,
     temperature
   );

@@ -1,7 +1,7 @@
 #include <libmfpic/Constants.hpp>
 #include <libmfpic/ElectrostaticFieldOperations.hpp>
-#include <mfem/fem/bilininteg.hpp>
-#include <mfem/fem/gridfunc.hpp>
+
+#include <mfem.hpp>
 
 namespace mfpic {
 
@@ -11,6 +11,7 @@ ElectrostaticFieldOperations::ElectrostaticFieldOperations(
   : dirichlet_boundary_conditions_(std::move(dirichlet_boundary_conditions))
   , electrostatic_bilinear_form_(&electrostatic_discretization.getFeSpace())
   , mass_form_(&electrostatic_discretization.getFeSpace())
+  , null_space_(&electrostatic_discretization.getFeSpace())
 {
   mfem::ConstantCoefficient permittivity(constants::permittivity);
   electrostatic_bilinear_form_.AddDomainIntegrator(new mfem::DiffusionIntegrator(permittivity));
@@ -18,6 +19,13 @@ ElectrostaticFieldOperations::ElectrostaticFieldOperations(
 
   mass_form_.AddDomainIntegrator(new mfem::LumpedIntegrator(new mfem::MassIntegrator));
   mass_form_.Assemble();
+
+  auto one = mfem::ConstantCoefficient(1.0);
+  null_space_.ProjectCoefficient(one);
+
+  if (dirichlet_boundary_conditions_ != nullptr) {
+    should_enforce_rhs_compatibility_ = dirichlet_boundary_conditions_->requiresRHSCompatibility();
+  }
 }
 
 void ElectrostaticFieldOperations::fieldSolve(ElectrostaticFieldState& field_state, const IntegratedCharge& charge_state) {
@@ -28,6 +36,10 @@ void ElectrostaticFieldOperations::fieldSolve(ElectrostaticFieldState& field_sta
   mfem::Vector integrated_charge_vector = charge_state.getIntegratedCharge();
 
   mfem::Array<int> dirichlet_dof_indices = dirichlet_boundary_conditions_->getDirichletBoundaryDofIndices();
+  if (should_enforce_rhs_compatibility_) {
+    enforceCompatibilityOnIntegratedCharge(integrated_charge_vector);
+  }
+  
   mfem::Vector solution_vector;
   mfem::Vector rhs_vector;
   electrostatic_bilinear_form_.FormLinearSystem(
@@ -88,6 +100,12 @@ mfem::GridFunction ElectrostaticFieldOperations::computeGhostChargeDensity(
   mass_form_.RecoverFEMSolution(solution_vector, integrated_ghost_charge, ghost_charge_density);
 
   return ghost_charge_density;
+}
+
+void ElectrostaticFieldOperations::enforceCompatibilityOnIntegratedCharge(mfem::Vector& integrated_charge_vector) const 
+{
+  const double rhs_dot_null = null_space_ * integrated_charge_vector / (null_space_ * null_space_);
+  integrated_charge_vector.Add(-rhs_dot_null, null_space_);
 }
 
 ElectrostaticFieldOperations::~ElectrostaticFieldOperations() = default;

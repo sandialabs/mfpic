@@ -11,6 +11,8 @@ public:
   virtual mfem::Array<int> getDirichletBoundaryDofIndices() const = 0;
 
   virtual void applyBoundaryConditions(mfem::GridFunction& solution) const = 0;
+
+  virtual bool requiresRHSCompatibility() const {return false;};
 };
 
 }

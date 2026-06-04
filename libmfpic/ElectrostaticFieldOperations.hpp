@@ -73,6 +73,13 @@ public:
     const ElectrostaticFieldState& field_state,
     const IntegratedCharge& integrated_charge);
 
+  /**
+   * @brief Remove the component of the integrated charge in the direction of the null space of the Laplacian.
+   *
+   * @param[in,out] integrated_charge_vector mfem::Vector of the integrated charge
+   */
+  void enforceCompatibilityOnIntegratedCharge(mfem::Vector& integrated_charge_vector) const;
+
   /// Dtor.
   virtual ~ElectrostaticFieldOperations();
 
@@ -95,6 +102,12 @@ private:
 
   /// mass operator assembled into matrix
   mfem::SparseMatrix mass_matrix_;
+
+  /// grid function representing the null space of the Laplacian
+  mfem::GridFunction null_space_;
+
+  /// flag that shows if problem setup requires enforcement of rhs compatibility
+  bool should_enforce_rhs_compatibility_ = false;
 };
 
 } // namespace mfpic
