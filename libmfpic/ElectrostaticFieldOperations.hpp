@@ -105,6 +105,9 @@ private:
 
   /// grid function representing the null space of the Laplacian
   mfem::GridFunction null_space_;
+
+  /// flag that shows if problem setup requires enforcement of rhs compatibility
+  bool should_enforce_rhs_compatibility_;
 };
 
 } // namespace mfpic

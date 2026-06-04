@@ -46,5 +46,4 @@ std::unique_ptr<DirichletBoundaryConditions> buildDirichletBoundaryConditions(
   return dirichlet_bcs;
 }
 
-
 }

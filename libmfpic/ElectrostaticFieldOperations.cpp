@@ -22,6 +22,8 @@ ElectrostaticFieldOperations::ElectrostaticFieldOperations(
 
   auto one = mfem::ConstantCoefficient(1.0);
   null_space_.ProjectCoefficient(one);
+
+  should_enforce_rhs_compatibility_ = dirichlet_boundary_conditions_->requiresRHSCompatibility();
 }
 
 void ElectrostaticFieldOperations::fieldSolve(ElectrostaticFieldState& field_state, const IntegratedCharge& charge_state) {
@@ -32,7 +34,7 @@ void ElectrostaticFieldOperations::fieldSolve(ElectrostaticFieldState& field_sta
   mfem::Vector integrated_charge_vector = charge_state.getIntegratedCharge();
 
   mfem::Array<int> dirichlet_dof_indices = dirichlet_boundary_conditions_->getDirichletBoundaryDofIndices();
-  if (dirichlet_dof_indices.IsEmpty()) {
+  if (should_enforce_rhs_compatibility_) {
     enforceCompatibilityOnIntegratedCharge(integrated_charge_vector);
   }
   
