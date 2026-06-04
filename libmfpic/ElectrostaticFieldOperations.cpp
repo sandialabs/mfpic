@@ -23,7 +23,9 @@ ElectrostaticFieldOperations::ElectrostaticFieldOperations(
   auto one = mfem::ConstantCoefficient(1.0);
   null_space_.ProjectCoefficient(one);
 
-  should_enforce_rhs_compatibility_ = dirichlet_boundary_conditions_->requiresRHSCompatibility();
+  if (dirichlet_boundary_conditions_ != nullptr) {
+    should_enforce_rhs_compatibility_ = dirichlet_boundary_conditions_->requiresRHSCompatibility();
+  }
 }
 
 void ElectrostaticFieldOperations::fieldSolve(ElectrostaticFieldState& field_state, const IntegratedCharge& charge_state) {
