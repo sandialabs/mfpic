@@ -35,6 +35,7 @@ void VerletTimeIntegrator::advanceTimestep(
   particle_container = particle_operations.move(dt, particle_container);
   particle_container.cleanOutDeadParticles();
   particle_charge.addCharge(particle_operations.assembleCharge(particle_container));
+
   field_operations.fieldSolve(particle_field_state, particle_charge);
 
   for (int i = 0; i < std::ssize(low_fidelity_operations); i++) {
