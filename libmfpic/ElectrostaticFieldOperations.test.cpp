@@ -7,8 +7,6 @@
 #include <libmfpic/MeshUtilities.hpp>
 #include <libmfpic/Pinning.hpp>
 
-#include <mfem/fem/coefficient.hpp>
-#include <mfem/fem/gridfunc.hpp>
 #include <mfem/mfem.hpp>
 
 #include <gtest/gtest.h>
@@ -404,7 +402,7 @@ TEST(ElectrostaticFieldOperations, FieldSolveCorrectForPeriodicWithPinning) {
 
 }
 
-TEST(ElectrostaticFieldOperations, CheckCompatabilityEnforcementIsAProjection) {
+TEST(ElectrostaticFieldOperations, CheckCompatibilityEnforcementIsAProjection) {
 
   MeshParameters mesh_parameters{
     .mesh_type = "line",
@@ -429,9 +427,9 @@ TEST(ElectrostaticFieldOperations, CheckCompatabilityEnforcementIsAProjection) {
   }
 
   // check this is a projection, i.e., P^2 = P
-  es_field_operations.enforceCompatabilityOnIntegratedCharge(integrated_charge_vector);
+  es_field_operations.enforceCompatibilityOnIntegratedCharge(integrated_charge_vector);
   const auto first_time = integrated_charge_vector;
-  es_field_operations.enforceCompatabilityOnIntegratedCharge(integrated_charge_vector);
+  es_field_operations.enforceCompatibilityOnIntegratedCharge(integrated_charge_vector);
   mfem::Vector diff = first_time;
   diff.Add(-1,integrated_charge_vector);
   EXPECT_NEAR(diff.Norml2(),0.,1e-14);
@@ -465,7 +463,7 @@ TEST(ElectrostaticFieldOperations, CheckNullSpaceVectorIsOne) {
   EXPECT_NEAR(field_energy, 0., 1e-14);
 
   // after correction should be zero if we started in the null space
-  es_field_operations.enforceCompatabilityOnIntegratedCharge(potential);
+  es_field_operations.enforceCompatibilityOnIntegratedCharge(potential);
   EXPECT_NEAR(potential.Norml2(), 0., 1e-14);
 
 }

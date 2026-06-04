@@ -1,8 +1,7 @@
 #include <libmfpic/Constants.hpp>
 #include <libmfpic/ElectrostaticFieldOperations.hpp>
-#include <mfem/fem/bilininteg.hpp>
-#include <mfem/fem/coefficient.hpp>
-#include <mfem/fem/gridfunc.hpp>
+
+#include <mfem.hpp>
 
 namespace mfpic {
 
@@ -34,7 +33,7 @@ void ElectrostaticFieldOperations::fieldSolve(ElectrostaticFieldState& field_sta
 
   mfem::Array<int> dirichlet_dof_indices = dirichlet_boundary_conditions_->getDirichletBoundaryDofIndices();
   if (dirichlet_dof_indices.IsEmpty()) {
-    enforceCompatabilityOnIntegratedCharge(integrated_charge_vector);
+    enforceCompatibilityOnIntegratedCharge(integrated_charge_vector);
   }
   
   mfem::Vector solution_vector;
@@ -99,7 +98,7 @@ mfem::GridFunction ElectrostaticFieldOperations::computeGhostChargeDensity(
   return ghost_charge_density;
 }
 
-void ElectrostaticFieldOperations::enforceCompatabilityOnIntegratedCharge(mfem::Vector& integrated_charge_vector) const 
+void ElectrostaticFieldOperations::enforceCompatibilityOnIntegratedCharge(mfem::Vector& integrated_charge_vector) const 
 {
   const double rhs_dot_null = null_space_ * integrated_charge_vector / (null_space_ * null_space_);
   integrated_charge_vector.Add(-rhs_dot_null, null_space_);

@@ -78,7 +78,7 @@ public:
    *
    * @param[in,out] integrated_charge_vector mfem::Vector of the integrated charge
    */
-  void enforceCompatabilityOnIntegratedCharge(mfem::Vector& integrated_charge_vector) const;
+  void enforceCompatibilityOnIntegratedCharge(mfem::Vector& integrated_charge_vector) const;
 
   /// Dtor.
   virtual ~ElectrostaticFieldOperations();
