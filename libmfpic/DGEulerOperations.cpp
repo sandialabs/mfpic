@@ -291,7 +291,7 @@ double DGEulerOperations::evaluateParticleDistributionFunction(
       return particle_distribution_function_value;
     }
   }
-  return -std::numeric_limits<double>::infinity();
+  return 0.;
 }
 
 std::unordered_map<Species,mfem::Vector> DGEulerOperations::integralForVarianceReducedNumberDensity(mfem::FiniteElementSpace finite_element_space, const LowFidelityState& current_state) const

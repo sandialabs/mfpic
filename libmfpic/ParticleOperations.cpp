@@ -220,8 +220,7 @@ IntegratedCharge ParticleOperations::assembleVarianceReducedCharge(
       particle.velocity,
       particle.element,
       particle.species);
-    // should make this const
-    double noise_reducing_factor = (1 - low_fidelity_particle_distribution_function_value / particle.particle_distribution_function_value);
+    const double noise_reducing_factor = (1 - low_fidelity_particle_distribution_function_value / particle.particle_distribution_function_value);
     for (int i = 0; i < fe->GetDof(); i++)
     {
       variance_reduce_check(vector_dofs[i]) = std::max(
@@ -250,18 +249,15 @@ IntegratedCharge ParticleOperations::assembleVarianceReducedCharge(
     fe->CalcPhysShape(*element_transformation,psi);
     finite_element_space.GetElementVDofs(elem_id, vector_dofs);
 
-    double low_fidelity_particle_distribution_function_value = low_fidelity_operations.evaluateParticleDistributionFunction(
+    const double low_fidelity_particle_distribution_function_value = low_fidelity_operations.evaluateParticleDistributionFunction(
       low_fidelity_state,
       particle_position,
       particle.velocity,
       particle.element,
       particle_species);
     for (int i = 0; i < fe->GetDof(); i++) {
-      double noise_reducing_factor = (1 - low_fidelity_particle_distribution_function_value / particle.particle_distribution_function_value);
-      if (variance_reduce_check(vector_dofs[i]) >= 1)
-      {
-        noise_reducing_factor = 1.0;
-      }
+      const double noise_reducing_factor = (variance_reduce_check[i] < 1.) ?
+        (1 - low_fidelity_particle_distribution_function_value / particle.particle_distribution_function_value) : 1.0;
       charge_state.addIntegratedChargeValue(vector_dofs[i],particle.weight * particle_charge * psi(i) * noise_reducing_factor);
     }
   }
