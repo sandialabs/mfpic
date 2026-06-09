@@ -291,9 +291,7 @@ double DGEulerOperations::evaluateParticleDistributionFunction(
       return particle_distribution_function_value;
     }
   }
-  std::ostringstream error_message;
-  error_message << "Species not found in low fidelity state.\n";
-  errorWithUserMessage(error_message.str()); 
+  return -std::numeric_limits<double>::infinity();
 }
 
 std::unordered_map<Species,mfem::Vector> DGEulerOperations::integralForVarianceReducedNumberDensity(mfem::FiniteElementSpace finite_element_space, const LowFidelityState& current_state) const
