@@ -263,7 +263,6 @@ void runSimulation(int argc, char* argv[]) {
       }
 
       IntegratedCharge integrated_charge = particle_operations.assembleCharge(particle_container);
-      integrated_charge.subtractMean();
       electrostatic_field_operations->fieldSolve(particle_electrostatic_field_state, integrated_charge);
       mesh_data_writer.output(
         particle_electrostatic_field_state,
@@ -273,7 +272,6 @@ void runSimulation(int argc, char* argv[]) {
         end_time);
 
       IntegratedCharge variance_reduced_integrated_charge = particle_operations.assembleVarianceReducedCharge(particle_container,low_fidelity_states[0],*low_fidelity_operations[0]);
-      variance_reduced_integrated_charge.subtractMean();
       electrostatic_field_operations->fieldSolve(variance_reduced_particle_electrostatic_field_state, variance_reduced_integrated_charge);
       variance_reduced_mesh_data_writer.output(
         variance_reduced_particle_electrostatic_field_state,

@@ -34,16 +34,4 @@ double IntegratedCharge::getIntegratedChargeValue(int dof_id) {
   return integrated_charge_(dof_id);
 }
 
-double IntegratedCharge::sumIntegratedCharge() {
-  double sum = 0.0;
-  for (int i = 0; i < integrated_charge_.Size(); i++) { sum += integrated_charge_(i); }
-  return sum;
-}
-
-void IntegratedCharge::subtractMean() {
-  const int n = integrated_charge_.Size();
-  const double mean = this->sumIntegratedCharge() / static_cast<double>(n);
-  for (int i = 0; i < n; i++) { integrated_charge_(i) -= mean; }
-}
-
 } // namespace mfpic

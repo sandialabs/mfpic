@@ -214,12 +214,13 @@ IntegratedCharge ParticleOperations::assembleVarianceReducedCharge(
     const mfem::Vector particle_position(particle.position.GetData(), dim_); 
     finite_element_space.GetElementVDofs(elem_id, vector_dofs);
 
-    double low_fidelity_particle_distribution_function_value = low_fidelity_operations.evaluateParticleDistributionFunction(
+    const double low_fidelity_particle_distribution_function_value = low_fidelity_operations.evaluateParticleDistributionFunction(
       low_fidelity_state,
       particle_position,
       particle.velocity,
       particle.element,
       particle.species);
+    // should make this const
     double noise_reducing_factor = (1 - low_fidelity_particle_distribution_function_value / particle.particle_distribution_function_value);
     for (int i = 0; i < fe->GetDof(); i++)
     {
