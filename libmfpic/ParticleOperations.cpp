@@ -396,7 +396,6 @@ std::unordered_map<Species, mfem::DenseMatrix>& ParticleOperations::getVarianceR
     double number_density = variance_reduced_particle_number_density_.at(particle.species)(elem_id);
 
     mfem::Vector velocity_in_element(variance_reduced_particle_bulk_velocity_.at(particle.species).GetColumn(elem_id), 3);
-    mfem::Vector low_fidelity_integral_in_element(low_fidelity_integral.at(particle.species).GetColumn(elem_id), 3);
 
     if (variance_reduced_postprocessors_.noise_reducing_factor.at(particle.species)(elem_id) < 1)
     {
