@@ -536,7 +536,8 @@ TEST(DGEulerOperations, evaluateParticleDistributionFunctionCorrectIn1D) {
   const mfem::Vector position({0.5,0.0,0.0});
   const mfem::Vector particle_position(position.GetData(), 1); 
   const mfem::Vector velocity({bulk_velocity(0),0.0,0.0});
-  double particle_distribution_value = dg_euler_operations.evaluateParticleDistributionFunction(low_fidelity_state,particle_position,velocity,0,electron_species);
+  const int low_fidelity_species_index = low_fidelity_state.getSpeciesIndex(electron_species);
+  double particle_distribution_value = dg_euler_operations.evaluateParticleDistributionFunction(low_fidelity_state,particle_position,velocity,0,low_fidelity_species_index);
 
   mfem::Vector prim = euler::constructPrimitiveState(number_density, bulk_velocity, temperature);
   const double sigma = std::sqrt(constants::boltzmann_constant * temperature / electron_species.mass);

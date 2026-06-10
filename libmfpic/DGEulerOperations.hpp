@@ -136,7 +136,7 @@ public:
   * @param position Location in physical space to evaluate PDF
   * @param velocity Location in velocity space to evaluate PDF
   * @param element  Element containing position
-  * @param species  Evaluate PDF for the given species
+  * @param i_species  Evaluate PDF for the given species index
   * @return PDF value
   */
   virtual double evaluateParticleDistributionFunction(
@@ -144,7 +144,7 @@ public:
     const mfem::Vector position,
     const mfem::Vector velocity,
     const int element,
-    const Species& species) const override;
+    const int i_species) const override;
 
   /**
    * @brief Get mfem mesh associated with the discretization

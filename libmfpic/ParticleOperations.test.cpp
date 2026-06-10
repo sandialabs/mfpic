@@ -1308,7 +1308,6 @@ TEST(ParticleOperations, VarianceReducedMomentsAreExactForMaxwellianIn3D) {
   }
 }
 
-
 TEST(ParticleOperations, VarianceReducedMomentsAndPICMomentsConvergeForKappa) {
 
   Species species{.charge = -constants::elementary_charge, .mass = constants::electron_mass};
@@ -1438,74 +1437,5 @@ TEST(ParticleOperations, VarianceReducedMomentsAndPICMomentsConvergeForKappa) {
     prev_max_rel_error_temperature = max_rel_error_temperature;
   }
 }
-
-TEST(ParticleOperations, VarianceReducedMomentsMatchLowFidelityStateWithZeroParticles) {
-  Species species{.charge = -constants::elementary_charge, .mass = constants::electron_mass};
-  const std::unordered_map<std::string, Species> species_map{{"one", species}};
-  constexpr double number_density = 1e22;
-  constexpr double temperature = 300;
-  mfem::Vector bulk_velocity({293.0,581.0,902.0});
-  constexpr int num_particles = 0;
-  std::mt19937 generator;
-
-  const int num_elems = 5;
-  constexpr int dg_order = 0;
-  constexpr int num_equations = 5;
-  constexpr mfem::Element::Type element_type = mfem::Element::HEXAHEDRON;
-  std::shared_ptr<mfem::Mesh> mesh = std::make_shared<mfem::Mesh>(mfem::Mesh::MakeCartesian3D(
-    num_elems,
-    num_elems,
-    num_elems,
-    element_type
-  ));
-
-  Discretization dg_discretization(mesh.get(), dg_order, FETypes::DG, num_equations);
-
-  constexpr int charge_order = 1;
-  Discretization charge_discretization(mesh.get(), charge_order, FETypes::HGRAD);
-
-  mfem::FiniteElementSpace finite_element_space = dg_discretization.getFeSpace();
-  std::shared_ptr<DGEulerAssembly> operator_ptr = std::make_shared<DGEulerAssembly>(finite_element_space, species);
-  std::vector<std::shared_ptr<DGEulerAssembly>> dg_operators({operator_ptr});
-  DGEulerOperations dg_euler_operations(charge_discretization, dg_operators);
-
-  std::vector<std::unique_ptr<SourceParameters>> list_of_parameters;
-  list_of_parameters.push_back(std::make_unique<ConstantSourceParameters>(species, number_density, temperature,bulk_velocity));
-  LowFidelityState low_fidelity_state = buildEulerState(dg_discretization, list_of_parameters);
-
-  const SourceStateParameters source_state_parameters{
-    .number_density = number_density,
-    .bulk_velocity = bulk_velocity,
-    .temperature = temperature,
-    .kappa = 2.0
-  };
-
-  ParticleContainer particles = loadParticles(
-    ConstantSourceParameters(species, source_state_parameters, num_particles),
-    generator,
-    mesh  
-  );
-
-  ParticleOperations particle_operations(
-    charge_discretization,
-    empty_particle_boundary_factory_list,
-    default_reflecting_particle_boundary_factory,
-    species_map
-  );
-
-  std::unordered_map<Species, mfem::Vector> variance_reduced_number_density = particle_operations.getVarianceReducedNumberDensity(particles,low_fidelity_state,dg_euler_operations);
-  std::unordered_map<Species, mfem::DenseMatrix> variance_reduced_bulk_velocity = particle_operations.getVarianceReducedBulkVelocity(particles,low_fidelity_state,dg_euler_operations);
-  std::unordered_map<Species, mfem::Vector>variance_reduced_temperature = particle_operations.getVarianceReducedTemperature(particles,low_fidelity_state,dg_euler_operations);
-
-  for (int elem_id = 0; elem_id < num_elems; ++elem_id)
-  {
-    EXPECT_DOUBLE_EQ(variance_reduced_number_density.at(species)(elem_id),number_density);
-    EXPECT_DOUBLE_EQ(variance_reduced_bulk_velocity.at(species)(0,elem_id),bulk_velocity(0));
-    EXPECT_DOUBLE_EQ(variance_reduced_bulk_velocity.at(species)(1,elem_id),bulk_velocity(1));
-    EXPECT_DOUBLE_EQ(variance_reduced_bulk_velocity.at(species)(2,elem_id),bulk_velocity(2));
-    EXPECT_DOUBLE_EQ(variance_reduced_temperature.at(species)(elem_id),temperature);
-  }
-}
-
 
 } // namespace

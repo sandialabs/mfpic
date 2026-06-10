@@ -267,31 +267,26 @@ double DGEulerOperations::evaluateParticleDistributionFunction(
   const mfem::Vector position,
   const mfem::Vector velocity,
   const int element,
-  const Species& species_to_evaluate) const
+  const int ispecies) const
 {
   mfem::FiniteElementSpace & finite_element_space = charge_discretization_.getFeSpace();
   mfem::Mesh * mesh = finite_element_space.GetMesh();
-  for (int ispecies = 0; ispecies < state.numSpecies(); ++ispecies) {
-    const LowFidelitySpeciesState& species_state = state.getSpeciesState(ispecies);
-    Species species = species_state.getSpecies();
-    if (species == species_to_evaluate) {
-      const mfem::GridFunction& species_grid_function = species_state.getGridFunction();
-      mfem::ElementTransformation *element_transformation = mesh->GetElementTransformation(element);
+  const LowFidelitySpeciesState& species_state = state.getSpeciesState(ispecies);
+  Species species = species_state.getSpecies();
+  const mfem::GridFunction& species_grid_function = species_state.getGridFunction();
+  mfem::ElementTransformation *element_transformation = mesh->GetElementTransformation(element);
 
-      mfem::InverseElementTransformation inverse_element_transformation(element_transformation);
-      mfem::IntegrationPoint ip_ref;
-      int info = inverse_element_transformation.Transform(position, ip_ref);
-      MFEM_VERIFY(info == mfem::InverseElementTransformation::Inside,
-          "Point is not inside the element.");
-      mfem::Vector fluid_state_at_position;
-      species_grid_function.GetVectorValue(element, ip_ref, fluid_state_at_position);
+  mfem::InverseElementTransformation inverse_element_transformation(element_transformation);
+  mfem::IntegrationPoint ip_ref;
+  int info = inverse_element_transformation.Transform(position, ip_ref);
+  MFEM_VERIFY(info == mfem::InverseElementTransformation::Inside,
+      "Point is not inside the element.");
+  mfem::Vector fluid_state_at_position;
+  species_grid_function.GetVectorValue(element, ip_ref, fluid_state_at_position);
 
-      mfem::Vector primitive_state = euler::convertFromConservativeToPrimitive(fluid_state_at_position, species);
-      double particle_distribution_function_value = euler::evaluateMaxwellian(primitive_state,velocity, species);
-      return particle_distribution_function_value;
-    }
-  }
-  return 0.;
+  mfem::Vector primitive_state = euler::convertFromConservativeToPrimitive(fluid_state_at_position, species);
+  double particle_distribution_function_value = euler::evaluateMaxwellian(primitive_state,velocity, species);
+  return particle_distribution_function_value;
 }
 
 std::unordered_map<Species,mfem::Vector> DGEulerOperations::integralForVarianceReducedNumberDensity(mfem::FiniteElementSpace finite_element_space, const LowFidelityState& current_state) const

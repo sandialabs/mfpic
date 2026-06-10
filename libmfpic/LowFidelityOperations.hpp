@@ -44,7 +44,7 @@ public:
     const mfem::Vector position,
     const mfem::Vector velocity,
     const int element,
-    const Species& species) const = 0;
+    const int i_species) const = 0;
 
   virtual double estimateCFL(const double & dt, const double & smallest_cell_lengthscale) const = 0;
 
