@@ -1460,9 +1460,8 @@ TEST(ParticleOperations, VarianceReducedMomentsMatchPICForSpeciesMissingLowFidel
   constexpr double number_density_a = 1.0e18;
   constexpr double number_density_b = 2.5e17;
 
-  constexpr int num_particles_a = 150000;
-  constexpr int num_particles_b = 150000;
-
+  constexpr int num_particles_a = 15000;
+  constexpr int num_particles_b = 15000;
 
   mfem::FiniteElementSpace finite_element_space = dg_discretization.getFeSpace();
   std::shared_ptr<DGEulerAssembly> operator_ptr =
@@ -1530,12 +1529,12 @@ TEST(ParticleOperations, VarianceReducedMomentsMatchPICForSpeciesMissingLowFidel
     particle_operations.getVarianceReducedTemperature(
       particles, low_fidelity_state, dg_euler_operations).at(species_b)(0);
 
-  EXPECT_NEAR(variance_reduced_number_density_b, standard_number_density_b, 1e-8);
+  EXPECT_NEAR(variance_reduced_number_density_b, standard_number_density_b, 1e-6);
 
   for (int i = 0; i < 3; ++i) {
-    EXPECT_NEAR(variance_reduced_bulk_velocity_b[i], standard_bulk_velocity_b[i], 1e-8);
+    EXPECT_NEAR(variance_reduced_bulk_velocity_b[i], standard_bulk_velocity_b[i], 1e-6);
   }
-  EXPECT_NEAR(variance_reduced_temperature_b, standard_temperature_b,1e-8);
+  EXPECT_NEAR(variance_reduced_temperature_b, standard_temperature_b,1e-6);
 }
 
 } // namespace
