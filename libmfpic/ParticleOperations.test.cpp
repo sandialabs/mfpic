@@ -1438,4 +1438,104 @@ TEST(ParticleOperations, VarianceReducedMomentsAndPICMomentsConvergeForKappa) {
   }
 }
 
+TEST(ParticleOperations, VarianceReducedMomentsMatchPICForSpeciesMissingLowFidelityState) {
+  const int num_elems = 1;
+  std::shared_ptr<mfem::Mesh> mesh =
+    std::make_shared<mfem::Mesh>(mfem::Mesh::MakeCartesian1D(num_elems, .234));
+  constexpr int dg_order = 0;
+  constexpr int num_equations = 5;
+  Discretization dg_discretization(mesh.get(), dg_order, FETypes::DG, num_equations);
+  constexpr int charge_order = 1;
+  Discretization charge_discretization(mesh.get(), charge_order, FETypes::HGRAD);
+
+  const Species species_a{.charge = 1.0, .mass = 1.0};
+  const Species species_b{.charge = 2.0, .mass = 2.0};
+
+  const mfem::Vector nominal_bulk_velocity_a({300.0, 0.0, 0.0});
+  const mfem::Vector nominal_bulk_velocity_b({-150.0, 0.0, 0.0});
+
+  constexpr double temperature_a = 11600.0;
+  constexpr double temperature_b = 8000.0;
+
+  constexpr double number_density_a = 1.0e18;
+  constexpr double number_density_b = 2.5e17;
+
+  constexpr int num_particles_a = 150000;
+  constexpr int num_particles_b = 150000;
+
+
+  mfem::FiniteElementSpace finite_element_space = dg_discretization.getFeSpace();
+  std::shared_ptr<DGEulerAssembly> operator_ptr =
+      std::make_shared<DGEulerAssembly>(finite_element_space, species_a);
+  std::vector<std::shared_ptr<DGEulerAssembly>> dg_operators({operator_ptr});
+  DGEulerOperations dg_euler_operations(charge_discretization, dg_operators);
+
+  std::vector<std::unique_ptr<SourceParameters>> list_of_parameters;
+  list_of_parameters.push_back(std::make_unique<ConstantSourceParameters>(
+      species_a, number_density_a, temperature_a, nominal_bulk_velocity_a));
+  LowFidelityState low_fidelity_state = buildEulerState(dg_discretization, list_of_parameters);
+
+  std::mt19937 generator(12345);
+  const SourceStateParameters source_state_parameters_a{
+    .number_density = number_density_a,
+    .bulk_velocity  = nominal_bulk_velocity_a,
+    .temperature    = temperature_a,
+    .kappa = 2.0
+  };
+  const SourceStateParameters source_state_parameters_b{
+    .number_density = number_density_b,
+    .bulk_velocity  = nominal_bulk_velocity_b,
+    .temperature    = temperature_b,
+    .kappa = 3.0
+  };
+
+  ParticleContainer particles_a = loadParticles(
+    ConstantSourceParameters(species_a, source_state_parameters_a, num_particles_a),
+    generator,
+    mesh);
+
+  ParticleContainer particles_b = loadParticles(
+    ConstantSourceParameters(species_b, source_state_parameters_b, num_particles_b),
+    generator,
+    mesh);
+
+  ParticleContainer particles = particles_a;
+  particles.addParticles(particles_b);
+
+  const std::unordered_map<std::string, Species> two_species {{"species_a", species_a}, {"species_b", species_b}};
+  ParticleOperations particle_operations(
+    charge_discretization,
+    empty_particle_boundary_factory_list,
+    default_reflecting_particle_boundary_factory,
+    two_species);
+
+  const double standard_number_density_b =
+    particle_operations.getNumberDensity(particles).at(species_b)(0);
+
+  mfem::Vector standard_bulk_velocity_b;
+  particle_operations.getBulkVelocity(particles).at(species_b).GetColumn(0, standard_bulk_velocity_b);
+
+  const double standard_temperature_b =
+    particle_operations.getTemperature(particles).at(species_b)(0);
+
+  const double variance_reduced_number_density_b =
+    particle_operations.getVarianceReducedNumberDensity(
+      particles, low_fidelity_state, dg_euler_operations).at(species_b)(0);
+
+  mfem::Vector variance_reduced_bulk_velocity_b;
+  particle_operations.getVarianceReducedBulkVelocity(
+      particles, low_fidelity_state, dg_euler_operations).at(species_b).GetColumn(0, variance_reduced_bulk_velocity_b);
+
+  const double variance_reduced_temperature_b =
+    particle_operations.getVarianceReducedTemperature(
+      particles, low_fidelity_state, dg_euler_operations).at(species_b)(0);
+
+  EXPECT_NEAR(variance_reduced_number_density_b, standard_number_density_b, 1e-8);
+
+  for (int i = 0; i < 3; ++i) {
+    EXPECT_NEAR(variance_reduced_bulk_velocity_b[i], standard_bulk_velocity_b[i], 1e-8);
+  }
+  EXPECT_NEAR(variance_reduced_temperature_b, standard_temperature_b,1e-8);
+}
+
 } // namespace

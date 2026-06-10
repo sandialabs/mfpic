@@ -452,7 +452,7 @@ std::unordered_map<Species, mfem::DenseMatrix>& ParticleOperations::getVarianceR
       mfem::Vector low_fidelity_integral_in_element(low_fidelity_integral.at(current_species).GetColumn(elem_id), 3);
       mfem::Vector velocity_in_element(variance_reduced_particle_bulk_velocity_.at(current_species).GetColumn(elem_id), 3);
       double number_density = variance_reduced_particle_number_density_.at(current_species)(elem_id);
-      if (variance_reduction_performed.at(current_species)[elem_id])
+      if (variance_reduction_performed.at(current_species)[elem_id] == 1)
       {
         velocity_in_element(0) += low_fidelity_integral_in_element(0) / (number_density * element_volume);
         velocity_in_element(1) += low_fidelity_integral_in_element(1) / (number_density * element_volume);
@@ -518,13 +518,16 @@ std::unordered_map<Species,mfem::Vector>& ParticleOperations::getVarianceReduced
 
   this->sumParticleWeights_(particles);
   this->getVarianceReducedPostprocessors(particles,low_fidelity_state,low_fidelity_operations);
-  mfem::Vector more_than_one_macro_particle(finite_element_space.GetNE());
-  more_than_one_macro_particle = 1.0;
 
   std::unordered_map<Species, std::vector<char>> variance_reduction_performed; 
+  std::unordered_map<Species, std::vector<char>> more_than_one_macro_particle;
   variance_reduction_performed.reserve(variance_reduced_particle_number_density_.size());
+  more_than_one_macro_particle.reserve(variance_reduced_particle_number_density_.size());
   for (const auto& kv : variance_reduced_particle_number_density_)
+  {
     variance_reduction_performed.emplace(kv.first, std::vector<char>(finite_element_space.GetNE(), 0));
+    more_than_one_macro_particle.emplace(kv.first, std::vector<char>(finite_element_space.GetNE(), 1.0));
+  }
 
   for (const Particle& particle : particles) {
     if (not particle.is_alive) continue;
@@ -544,6 +547,7 @@ std::unordered_map<Species,mfem::Vector>& ParticleOperations::getVarianceReduced
     fluctuation_velocity(1) -= y_bulk_velocity;
     fluctuation_velocity(2) -= z_bulk_velocity;
     const double sum_weights = sum_of_weights_.at(particle.species)(elem_id);
+    if (sum_weights <= 0.0) continue;
     const double number_of_macro_particles = sum_weights / particle.weight;
 
     const double norm_squared = fluctuation_velocity * fluctuation_velocity;
@@ -565,11 +569,15 @@ std::unordered_map<Species,mfem::Vector>& ParticleOperations::getVarianceReduced
         variance_reduced_particle_temperature_.at(particle.species)(elem_id) += number_of_macro_particles / (number_of_macro_particles - 1) * m_over_3kb * norm_squared * particle.weight * noise_reducing_factor / (number_density * element_volume) ;
       }
       else
+      {
+        // const double bias_corrected_weight = particle.weight * number_of_macro_particles / (number_of_macro_particles - 1.);
+        // variance_reduced_particle_temperature_.at(particle.species)(elem_id) += norm_squared * bias_corrected_weight * particle.species.mass / (3.0 * constants::boltzmann_constant * sum_weights);
         variance_reduced_particle_temperature_.at(particle.species)(elem_id) += number_of_macro_particles / (number_of_macro_particles - 1) * m_over_3kb * norm_squared * particle.weight / (number_density * element_volume);
+      }
     }
     else
     {
-      more_than_one_macro_particle(elem_id) = 0.0;
+      more_than_one_macro_particle.at(particle.species)[elem_id] = 0.0;
     }
   }
 
@@ -580,7 +588,7 @@ std::unordered_map<Species,mfem::Vector>& ParticleOperations::getVarianceReduced
     {
       const LowFidelitySpeciesState& current_species_state = low_fidelity_state.getSpeciesState(ispecies);
       Species current_species = current_species_state.getSpecies();
-      if (variance_reduction_performed.at(current_species)[elem_id]) 
+      if (variance_reduction_performed.at(current_species)[elem_id] == 1) 
       {
         const double m_over_3kb = current_species.mass / (3.0 * constants::boltzmann_constant);
         double number_density = variance_reduced_particle_number_density_.at(current_species)(elem_id);
@@ -594,7 +602,7 @@ std::unordered_map<Species,mfem::Vector>& ParticleOperations::getVarianceReduced
         + z_bulk_velocity * low_fidelity_bulk_velocity_integral.at(current_species)(2,elem_id);
 
         variance_reduced_particle_temperature_.at(current_species)(elem_id) 
-          += more_than_one_macro_particle(elem_id) * 
+          += more_than_one_macro_particle.at(current_species)[elem_id] * 
           (low_fidelity_temperature_integral.at(current_species)(elem_id) / (number_density * element_volume)
           + m_over_3kb * bulk_velocity_mag_squared * low_fidelity_number_density_integral.at(current_species)(elem_id) / (number_density * element_volume)
           - m_over_3kb * 2.0 * bulk_velocity_dot_low_fidelity_bulk_velocity_integral / (number_density * element_volume));
