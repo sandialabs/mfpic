@@ -39,6 +39,11 @@ public:
     const LowFidelityState& state
   ) const = 0;
 
+  virtual IntegratedCharge assembleChargePerSpecies(
+    const LowFidelityState& state,
+    const int ispecies 
+  ) const = 0;
+
   virtual double evaluateParticleDistributionFunction(
     const LowFidelityState& state,
     const mfem::Vector position,

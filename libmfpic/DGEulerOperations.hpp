@@ -103,6 +103,17 @@ public:
   ) const override;
 
   /**
+  * @brief Assemble charges from the fluids into the charge density per species
+  *
+  * @param state State including dofs and species list
+  * @return IntegratedCharge - integrated charge state for a given species
+  */
+  virtual IntegratedCharge assembleChargePerSpecies(
+    const LowFidelityState& state,
+    const int ispecies
+  ) const override;
+
+  /**
   * @brief Return the CFL based on the maximum eigenvalue of the Euler system (fluid plus acoustic speed)
   *
   * @return CFL

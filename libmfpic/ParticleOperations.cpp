@@ -207,7 +207,10 @@ IntegratedCharge ParticleOperations::assembleVarianceReducedCharge(
   mfem::FiniteElementSpace finite_element_space = discretization_.getFeSpace();
   mfem::Mesh& mesh = *finite_element_space.GetMesh();
 
-  std::vector<char> variance_reduction_performed(finite_element_space.GetNDofs(), 0);
+  std::unordered_map<Species, std::vector<char>> variance_reduction_performed; 
+  variance_reduction_performed.reserve(variance_reduced_particle_number_density_.size());
+  for (const auto& kv : variance_reduced_particle_number_density_)
+    variance_reduction_performed.emplace(kv.first, std::vector<char>(finite_element_space.GetNDofs(), 0));
 
   for (const Particle& particle : particles) {
     if (!particle.is_alive) continue;
@@ -230,7 +233,7 @@ IntegratedCharge ParticleOperations::assembleVarianceReducedCharge(
     if (std::abs(noise_reducing_factor) < 1.0) {
       for (int local_dof = 0; local_dof < finite_element->GetDof(); ++local_dof) {
         const int global_dof = vector_dofs[local_dof];
-        variance_reduction_performed[global_dof] = 1;
+        variance_reduction_performed.at(particle.species)[global_dof] = 1;
       }
     }
   }
@@ -263,7 +266,7 @@ IntegratedCharge ParticleOperations::assembleVarianceReducedCharge(
     for (int local_dof = 0; local_dof < finite_element->GetDof(); ++local_dof) {
       const int global_dof = vector_dofs[local_dof];
       double noise_reducing_factor = 1.0;
-      if (variance_reduction_performed[global_dof] == 1)
+      if (variance_reduction_performed.at(particle.species)[global_dof] == 1)
       {
         const int low_fidelity_species_index = low_fidelity_state.getSpeciesIndex(particle.species);
         const double low_fidelity_value = low_fidelity_operations.evaluateParticleDistributionFunction(low_fidelity_state, particle_position, particle.velocity, element_id, low_fidelity_species_index);
@@ -273,14 +276,15 @@ IntegratedCharge ParticleOperations::assembleVarianceReducedCharge(
     }
   }
 
-  IntegratedCharge low_fidelity_charge_state =
-  low_fidelity_operations.assembleCharge(low_fidelity_state);
-
-  for (int global_dof = 0; global_dof < finite_element_space.GetNDofs(); ++global_dof) {
-    if (variance_reduction_performed[global_dof] == 1) {
-      integrated_charge.addIntegratedChargeValue(
+  for (int ispecies = 0; ispecies < low_fidelity_state.numSpecies(); ++ispecies) {
+    const Species species = low_fidelity_state.getSpeciesState(ispecies).getSpecies();
+    IntegratedCharge low_fidelity_charge_state = low_fidelity_operations.assembleChargePerSpecies(low_fidelity_state,ispecies);
+    for (int global_dof = 0; global_dof < finite_element_space.GetNDofs(); ++global_dof) {
+      if (variance_reduction_performed.at(species)[global_dof] == 1) {
+        integrated_charge.addIntegratedChargeValue(
         global_dof,
         low_fidelity_charge_state.getIntegratedChargeValue(global_dof));
+      }
     }
   }
   return integrated_charge;
