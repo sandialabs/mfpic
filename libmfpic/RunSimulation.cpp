@@ -158,6 +158,8 @@ void runSimulation(int argc, char* argv[]) {
     //assume only one low fidelity state
     IntegratedCharge variance_reduced_integrated_charge = particle_operations.assembleVarianceReducedCharge(particle_container,low_fidelity_states[0],*low_fidelity_operations[0]);
     electrostatic_field_operations->fieldSolve(variance_reduced_particle_electrostatic_field_state, variance_reduced_integrated_charge);
+    // TODO BWR HACK
+    electrostatic_field_operations->fieldSolve(particle_electrostatic_field_state, variance_reduced_integrated_charge);
   }
   
   for (int i = 0; i < std::ssize(low_fidelity_field_states); ++i) {
@@ -262,8 +264,9 @@ void runSimulation(int argc, char* argv[]) {
         dumpLowFidelityMoments(low_fidelity_states[i],*ops,low_fidelity_prefix, i_timestep, end_time);
       }
 
-      IntegratedCharge integrated_charge = particle_operations.assembleCharge(particle_container);
-      electrostatic_field_operations->fieldSolve(particle_electrostatic_field_state, integrated_charge);
+      // TODO BWR remove this so we see the E field from the actual push
+      //IntegratedCharge integrated_charge = particle_operations.assembleCharge(particle_container);
+      //electrostatic_field_operations->fieldSolve(particle_electrostatic_field_state, integrated_charge);
       mesh_data_writer.output(
         particle_electrostatic_field_state,
         low_fidelity_field_states,
