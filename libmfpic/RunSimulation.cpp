@@ -90,6 +90,8 @@ void runSimulation(int argc, char* argv[]) {
   );
   const std::string prefix = "particle_moments";
   dumpParticleMoments(particle_operations,particle_container, prefix, 0, 0.0);
+  const std::string avg_prefix = "avg_particle_moments";
+  dumpAvgParticleMoments(particle_operations,particle_container, avg_prefix, 0, 0.0);
   dumpParticles(particle_container, 0.0);
 
   std::vector<LowFidelityState> low_fidelity_states;
@@ -138,7 +140,8 @@ void runSimulation(int argc, char* argv[]) {
     if (!ops) throw std::runtime_error("Cannot compute variance reduced moments for low_fidelity_operations[i] that is not DGEulerOperations.");
     const std::string variance_reduced_prefix = "variance_reduced_particle_moments";
     dumpVarianceReducedParticleMoments(particle_operations,particle_container,low_fidelity_states[i],*ops,variance_reduced_prefix, 0, 0.0);
-    dumpAvgVarianceReducedParticleMoments(particle_operations,particle_container,low_fidelity_states[i],*ops,variance_reduced_prefix, 0, 0.0);
+    const std::string avg_variance_reduced_prefix = "avg_variance_reduced_particle_moments";
+    dumpAvgVarianceReducedParticleMoments(particle_operations,particle_container,low_fidelity_states[i],*ops,avg_variance_reduced_prefix, 0, 0.0);
     const std::string low_fidelity_prefix = "low_fidelity_moments";
     dumpLowFidelityMoments(low_fidelity_states[i],*ops,low_fidelity_prefix, 0, 0.0);
   }
@@ -255,13 +258,16 @@ void runSimulation(int argc, char* argv[]) {
     if (i_timestep % output_parameters.output_stride == 0) {
       const std::string prefix = "particle_moments";
       dumpParticleMoments(particle_operations,particle_container, prefix, i_timestep, end_time);
+      const std::string avg_prefix = "avg_particle_moments";
+      dumpAvgParticleMoments(particle_operations,particle_container, avg_prefix, i_timestep, end_time);
       dumpParticles(particle_container, end_time, output_parameters.particle_dump_filename);
       for (int i = 0; i < std::ssize(low_fidelity_field_states); ++i) {
         auto* ops = dynamic_cast<DGEulerOperations*>(low_fidelity_operations[i].get());
         if (!ops) throw std::runtime_error("Cannot compute variance reduced moments for low_fidelity_operations[i] that is not DGEulerOperations.");
         const std::string variance_reduced_prefix = "variance_reduced_particle_moments";
         dumpVarianceReducedParticleMoments(particle_operations,particle_container,low_fidelity_states[i],*ops,variance_reduced_prefix, i_timestep, end_time);
-        dumpAvgVarianceReducedParticleMoments(particle_operations,particle_container,low_fidelity_states[i],*ops,variance_reduced_prefix, i_timestep, end_time);
+        const std::string avg_variance_reduced_prefix = "avg_variance_reduced_particle_moments";
+        dumpAvgVarianceReducedParticleMoments(particle_operations,particle_container,low_fidelity_states[i],*ops,avg_variance_reduced_prefix, i_timestep, end_time);
         const std::string low_fidelity_prefix = "low_fidelity_moments";
         dumpLowFidelityMoments(low_fidelity_states[i],*ops,low_fidelity_prefix, i_timestep, end_time);
       }

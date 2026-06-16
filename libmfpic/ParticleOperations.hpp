@@ -93,7 +93,7 @@ public:
    * @return Map of particle species to number density, (species, (element))
    */
   std::unordered_map<Species, mfem::Vector>& getNumberDensity(const ParticleContainer& particles);
-
+  std::unordered_map<Species, double>& getAvgNumberDensity(const ParticleContainer& particles);
 
   /**
    * @brief Compute the variance reduced number density in each element from the low fidelity state
@@ -124,6 +124,7 @@ public:
    * @return Map of particle species to bulk velocity (species, (dimension, element))
    */
   std::unordered_map<Species, mfem::DenseMatrix>& getBulkVelocity(const ParticleContainer& particles, const bool sum_weights = true);
+  std::unordered_map<Species, mfem::Vector>& getAvgBulkVelocity(const ParticleContainer& particles, const bool sum_weights = true);
 
   /**
    * @brief Compute the bulk velocity in each element
@@ -157,6 +158,8 @@ public:
    * @return Map of particle species to temperature, (species, (element))
    */
   std::unordered_map<Species, mfem::Vector>& getTemperature(const ParticleContainer& particles, const bool sum_weights = true, const bool compute_bulk_velocity = true);
+
+  std::unordered_map<Species, double>& getAvgTemperature(const ParticleContainer& particles, const bool sum_weights = true, const bool compute_bulk_velocity = true);
 
   std::unordered_map<Species, mfem::Vector>& getVarianceReducedTemperature(
     const ParticleContainer& particles, 
@@ -225,6 +228,15 @@ private:
 
   /// Particle temperature
   std::unordered_map<Species, mfem::Vector> particle_temperature_;
+
+  /// Particle number density
+  std::unordered_map<Species, double> avg_particle_number_density_;
+
+  /// Particle bulk velocity
+  std::unordered_map<Species, mfem::Vector> avg_particle_bulk_velocity_;
+
+  /// Particle temperature
+  std::unordered_map<Species, double> avg_particle_temperature_;
 
   /// Variance reduced particle number density
   std::unordered_map<Species, mfem::Vector> variance_reduced_particle_number_density_;

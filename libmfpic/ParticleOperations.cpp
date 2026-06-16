@@ -34,6 +34,9 @@ ParticleOperations::ParticleOperations(
     variance_reduced_particle_number_density_.insert({species, mfem::Vector(mesh.GetNE())});
     variance_reduced_particle_bulk_velocity_.insert({species, mfem::DenseMatrix(3, mesh.GetNE())});
     variance_reduced_particle_temperature_.insert({species, mfem::Vector(mesh.GetNE())});
+    avg_particle_number_density_.insert({species, 0.0});
+    avg_particle_bulk_velocity_.insert({species, mfem::Vector(3)});
+    avg_particle_temperature_.insert({species, 0.0});
     avg_variance_reduced_particle_number_density_.insert({species, 0.0});
     avg_variance_reduced_particle_bulk_velocity_.insert({species, mfem::Vector(3)});
     avg_variance_reduced_particle_temperature_.insert({species, 0.0});
@@ -314,6 +317,27 @@ std::unordered_map<Species, mfem::Vector>& ParticleOperations::getNumberDensity(
   return this->particle_number_density_;
 }
 
+std::unordered_map<Species, double>& ParticleOperations::getAvgNumberDensity(const ParticleContainer& particles
+) {
+
+  for (auto & species_and_number_density : avg_particle_number_density_)
+    species_and_number_density.second = 0.0;
+
+  mfem::Array<int> vector_dofs;
+  mfem::FiniteElementSpace finite_element_space = discretization_.getFeSpace();
+  mfem::Mesh &mesh = *finite_element_space.GetMesh();
+
+  for (const Particle& particle : particles) {
+    if (not particle.is_alive) continue;
+
+    const Species & species = particle.species;
+    avg_particle_number_density_.at(species) += particle.weight / getMeshVolume(mesh);
+  }
+
+  return this->avg_particle_number_density_;
+}
+
+
 std::unordered_map<Species, mfem::Vector>& ParticleOperations::getVarianceReducedNumberDensity(
   const ParticleContainer& particles, 
   const LowFidelityState& low_fidelity_state,
@@ -395,6 +419,30 @@ std::unordered_map<Species, mfem::DenseMatrix>& ParticleOperations::getBulkVeloc
   }
 
   return this->particle_bulk_velocity_;
+}
+
+std::unordered_map<Species, mfem::Vector>& ParticleOperations::getAvgBulkVelocity(const ParticleContainer& particles, const bool sum_weights
+) {
+
+  for (auto & species_and_bulk_velocity : avg_particle_bulk_velocity_)
+    species_and_bulk_velocity.second = 0.0;
+
+  if (sum_weights) this->sumParticleWeights_(particles);
+
+  for (const Particle& particle : particles) {
+    if (not particle.is_alive) continue;
+
+    const int elem_id = particle.element;
+    const Species & species = particle.species;
+    const double sum_weights = sum_of_weights_.at(species)(elem_id);
+    const double number_of_physical_particles = sum_of_weights_.at(particle.species)(0);
+    if (sum_weights <= 0.0) continue;
+
+    mfem::Vector velocity_in_element(avg_particle_bulk_velocity_.at(species));
+    velocity_in_element.Add(particle.weight / number_of_physical_particles, particle.velocity);
+  }
+
+  return this->avg_particle_bulk_velocity_;
 }
 
 std::unordered_map<Species, mfem::DenseMatrix>& ParticleOperations::getVarianceReducedBulkVelocity(
@@ -508,6 +556,40 @@ std::unordered_map<Species, mfem::Vector>& ParticleOperations::getTemperature(co
   }
 
   return this->particle_temperature_;
+}
+
+std::unordered_map<Species, double>& ParticleOperations::getAvgTemperature(const ParticleContainer& particles, const bool sum_weights, const bool compute_bulk_velocity
+) {
+
+  for (auto & species_and_temperature : avg_particle_temperature_)
+    species_and_temperature.second = 0.0;
+
+  if (sum_weights) this->sumParticleWeights_(particles);
+  if (compute_bulk_velocity) this->getBulkVelocity(particles, false);
+
+  for (const Particle& particle : particles) {
+    if (not particle.is_alive) continue;
+
+    const int elem_id = particle.element;
+    const Species & species = particle.species;
+    const double sum_weights = sum_of_weights_.at(species)(elem_id);
+    if (sum_weights <= 0.0) continue;
+
+    //const mfem::Vector bulk_velocity_in_element(particle_bulk_velocity_.at(species).GetColumn(elem_id), 3);
+    mfem::Vector fluctuation_velocity = particle.velocity;
+    //fluctuation_velocity -= bulk_velocity_in_element;
+
+    const double norm_squared = fluctuation_velocity * fluctuation_velocity;
+
+    // this only holds for constant weights
+    const double number_of_samples = sum_weights / particle.weight;
+    if (number_of_samples <= 1.) continue;
+
+    avg_particle_temperature_.at(species) += norm_squared * particle.species.mass / (3.0 * constants::boltzmann_constant * sum_weights);
+
+  }
+
+  return this->avg_particle_temperature_;
 }
 
 std::unordered_map<Species,mfem::Vector>& ParticleOperations::getVarianceReducedTemperature(

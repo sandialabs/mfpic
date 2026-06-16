@@ -13,6 +13,8 @@ void dumpParticles(const ParticleContainer& particles, double simulation_time, c
 
 void dumpParticleMoments(ParticleOperations& particle_operations,const ParticleContainer& particles,const std::string& file_prefix,const int step,const double time); 
 
+void dumpAvgParticleMoments(ParticleOperations& particle_operations,const ParticleContainer& particles,const std::string& file_prefix,const int step,const double time); 
+
 void dumpVarianceReducedParticleMoments(
     ParticleOperations& particle_operations,
     const ParticleContainer& particles,

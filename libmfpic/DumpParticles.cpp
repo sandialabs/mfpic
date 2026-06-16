@@ -273,6 +273,44 @@ void dumpLowFidelityMoments(
 }
 
 
+void dumpAvgParticleMoments(
+  ParticleOperations& particle_operations,
+  const ParticleContainer& particles,
+  const std::string& file_prefix,
+  const int step,
+  const double time) 
+{
+  std::unordered_map<Species, double> number_density     = particle_operations.getAvgNumberDensity(particles);
+  std::unordered_map<Species, mfem::Vector> bulk_velocity = particle_operations.getAvgBulkVelocity(particles,true);
+  std::unordered_map<Species, double> temperature        = particle_operations.getAvgTemperature(particles,false,false);
+
+  for (const auto & [species, _] : number_density) {
+    std::string filename = file_prefix + "_" + species.name + ".csv";
+
+    std::ofstream out;
+    if (step > 0)
+      out.open(filename, std::ios::out | std::ios::app);
+    else
+      out.open(filename, std::ios::out | std::ios::trunc);  
+    if (!out) throw std::runtime_error("Failed to open CSV file: " + filename);
+
+    out.setf(std::ios::scientific);
+    out << std::setprecision(17);
+
+    const bool need_header = fileIsEmpty(filename);
+    if (need_header) {
+      out << "step,time,number_density,temperature,bulk_velocity_0,bulk_velocity_1,bulk_velocity_2\n";
+    }
+
+    const mfem::Vector bulk_velocity_in_element(bulk_velocity.at(species));
+    out << step << ","
+        << time << ","
+        << number_density.at(species) << ","
+        << temperature.at(species) << ","
+        << bulk_velocity_in_element(0) << "," << bulk_velocity_in_element(1) << "," << bulk_velocity_in_element(2) << "\n";
+  }
+}
+
 void dumpAvgVarianceReducedParticleMoments(
   ParticleOperations& particle_operations,
   const ParticleContainer& particles,
@@ -310,7 +348,7 @@ void dumpAvgVarianceReducedParticleMoments(
           << avg_variance_reduced_temperature.at(species) << ","
           << avg_variance_reduced_bulk_velocity.at(species)(0) << ","
           << avg_variance_reduced_bulk_velocity.at(species)(1) << ","
-          << avg_variance_reduced_bulk_velocity.at(species)(2) << ","
+          << avg_variance_reduced_bulk_velocity.at(species)(2) 
           << "\n";
   }
 }
