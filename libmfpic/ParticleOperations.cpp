@@ -438,8 +438,9 @@ std::unordered_map<Species, mfem::Vector>& ParticleOperations::getAvgBulkVelocit
     const double number_of_physical_particles = sum_of_weights_.at(particle.species)(0);
     if (sum_weights <= 0.0) continue;
 
-    mfem::Vector velocity_in_element(avg_particle_bulk_velocity_.at(species));
-    velocity_in_element.Add(particle.weight / number_of_physical_particles, particle.velocity);
+    avg_particle_bulk_velocity_.at(particle.species)(0) = particle.weight  * particle.velocity(0) / number_of_physical_particles;
+    avg_particle_bulk_velocity_.at(particle.species)(1) = particle.weight  * particle.velocity(1) / number_of_physical_particles;
+    avg_particle_bulk_velocity_.at(particle.species)(2) = particle.weight  * particle.velocity(2) / number_of_physical_particles;
   }
 
   return this->avg_particle_bulk_velocity_;
@@ -585,7 +586,7 @@ std::unordered_map<Species, double>& ParticleOperations::getAvgTemperature(const
     const double number_of_samples = sum_weights / particle.weight;
     if (number_of_samples <= 1.) continue;
 
-    avg_particle_temperature_.at(species) += norm_squared * particle.species.mass / (3.0 * constants::boltzmann_constant * sum_weights);
+    avg_particle_temperature_.at(species) += particle.weight * norm_squared * particle.species.mass / (3.0 * constants::boltzmann_constant * sum_weights);
 
   }
 
@@ -872,9 +873,9 @@ std::unordered_map<Species, mfem::Vector>& ParticleOperations::getAvgVarianceRed
     mfem::Vector velocity_in_element(avg_variance_reduced_particle_bulk_velocity_.at(particle.species));
     double low_fidelity_particle_distribution_function_value = low_fidelity_operations.evaluateParticleDistributionFunction(low_fidelity_state,particle_position,particle.velocity,particle.element,low_fidelity_species_index);
     double noise_reducing_factor = (1 - low_fidelity_particle_distribution_function_value / particle.particle_distribution_function_value);
-    velocity_in_element(0) += (particle.weight * particle.velocity(0) * noise_reducing_factor) / number_of_physical_particles;
-    velocity_in_element(1) += (particle.weight * particle.velocity(1) * noise_reducing_factor) / number_of_physical_particles; 
-    velocity_in_element(2) += (particle.weight * particle.velocity(2) * noise_reducing_factor) / number_of_physical_particles;
+    avg_variance_reduced_particle_bulk_velocity_.at(particle.species)(0) += (particle.weight * particle.velocity(0) * noise_reducing_factor) / number_of_physical_particles;
+    avg_variance_reduced_particle_bulk_velocity_.at(particle.species)(1) += (particle.weight * particle.velocity(1) * noise_reducing_factor) / number_of_physical_particles; 
+    avg_variance_reduced_particle_bulk_velocity_.at(particle.species)(2) += (particle.weight * particle.velocity(2) * noise_reducing_factor) / number_of_physical_particles;
   }
 
   for (int elem_id = 0; elem_id < finite_element_space.GetNE(); ++elem_id)
@@ -886,9 +887,9 @@ std::unordered_map<Species, mfem::Vector>& ParticleOperations::getAvgVarianceRed
       const double number_of_physical_particles = sum_of_weights_.at(current_species)(0);
       mfem::Vector low_fidelity_integral_in_element(low_fidelity_integral.at(current_species).GetColumn(elem_id), 3);
       mfem::Vector velocity_in_element(avg_variance_reduced_particle_bulk_velocity_.at(current_species));
-      velocity_in_element(0) += low_fidelity_integral_in_element(0) / number_of_physical_particles;
-      velocity_in_element(1) += low_fidelity_integral_in_element(1) / number_of_physical_particles;
-      velocity_in_element(2) += low_fidelity_integral_in_element(2) / number_of_physical_particles;
+      avg_variance_reduced_particle_bulk_velocity_.at(current_species)(0) += low_fidelity_integral_in_element(0) / number_of_physical_particles;
+      avg_variance_reduced_particle_bulk_velocity_.at(current_species)(1) += low_fidelity_integral_in_element(1) / number_of_physical_particles;
+      avg_variance_reduced_particle_bulk_velocity_.at(current_species)(2) += low_fidelity_integral_in_element(2) / number_of_physical_particles;
     }
   } 
 
@@ -940,7 +941,7 @@ std::unordered_map<Species,double>& ParticleOperations::getAvgVarianceReducedTem
     double low_fidelity_particle_distribution_function_value = low_fidelity_operations.evaluateParticleDistributionFunction(low_fidelity_state,particle_position,particle.velocity,particle.element,low_fidelity_species_index);
     double noise_reducing_factor = (1 - low_fidelity_particle_distribution_function_value / particle.particle_distribution_function_value);
     //variance_reduced_particle_temperature_.at(particle.species)(elem_id) += number_of_macro_particles / (number_of_macro_particles - 1) * m_over_3kb * norm_squared * particle.weight * noise_reducing_factor / number_of_physical_particles;
-    variance_reduced_particle_temperature_.at(particle.species)(elem_id) += m_over_3kb * norm_squared * particle.weight * noise_reducing_factor / number_of_physical_particles;
+    avg_variance_reduced_particle_temperature_.at(particle.species) += m_over_3kb * norm_squared * particle.weight * noise_reducing_factor / number_of_physical_particles;
   }
 
   for (int elem_id = 0; elem_id < finite_element_space.GetNE(); ++elem_id)
