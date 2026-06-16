@@ -272,4 +272,47 @@ void dumpLowFidelityMoments(
   }
 }
 
+
+void dumpAvgVarianceReducedParticleMoments(
+  ParticleOperations& particle_operations,
+  const ParticleContainer& particles,
+  const LowFidelityState& low_fidelity_state,
+  const DGEulerOperations& low_fidelity_operations,
+  const std::string& file_prefix,
+  const int step,
+  const double time) 
+{
+
+  std::unordered_map<Species, double> avg_variance_reduced_number_density = particle_operations.getAvgVarianceReducedNumberDensity(particles,low_fidelity_state,low_fidelity_operations);
+  std::unordered_map<Species, mfem::Vector> avg_variance_reduced_bulk_velocity = particle_operations.getAvgVarianceReducedBulkVelocity(particles,low_fidelity_state,low_fidelity_operations);
+  std::unordered_map<Species, double> avg_variance_reduced_temperature = particle_operations.getAvgVarianceReducedTemperature(particles,low_fidelity_state,low_fidelity_operations);
+
+  for (const auto & [species, _] : avg_variance_reduced_number_density) {
+    std::string filename = file_prefix + "_" + species.name + ".csv";
+
+    std::ofstream out;
+    if (step > 0)
+      out.open(filename, std::ios::out | std::ios::app);
+    else
+      out.open(filename, std::ios::out | std::ios::trunc);  
+    if (!out) throw std::runtime_error("Failed to open CSV file: " + filename);
+
+    out.setf(std::ios::scientific);
+    out << std::setprecision(17);
+
+    const bool need_header = fileIsEmpty(filename);
+    if (need_header) {
+      out << "step,time,number_density,temperature,bulk_velocity_0,bulk_velocity_1,bulk_velocity_2\n";
+    }
+      out << step << ","
+          << time << ","
+          << avg_variance_reduced_number_density.at(species) << ","
+          << avg_variance_reduced_temperature.at(species) << ","
+          << avg_variance_reduced_bulk_velocity.at(species)(0) << ","
+          << avg_variance_reduced_bulk_velocity.at(species)(1) << ","
+          << avg_variance_reduced_bulk_velocity.at(species)(2) << ","
+          << "\n";
+  }
+}
+
 } // namespace mfpic

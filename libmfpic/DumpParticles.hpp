@@ -22,6 +22,15 @@ void dumpVarianceReducedParticleMoments(
     const int step,
     const double time); 
 
+void dumpAvgVarianceReducedParticleMoments(
+    ParticleOperations& particle_operations,
+    const ParticleContainer& particles,
+    const LowFidelityState& low_fidelity_state,
+    const DGEulerOperations& low_fidelity_operations,
+    const std::string& file_prefix,
+    const int step,
+    const double time); 
+
 void dumpLowFidelityMoments(
     const LowFidelityState& low_fidelity_state,
     const DGEulerOperations& low_fidelity_operations,

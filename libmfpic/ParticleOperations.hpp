@@ -108,6 +108,13 @@ public:
     const DGEulerOperations& low_fidelity_operations
   );
 
+    std::unordered_map<Species, double>& getAvgVarianceReducedNumberDensity(
+    const ParticleContainer& particles,
+    const LowFidelityState& low_fidelity_state,
+    const DGEulerOperations& low_fidelity_operations
+  );
+
+
   /**
    * @brief Compute the bulk velocity in each element
    *
@@ -132,6 +139,14 @@ public:
     const DGEulerOperations& low_fidelity_operations
   );
 
+  std::unordered_map<Species, mfem::Vector>& getAvgVarianceReducedBulkVelocity(
+    const ParticleContainer& particles, 
+    const LowFidelityState& low_fidelity_state,
+    const DGEulerOperations& low_fidelity_operations
+  );
+
+
+
   /**
    * @brief Compute the temperature in each element
    *
@@ -144,6 +159,12 @@ public:
   std::unordered_map<Species, mfem::Vector>& getTemperature(const ParticleContainer& particles, const bool sum_weights = true, const bool compute_bulk_velocity = true);
 
   std::unordered_map<Species, mfem::Vector>& getVarianceReducedTemperature(
+    const ParticleContainer& particles, 
+    const LowFidelityState& low_fidelity_state,
+    const DGEulerOperations& low_fidelity_operations
+  );
+
+  std::unordered_map<Species, double>& getAvgVarianceReducedTemperature(
     const ParticleContainer& particles, 
     const LowFidelityState& low_fidelity_state,
     const DGEulerOperations& low_fidelity_operations
@@ -213,6 +234,15 @@ private:
 
   /// Variance reduced particle temperature
   std::unordered_map<Species, mfem::Vector> variance_reduced_particle_temperature_;
+
+  /// Spatially Averaged Variance reduced particle number density
+  std::unordered_map<Species, double> avg_variance_reduced_particle_number_density_;
+
+  /// Spatially Averaged Variance reduced particle bulk velocity
+  std::unordered_map<Species, mfem::Vector> avg_variance_reduced_particle_bulk_velocity_;
+
+  /// Spatially Averaged Variance reduced particle temperature
+  std::unordered_map<Species, double> avg_variance_reduced_particle_temperature_;
 
   /// Variance reduced postprocessors
   VarianceReducedPostprocessors variance_reduced_postprocessors_;
