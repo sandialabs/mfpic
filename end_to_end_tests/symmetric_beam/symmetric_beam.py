@@ -135,26 +135,10 @@ Species:
     Mass: {electron_species.mass}
     Charge: {electron_species.charge}
 
-  ion:
-    Mass: {ion_species.mass}
-    Charge: {ion_species.charge}
-    Charge Over Mass: 0.0
-
 Particles:
   Basis Order: {basis_order}
 
   Initial Conditions:
-
-    # ------------------------------------------------
-    # Uniform ion background
-    # ------------------------------------------------
-
-    - Species: [ion]
-      Number of Macroparticles per Species: {num_ion_macroparticles}
-      Constant:
-        Number Density: {total_electron_density}
-        Temperature: 0.0
-        Bulk Velocity: [0.0, 0.0, 0.0]
 
     # ------------------------------------------------
     # Maxwellian electron background
