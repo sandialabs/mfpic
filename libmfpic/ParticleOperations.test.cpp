@@ -1124,6 +1124,45 @@ TEST(ParticleOperations, TemperatureIsZeroWithZeroOrOneParticles) {
   }
 }
 
+TEST(ParticleOperations, TemperatureCalculationIsUnbiasedWithVariableParticleWeights) {
+  const int num_elems = 1;
+  std::shared_ptr<mfem::Mesh> mesh = std::make_shared<mfem::Mesh>(mfem::Mesh::MakeCartesian1D(num_elems, .234));
+  constexpr int order = 1;
+  Discretization discretization(mesh.get(),order);
+  ParticleOperations particle_operations(
+    discretization,
+    empty_particle_boundary_factory_list,
+    default_reflecting_particle_boundary_factory,
+    one_species
+  );
+
+  std::default_random_engine generator;
+  constexpr double nominal_temperature = 1.0e25;
+  constexpr int num_repetitions = 100;
+  double average_computed_temperature = 0.0;
+  for (int rep = 0; rep < num_repetitions; rep++) {
+    ParticleContainer particles;
+    const mfem::Vector nominal_bulk_velocity({0.0, 0.0, 0.0});
+    constexpr double weight_lower_bound = 0.0;
+    constexpr double weight_upper_bound = 2.0;
+    std::uniform_real_distribution<double> weight_distribution(weight_lower_bound, weight_upper_bound);
+    constexpr int num_particles_per_repetition = 4;
+    for (int iparticle = 0; iparticle < num_particles_per_repetition; iparticle++) {
+      particles.addParticle(Particle{
+        .velocity = generateMaxwellianVelocity(nominal_bulk_velocity, nominal_temperature, default_species.mass, generator),
+        .species = default_species,
+        .weight = weight_distribution(generator),
+      });
+    }
+
+    const double computed_temperature = particle_operations.getTemperature(particles).at(default_species)(0);
+    average_computed_temperature += computed_temperature / num_repetitions;
+  }
+
+  constexpr double relative_tolerance = 0.01;
+  EXPECT_NEAR(average_computed_temperature, nominal_temperature, relative_tolerance * nominal_temperature);
+}
+
 TEST(ParticleOperations, ParticleMomentsCorrectForMaxwellian) {
   const int num_elems = 1;
   std::shared_ptr<mfem::Mesh> mesh = std::make_shared<mfem::Mesh>(mfem::Mesh::MakeCartesian1D(num_elems, .234));
