@@ -291,14 +291,14 @@ std::unordered_map<Species, mfem::Vector>& ParticleOperations::getTemperature(co
   if (sum_weights) this->sumParticleWeights_(particles);
   if (compute_bulk_velocity) this->getBulkVelocity(particles, false);
 
-  std::unordered_map<Species, mfem::Vector> sum_of_weights_squared = sum_of_weights_;
-  for (mfem::Vector& sum_of_weights_squared_for_species : std::views::values(sum_of_weights_squared)) {
-    sum_of_weights_squared_for_species = 0.0;
+  std::unordered_map<Species, mfem::Vector> sum_of_squared_weights = sum_of_weights_;
+  for (mfem::Vector& sum_of_squared_weights_for_species : std::views::values(sum_of_squared_weights)) {
+    sum_of_squared_weights_for_species = 0.0;
   }
   for (const Particle& particle : particles) {
     if (not particle.is_alive) continue;
 
-    sum_of_weights_squared.at(particle.species)(particle.element) += particle.weight * particle.weight;
+    sum_of_squared_weights.at(particle.species)(particle.element) += particle.weight * particle.weight;
   }
 
   for (const Particle& particle : particles) {
@@ -313,9 +313,9 @@ std::unordered_map<Species, mfem::Vector>& ParticleOperations::getTemperature(co
     mfem::Vector fluctuation_velocity = particle.velocity;
     fluctuation_velocity -= bulk_velocity_in_element;
 
-    const double sum_of_weights_squared_in_element = sum_of_weights_squared.at(species)(elem_id);
+    const double sum_of_squared_weights_in_element = sum_of_squared_weights.at(species)(elem_id);
     const double norm_squared = fluctuation_velocity * fluctuation_velocity;
-    const double bias_correction = 1.0 / (1.0 - sum_of_weights_squared_in_element / std::pow(sum_of_weights_in_element, 2.0));
+    const double bias_correction = 1.0 / (1.0 - sum_of_squared_weights_in_element / std::pow(sum_of_weights_in_element, 2.0));
     const double bias_corrected_weight = bias_correction * particle.weight;
 
     particle_temperature_.at(species)(elem_id) += norm_squared * bias_corrected_weight * particle.species.mass / (3.0 * constants::boltzmann_constant * sum_of_weights_in_element);
