@@ -122,8 +122,8 @@ def run(mfpic_executable, time_integrator, refinement_levels):
         verification.check_fluid_energy_positive_and_constant('Total_Fluid_Energy')
         verification.check_fluid_energy_positive_and_constant('Total_Fluid_Kinetic_Energy')
 
+        os.rename(yaml, f"{output_directory}/{yaml}_{refinement_level:02}")
         os.rename('output_lf_0.csv', f"{output_directory}/output_lf_0_{refinement_level:02}.csv")
-        os.rename(yaml, f"{output_directory}/advecting_gaussian_{refinement_level:02}.yaml")
 
         result.check_returncode()
 

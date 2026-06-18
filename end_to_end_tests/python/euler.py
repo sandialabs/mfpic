@@ -74,10 +74,15 @@ def get_kinetic_energy_density_from_conservative_state(conservative_state):
     return kinetic_energy_density(mass_density, momentum_density)
 
 
-def get_pressure_from_conservative_state(conservative_state, species):
+def get_internal_energy_density_from_conservative_state(conservative_state):
     total_energy_density = conservative_state[4]
     kinetic_energy_density = get_kinetic_energy_density_from_conservative_state(conservative_state)
     internal_energy_density = total_energy_density - kinetic_energy_density
+    return internal_energy_density
+
+
+def get_pressure_from_conservative_state(conservative_state, species):
+    internal_energy_density = get_internal_energy_density_from_conservative_state(conservative_state)
     return pressure_from_species(species, internal_energy_density)
 
 
