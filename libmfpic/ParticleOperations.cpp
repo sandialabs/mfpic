@@ -552,7 +552,11 @@ std::unordered_map<Species, mfem::Vector>& ParticleOperations::getTemperature(co
 
     const double bias_corrected_weight = particle.weight * number_of_samples / (number_of_samples - 1.);
 
+#ifdef ONE_V
+    particle_temperature_.at(species)(elem_id) += norm_squared * bias_corrected_weight * particle.species.mass / (constants::boltzmann_constant * sum_weights);
+#else
     particle_temperature_.at(species)(elem_id) += norm_squared * bias_corrected_weight * particle.species.mass / (3.0 * constants::boltzmann_constant * sum_weights);
+#endif
 
   }
 
@@ -588,7 +592,11 @@ std::unordered_map<Species, double>& ParticleOperations::getAvgTemperature(const
     const double one_over_n_minus_one = 1./(number_of_physical_particles - 1);
     if (number_of_samples <= 1.) continue;
 
+#ifdef ONE_V
+    avg_particle_temperature_.at(species) += one_over_n_minus_one * particle.weight * norm_squared * particle.species.mass / (constants::boltzmann_constant);
+#else
     avg_particle_temperature_.at(species) += one_over_n_minus_one * particle.weight * norm_squared * particle.species.mass / (3.0 * constants::boltzmann_constant);
+#endif
 
   }
 
