@@ -130,9 +130,9 @@ TEST(ParticleOperations, AssembleChargeWorksin1D) {
   constexpr int order = 1;
   Discretization discretization(&mesh,order);
 
-  //Place one particle in the middle of each element 
+  //Place one particle in the middle of each element
   ParticleContainer static_particles;
-  for (int i = 0; i < num_elements; i++) { 
+  for (int i = 0; i < num_elements; i++) {
     mfem::ElementTransformation *element_transformation = mesh.GetElementTransformation(i);
     mfem::IntegrationPoint integration_point;
     integration_point.Set1w(0.5,1.0);
@@ -184,7 +184,7 @@ TEST(ParticleOperations, AssembleChargeWorksin2D) {
   // *---*---*
   // | 2 | 3 |
   // *---*---*
-  // | 0 | 1 | 
+  // | 0 | 1 |
   // *---*---*
 
   constexpr int order = 1;
@@ -192,12 +192,12 @@ TEST(ParticleOperations, AssembleChargeWorksin2D) {
 
   ParticleContainer static_particles;
   //Place one particle in the middle of each element with different charges
-  for (int i = 0; i < num_elems_per_dim*num_elems_per_dim; i++) { 
+  for (int i = 0; i < num_elems_per_dim*num_elems_per_dim; i++) {
     double charge;
-    if (i==0) charge = 1.0; 
-    if (i==1) charge = 2.0; 
-    if (i==2) charge = 3.0; 
-    if (i==3) charge = 4.0; 
+    if (i==0) charge = 1.0;
+    if (i==1) charge = 2.0;
+    if (i==2) charge = 3.0;
+    if (i==3) charge = 4.0;
 
     mfem::ElementTransformation *element_transformation = mesh.GetElementTransformation(i);
     mfem::IntegrationPoint integration_point;
@@ -987,7 +987,7 @@ TEST(ParticleOperations, VarianceReducedChargeIsExactForMaxwellianIn3D) {
   ParticleContainer particles = loadParticles(
     ConstantSourceParameters(species, source_state_parameters, num_particles),
     generator,
-    mesh  
+    mesh
   );
 
   ParticleOperations particle_operations(
@@ -1067,7 +1067,7 @@ TEST(ParticleOperations, VarianceReducedChargeAndPICChargeConvergeForKappa) {
   ParticleContainer particles_all = loadParticles(
     ConstantSourceParameters(species, source_state_parameters, num_particles_list[4]),
     gen_for_n,
-    mesh  
+    mesh
   );
 
   for (int num_particles : num_particles_list) {
@@ -1097,6 +1097,32 @@ TEST(ParticleOperations, VarianceReducedChargeAndPICChargeConvergeForKappa) {
   }
 }
 
+TEST(ParticleOperations, TemperatureIsZeroWithZeroOrOneParticles) {
+  constexpr int num_elems = 1;
+  constexpr double domain_length = 1.0;
+  std::shared_ptr<mfem::Mesh> mesh = std::make_shared<mfem::Mesh>(mfem::Mesh::MakeCartesian1D(num_elems, domain_length));
+  constexpr int order = 1;
+  Discretization discretization(mesh.get(),order);
+
+  for (int num_particles = 0; num_particles <= 1; num_particles++) {
+    ParticleContainer particles;
+    for (int iparticle = 0; iparticle < num_particles; iparticle++) {
+      particles.addParticle(Particle{.velocity = mfem::Vector({1.0, 2.0, 3.0}), .species = default_species, .weight = 1.0});
+    }
+
+    ParticleOperations particle_operations(
+      discretization,
+      empty_particle_boundary_factory_list,
+      default_reflecting_particle_boundary_factory,
+      one_species
+    );
+    const std::unordered_map<Species, mfem::Vector>& temperature_per_species_per_element =
+      particle_operations.getTemperature(particles);
+    const double computed_temperature = temperature_per_species_per_element.at(default_species)(0);
+
+    EXPECT_DOUBLE_EQ(0.0, computed_temperature);
+  }
+}
 
 TEST(ParticleOperations, ParticleMomentsCorrectForMaxwellian) {
   const int num_elems = 1;
