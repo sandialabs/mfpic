@@ -39,17 +39,23 @@ public:
     const LowFidelityState& state
   ) const = 0;
 
+  virtual IntegratedCharge assembleChargePerSpecies(
+    const LowFidelityState& state,
+    const int ispecies 
+  ) const = 0;
+
   virtual double evaluateParticleDistributionFunction(
     const LowFidelityState& state,
     const mfem::Vector position,
     const mfem::Vector velocity,
     const int element,
-    const Species& species) const = 0;
+    const int i_species) const = 0;
 
   virtual double estimateCFL(const double & dt, const double & smallest_cell_lengthscale) const = 0;
 
   virtual double computeTotalEnergy(const LowFidelityState& state) const = 0;
   virtual double computeTotalKineticEnergy(const LowFidelityState& state) const = 0;
+  virtual double computeTotalCharge(const LowFidelityState& state) const = 0;
 
   virtual ~LowFidelityOperations() = default;
 };

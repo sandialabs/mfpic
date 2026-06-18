@@ -141,7 +141,7 @@ TEST(DumpParticles, ReadParticlesMatchDumpedParticles) {
       .element = element,
       .species = default_species,
       .weight = weight,
-      .particle_distribution_function_value = particle_distribution_function_value
+      .particle_distribution_function_value = particle_distribution_function_value,
     });
   }
 

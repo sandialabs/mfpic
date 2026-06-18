@@ -85,6 +85,9 @@ public:
   LowFidelitySpeciesState& getSpeciesState(const int i_species);
   const LowFidelitySpeciesState& getSpeciesState(const int i_species) const;
 
+  bool containsSpecies(const Species& species) const;
+  int getSpeciesIndex(const Species& species) const; 
+
   /**
    * @brief Add scale * state to this object
    * 

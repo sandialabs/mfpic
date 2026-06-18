@@ -159,4 +159,198 @@ void dumpParticleMoments(
   }
 }
 
+void dumpVarianceReducedParticleMoments(
+  ParticleOperations& particle_operations,
+  const ParticleContainer& particles,
+  const LowFidelityState& low_fidelity_state,
+  const DGEulerOperations& low_fidelity_operations,
+  const std::string& file_prefix,
+  const int step,
+  const double time) 
+{
+
+  std::unordered_map<Species, mfem::Vector> variance_reduced_number_density = particle_operations.getVarianceReducedNumberDensity(particles,low_fidelity_state,low_fidelity_operations);
+  std::unordered_map<Species, mfem::DenseMatrix> variance_reduced_bulk_velocity = particle_operations.getVarianceReducedBulkVelocity(particles,low_fidelity_state,low_fidelity_operations);
+  std::unordered_map<Species, mfem::Vector> variance_reduced_temperature = particle_operations.getVarianceReducedTemperature(particles,low_fidelity_state,low_fidelity_operations);
+
+  VarianceReducedPostprocessors variance_reduced_postprocessors = particle_operations.getVarianceReducedPostprocessors(particles,low_fidelity_state,low_fidelity_operations);
+
+  mfem::Mesh& mesh = particle_operations.getMesh();
+  const int nelem = mesh.GetNE();
+
+  for (const auto & [species, _] : variance_reduced_number_density) {
+    std::string filename = file_prefix + "_" + species.name + ".csv";
+
+    std::ofstream out;
+    if (step > 0)
+      out.open(filename, std::ios::out | std::ios::app);
+    else
+      out.open(filename, std::ios::out | std::ios::trunc);  
+    if (!out) throw std::runtime_error("Failed to open CSV file: " + filename);
+
+    out.setf(std::ios::scientific);
+    out << std::setprecision(17);
+
+    const bool need_header = fileIsEmpty(filename);
+    if (need_header) {
+      out << "step,time,elem,x,y,z,number_density,temperature,bulk_velocity_0,bulk_velocity_1,bulk_velocity_2,f,fNR,noise_reducing_factor\n";
+    }
+
+    for (int e = 0; e < nelem; ++e) {
+      mfem::Vector element_point(3);
+      element_point = 0.0;
+      const int dim = mesh.SpaceDimension();
+      mfem::Vector element_point_view(element_point.GetData(), dim);   
+      mesh.GetElementCenter(e, element_point_view);
+
+      const mfem::Vector bulk_velocity_in_element(variance_reduced_bulk_velocity.at(species).GetColumn(e), 3);
+
+      out << step << ","
+          << time << ","
+          << e << ","
+          << element_point(0) << "," << element_point(1) << "," << element_point(2) << ","
+          << variance_reduced_number_density.at(species)(e) << ","
+          << variance_reduced_temperature.at(species)(e) << ","
+          << bulk_velocity_in_element(0) << "," << bulk_velocity_in_element(1) << "," << bulk_velocity_in_element(2) << ","
+          << variance_reduced_postprocessors.particle_distribution_function.at(species)(e) << ","
+          << variance_reduced_postprocessors.low_fidelity_particle_distribution_function.at(species)(e) << ","
+          << variance_reduced_postprocessors.noise_reducing_factor.at(species)(e) 
+          << "\n";
+    }
+  }
+}
+
+void dumpLowFidelityMoments(
+  const LowFidelityState& low_fidelity_state,
+  const DGEulerOperations& low_fidelity_operations,
+  const std::string& file_prefix,
+  const int step,
+  const double time) 
+{
+  std::unordered_map<Species, mfem::Vector> number_density = low_fidelity_operations.getCellAveragedNumberDensity(low_fidelity_state);
+  std::unordered_map<Species, mfem::DenseMatrix> bulk_velocity = low_fidelity_operations.getCellAveragedBulkVelocity(low_fidelity_state);
+  std::unordered_map<Species, mfem::Vector> temperature = low_fidelity_operations.getCellAveragedTemperature(low_fidelity_state);
+
+  mfem::Mesh& mesh = low_fidelity_operations.getMesh();
+  const int nelem = mesh.GetNE();
+
+  for (const auto & [species, _] : number_density) {
+    std::string filename = file_prefix + "_" + species.name + ".csv";
+
+    std::ofstream out;
+    if (step > 0)
+      out.open(filename, std::ios::out | std::ios::app);
+    else
+      out.open(filename, std::ios::out | std::ios::trunc);  
+    if (!out) throw std::runtime_error("Failed to open CSV file: " + filename);
+
+    out.setf(std::ios::scientific);
+    out << std::setprecision(17);
+
+    const bool need_header = fileIsEmpty(filename);
+    if (need_header) {
+      out << "step,time,elem,x,y,z,number_density,temperature,bulk_velocity_0,bulk_velocity_1,bulk_velocity_2\n";
+    }
+
+    for (int e = 0; e < nelem; ++e) {
+      mfem::Vector element_point(3);
+      element_point = 0.0;
+      const int dim = mesh.SpaceDimension();
+      mfem::Vector element_point_view(element_point.GetData(), dim);   
+      mesh.GetElementCenter(e, element_point_view);
+
+      const mfem::Vector bulk_velocity_in_element(bulk_velocity.at(species).GetColumn(e), 3);
+
+      out << step << ","
+          << time << ","
+          << e << ","
+          << element_point(0) << "," << element_point(1) << "," << element_point(2) << ","
+          << number_density.at(species)(e) << ","
+          << temperature.at(species)(e) << ","
+          << bulk_velocity_in_element(0) << "," << bulk_velocity_in_element(1) << "," << bulk_velocity_in_element(2) << "\n";
+    }
+  }
+}
+
+
+void dumpAvgParticleMoments(
+  ParticleOperations& particle_operations,
+  const ParticleContainer& particles,
+  const std::string& file_prefix,
+  const int step,
+  const double time) 
+{
+  std::unordered_map<Species, double> number_density     = particle_operations.getAvgNumberDensity(particles);
+  std::unordered_map<Species, mfem::Vector> bulk_velocity = particle_operations.getAvgBulkVelocity(particles,true);
+  std::unordered_map<Species, double> temperature        = particle_operations.getAvgTemperature(particles,false,false);
+
+  for (const auto & [species, _] : number_density) {
+    std::string filename = file_prefix + "_" + species.name + ".csv";
+
+    std::ofstream out;
+    if (step > 0)
+      out.open(filename, std::ios::out | std::ios::app);
+    else
+      out.open(filename, std::ios::out | std::ios::trunc);  
+    if (!out) throw std::runtime_error("Failed to open CSV file: " + filename);
+
+    out.setf(std::ios::scientific);
+    out << std::setprecision(17);
+
+    const bool need_header = fileIsEmpty(filename);
+    if (need_header) {
+      out << "step,time,number_density,temperature,bulk_velocity_0,bulk_velocity_1,bulk_velocity_2\n";
+    }
+
+    const mfem::Vector bulk_velocity_in_element(bulk_velocity.at(species));
+    out << step << ","
+        << time << ","
+        << number_density.at(species) << ","
+        << temperature.at(species) << ","
+        << bulk_velocity_in_element(0) << "," << bulk_velocity_in_element(1) << "," << bulk_velocity_in_element(2) << "\n";
+  }
+}
+
+void dumpAvgVarianceReducedParticleMoments(
+  ParticleOperations& particle_operations,
+  const ParticleContainer& particles,
+  const LowFidelityState& low_fidelity_state,
+  const DGEulerOperations& low_fidelity_operations,
+  const std::string& file_prefix,
+  const int step,
+  const double time) 
+{
+
+  std::unordered_map<Species, double> avg_variance_reduced_number_density = particle_operations.getAvgVarianceReducedNumberDensity(particles,low_fidelity_state,low_fidelity_operations);
+  std::unordered_map<Species, mfem::Vector> avg_variance_reduced_bulk_velocity = particle_operations.getAvgVarianceReducedBulkVelocity(particles,low_fidelity_state,low_fidelity_operations);
+  std::unordered_map<Species, double> avg_variance_reduced_temperature = particle_operations.getAvgVarianceReducedTemperature(particles,low_fidelity_state,low_fidelity_operations);
+
+  for (const auto & [species, _] : avg_variance_reduced_number_density) {
+    std::string filename = file_prefix + "_" + species.name + ".csv";
+
+    std::ofstream out;
+    if (step > 0)
+      out.open(filename, std::ios::out | std::ios::app);
+    else
+      out.open(filename, std::ios::out | std::ios::trunc);  
+    if (!out) throw std::runtime_error("Failed to open CSV file: " + filename);
+
+    out.setf(std::ios::scientific);
+    out << std::setprecision(17);
+
+    const bool need_header = fileIsEmpty(filename);
+    if (need_header) {
+      out << "step,time,number_density,temperature,bulk_velocity_0,bulk_velocity_1,bulk_velocity_2\n";
+    }
+      out << step << ","
+          << time << ","
+          << avg_variance_reduced_number_density.at(species) << ","
+          << avg_variance_reduced_temperature.at(species) << ","
+          << avg_variance_reduced_bulk_velocity.at(species)(0) << ","
+          << avg_variance_reduced_bulk_velocity.at(species)(1) << ","
+          << avg_variance_reduced_bulk_velocity.at(species)(2) 
+          << "\n";
+  }
+}
+
 } // namespace mfpic

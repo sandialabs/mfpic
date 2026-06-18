@@ -26,6 +26,10 @@ public:
    */
   void setPotential(const mfem::GridFunction& potential) { potential_ = potential; }
 
+  void setIntegratedCharge(const mfem::Vector& integrated_charge) { integrated_charge_ = integrated_charge; }
+  template <class Self>
+  auto&& getIntegratedCharge(this Self&& self) { return self.integrated_charge_; }
+
   /**
    * @brief Get the potential of the electrostatic field
    *
@@ -57,6 +61,7 @@ public:
 private:
   /// value of electrostatic potential on mesh
   mfem::GridFunction potential_;
+  mfem::GridFunction integrated_charge_;
 
 };
 

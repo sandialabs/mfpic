@@ -36,9 +36,15 @@ mfem::Vector generateMaxwellianVelocity(
   if (thermal_speed > 0.0) {
     constexpr double peculiar_velocity_distribution_mean = 0.0;
     std::normal_distribution<double> peculiar_velocity_distribution(peculiar_velocity_distribution_mean, thermal_speed);
+#ifdef ONE_V
+    for (int dimension = 0; dimension < 1; dimension++) {
+      velocity[dimension] += peculiar_velocity_distribution(generator);
+    }
+#else
     for (int dimension = 0; dimension < 3; dimension++) {
       velocity[dimension] += peculiar_velocity_distribution(generator);
     }
+#endif
   }
 
   return velocity;

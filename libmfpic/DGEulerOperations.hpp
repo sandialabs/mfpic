@@ -8,6 +8,7 @@
 #include <libmfpic/LowFidelityState.hpp>
 
 #include <mfem/mfem.hpp>
+#include <unordered_map>
 
 namespace mfpic {
 
@@ -102,6 +103,17 @@ public:
   ) const override;
 
   /**
+  * @brief Assemble charges from the fluids into the charge density per species
+  *
+  * @param state State including dofs and species list
+  * @return IntegratedCharge - integrated charge state for a given species
+  */
+  virtual IntegratedCharge assembleChargePerSpecies(
+    const LowFidelityState& state,
+    const int ispecies
+  ) const override;
+
+  /**
   * @brief Return the CFL based on the maximum eigenvalue of the Euler system (fluid plus acoustic speed)
   *
   * @return CFL
@@ -126,6 +138,8 @@ public:
   */
   virtual double computeTotalKineticEnergy(const LowFidelityState& state) const override;
 
+  virtual double computeTotalCharge(const LowFidelityState& state) const override;
+
   /**
   * @brief Evaluates the particle distribution function for the low fidelity state at a given position and velocity.
   *
@@ -133,7 +147,7 @@ public:
   * @param position Location in physical space to evaluate PDF
   * @param velocity Location in velocity space to evaluate PDF
   * @param element  Element containing position
-  * @param species  Evaluate PDF for the given species
+  * @param i_species  Evaluate PDF for the given species index
   * @return PDF value
   */
   virtual double evaluateParticleDistributionFunction(
@@ -141,7 +155,41 @@ public:
     const mfem::Vector position,
     const mfem::Vector velocity,
     const int element,
-    const Species& species) const override;
+    const int i_species) const override;
+
+  /**
+   * @brief Get mfem mesh associated with the discretization
+   *
+   * @return mfem::Mesh 
+   */
+  mfem::Mesh& getMesh() const {return *charge_discretization_.getFeSpace().GetMesh();};
+
+  std::unordered_map<Species,mfem::Vector> integralForVarianceReducedNumberDensity(
+    mfem::FiniteElementSpace finite_element_space, 
+    const LowFidelityState& current_state
+  ) const;
+
+  std::unordered_map<Species, mfem::DenseMatrix> integralForVarianceReducedBulkVelocity(
+    mfem::FiniteElementSpace finite_element_space, 
+    const LowFidelityState& current_state
+  ) const;
+
+  std::unordered_map<Species,mfem::Vector> integralForVarianceReducedTemperature(
+    mfem::FiniteElementSpace finite_element_space, 
+    const LowFidelityState& current_state
+  ) const;
+
+  std::unordered_map<Species,mfem::Vector> getCellAveragedNumberDensity(
+    const LowFidelityState& current_state
+  ) const;
+
+  std::unordered_map<Species,mfem::DenseMatrix> getCellAveragedBulkVelocity(
+    const LowFidelityState& current_state
+  ) const;
+
+  std::unordered_map<Species,mfem::Vector> getCellAveragedTemperature(
+    const LowFidelityState& current_state
+  ) const;
 
 private:
   Discretization & charge_discretization_;

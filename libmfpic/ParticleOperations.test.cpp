@@ -1240,4 +1240,301 @@ TEST(ParticleOperations, ParticleMomentsCorrectForKnownParticles) {
 
 };
 
+
+TEST(ParticleOperations, VarianceReducedMomentsAreExactForMaxwellianIn3D) {
+  Species species{.charge = -constants::elementary_charge, .mass = constants::electron_mass};
+  const std::unordered_map<std::string, Species> species_map{{"one", species}};
+  constexpr double number_density = 1e22;
+  constexpr double temperature = 300;
+  mfem::Vector bulk_velocity({293.0,581.0,902.0});
+  constexpr int num_particles = 20000;
+  std::mt19937 generator;
+
+  const int num_elems = 5;
+  constexpr int dg_order = 0;
+  constexpr int num_equations = 5;
+  constexpr mfem::Element::Type element_type = mfem::Element::HEXAHEDRON;
+  std::shared_ptr<mfem::Mesh> mesh = std::make_shared<mfem::Mesh>(mfem::Mesh::MakeCartesian3D(
+    num_elems,
+    num_elems,
+    num_elems,
+    element_type
+  ));
+
+  Discretization dg_discretization(mesh.get(), dg_order, FETypes::DG, num_equations);
+
+  constexpr int charge_order = 1;
+  Discretization charge_discretization(mesh.get(), charge_order, FETypes::HGRAD);
+
+  mfem::FiniteElementSpace finite_element_space = dg_discretization.getFeSpace();
+  std::shared_ptr<DGEulerAssembly> operator_ptr = std::make_shared<DGEulerAssembly>(finite_element_space, species);
+  std::vector<std::shared_ptr<DGEulerAssembly>> dg_operators({operator_ptr});
+  DGEulerOperations dg_euler_operations(charge_discretization, dg_operators);
+
+  std::vector<std::unique_ptr<SourceParameters>> list_of_parameters;
+  list_of_parameters.push_back(std::make_unique<ConstantSourceParameters>(species, number_density, temperature,bulk_velocity));
+  LowFidelityState low_fidelity_state = buildEulerState(dg_discretization, list_of_parameters);
+
+  const SourceStateParameters source_state_parameters{
+    .number_density = number_density,
+    .bulk_velocity = bulk_velocity,
+    .temperature = temperature,
+  };
+
+  ParticleContainer particles = loadParticles(
+    ConstantSourceParameters(species, source_state_parameters, num_particles),
+    generator,
+    mesh  
+  );
+
+  ParticleOperations particle_operations(
+    charge_discretization,
+    empty_particle_boundary_factory_list,
+    default_reflecting_particle_boundary_factory,
+    species_map
+  );
+
+  std::unordered_map<Species, mfem::Vector> variance_reduced_number_density = particle_operations.getVarianceReducedNumberDensity(particles,low_fidelity_state,dg_euler_operations);
+  std::unordered_map<Species, mfem::DenseMatrix> variance_reduced_bulk_velocity = particle_operations.getVarianceReducedBulkVelocity(particles,low_fidelity_state,dg_euler_operations);
+  std::unordered_map<Species, mfem::Vector> variance_reduced_temperature = particle_operations.getVarianceReducedTemperature(particles,low_fidelity_state,dg_euler_operations);
+
+  for (int elem_id = 0; elem_id < num_elems; ++elem_id)
+  {
+    EXPECT_DOUBLE_EQ(variance_reduced_number_density.at(species)(elem_id),number_density);
+    EXPECT_DOUBLE_EQ(variance_reduced_bulk_velocity.at(species)(0,elem_id),bulk_velocity(0));
+    EXPECT_DOUBLE_EQ(variance_reduced_bulk_velocity.at(species)(1,elem_id),bulk_velocity(1));
+    EXPECT_DOUBLE_EQ(variance_reduced_bulk_velocity.at(species)(2,elem_id),bulk_velocity(2));
+    EXPECT_DOUBLE_EQ(variance_reduced_temperature.at(species)(elem_id),temperature);
+  }
+}
+
+TEST(ParticleOperations, VarianceReducedMomentsAndPICMomentsConvergeForKappa) {
+
+  Species species{.charge = -constants::elementary_charge, .mass = constants::electron_mass};
+  const std::unordered_map<std::string, Species> species_map{{"one", species}};
+  constexpr double number_density = 1e22;
+  constexpr double temperature = 300;
+  mfem::Vector bulk_velocity({1.0, 0.0, 0.0});
+
+  const std::vector<int> num_particles_list = {10,100,1000,10000,100000};
+
+  const int num_elems = 5;
+  constexpr int dg_order = 0;
+  constexpr int num_equations = 5;
+  std::shared_ptr<mfem::Mesh> mesh =
+      std::make_shared<mfem::Mesh>(mfem::Mesh::MakeCartesian1D(num_elems));
+  Discretization dg_discretization(mesh.get(), dg_order, FETypes::DG, num_equations);
+
+  constexpr int charge_order = 1;
+  Discretization charge_discretization(mesh.get(), charge_order, FETypes::HGRAD);
+
+  mfem::FiniteElementSpace finite_element_space = dg_discretization.getFeSpace();
+  std::shared_ptr<DGEulerAssembly> operator_ptr =
+      std::make_shared<DGEulerAssembly>(finite_element_space, species);
+  std::vector<std::shared_ptr<DGEulerAssembly>> dg_operators({operator_ptr});
+  DGEulerOperations dg_euler_operations(charge_discretization, dg_operators);
+
+  std::vector<std::unique_ptr<SourceParameters>> list_of_parameters;
+  list_of_parameters.push_back(std::make_unique<ConstantSourceParameters>(
+      species, number_density, temperature, bulk_velocity));
+
+  LowFidelityState low_fidelity_state = buildEulerState(dg_discretization, list_of_parameters);
+  IntegratedCharge low_fidelity_charge_state =
+      dg_euler_operations.assembleCharge(low_fidelity_state);
+  mfem::Vector integrated_charge_vector = low_fidelity_charge_state.getIntegratedCharge();
+
+  ParticleOperations particle_operations(
+      charge_discretization,
+      empty_particle_boundary_factory_list,
+      default_reflecting_particle_boundary_factory,
+      species_map
+    );
+
+
+  const SourceStateParameters source_state_parameters{
+    .number_density = number_density,
+    .bulk_velocity = bulk_velocity,
+    .temperature = temperature,
+    .kappa = 2.0
+  };
+  std::mt19937 gen_for_n(12345);
+
+  ParticleContainer particles_all = loadParticles(
+    ConstantSourceParameters(species, source_state_parameters, num_particles_list[4]),
+    gen_for_n,
+    mesh  
+  );
+
+  for (int num_particles : num_particles_list) {
+    ParticleContainer particles = takePrefix(particles_all, num_particles);
+
+    std::unordered_map<Species, mfem::Vector> variance_reduced_number_density = particle_operations.getVarianceReducedNumberDensity(particles,low_fidelity_state,dg_euler_operations);
+    std::unordered_map<Species, mfem::DenseMatrix> variance_reduced_bulk_velocity = particle_operations.getVarianceReducedBulkVelocity(particles,low_fidelity_state,dg_euler_operations);
+    std::unordered_map<Species, mfem::Vector> variance_reduced_temperature = particle_operations.getVarianceReducedTemperature(particles,low_fidelity_state,dg_euler_operations);
+
+    std::unordered_map<Species, mfem::Vector> pic_number_density = particle_operations.getNumberDensity(particles);
+    std::unordered_map<Species, mfem::DenseMatrix> pic_bulk_velocity = particle_operations.getBulkVelocity(particles);
+    std::unordered_map<Species, mfem::Vector> pic_temperature = particle_operations.getTemperature(particles);
+
+    double max_rel_error_number_density = 0.0;
+    double max_rel_error_x_bulk_velocity = 0.0;
+    double max_rel_error_y_bulk_velocity = 0.0;
+    double max_rel_error_z_bulk_velocity = 0.0;
+    double max_rel_error_temperature = 0.0;
+
+    double prev_max_rel_error_number_density = std::numeric_limits<double>::infinity();
+    double prev_max_rel_error_x_bulk_velocity = std::numeric_limits<double>::infinity();
+    double prev_max_rel_error_y_bulk_velocity = std::numeric_limits<double>::infinity();
+    double prev_max_rel_error_z_bulk_velocity = std::numeric_limits<double>::infinity();
+    double prev_max_rel_error_temperature = std::numeric_limits<double>::infinity();
+
+    for (int elem_id = 0; elem_id < num_elems; ++elem_id)
+    {
+      double vr = variance_reduced_number_density.at(species)(elem_id);
+      double pic = pic_number_density.at(species)(elem_id);
+      double denom = std::max(std::abs(pic), 1e-300);
+      double rel_error_number_density = std::abs(vr - pic) / denom;
+      max_rel_error_number_density = std::max(max_rel_error_number_density, rel_error_number_density);
+
+      vr = variance_reduced_bulk_velocity.at(species)(0,elem_id);
+      pic = pic_bulk_velocity.at(species)(0,elem_id);
+      denom = std::max(std::abs(pic), 1e-300);
+      double rel_error_x_bulk_velocity = std::abs(vr - pic) / denom;
+      max_rel_error_x_bulk_velocity = std::max(max_rel_error_x_bulk_velocity, rel_error_x_bulk_velocity);
+
+      vr = variance_reduced_bulk_velocity.at(species)(1,elem_id);
+      pic = pic_bulk_velocity.at(species)(1,elem_id);
+      denom = std::max(std::abs(pic), 1e-300);
+      double rel_error_y_bulk_velocity = std::abs(vr - pic) / denom;
+      max_rel_error_y_bulk_velocity = std::max(max_rel_error_y_bulk_velocity, rel_error_y_bulk_velocity);
+
+      vr = variance_reduced_bulk_velocity.at(species)(2,elem_id);
+      pic = pic_bulk_velocity.at(species)(2,elem_id);
+      denom = std::max(std::abs(pic), 1e-300);
+      double rel_error_z_bulk_velocity = std::abs(vr - pic) / denom;
+      max_rel_error_z_bulk_velocity = std::max(max_rel_error_z_bulk_velocity, rel_error_z_bulk_velocity);
+
+      vr = variance_reduced_temperature.at(species)(elem_id);
+      pic = pic_temperature.at(species)(elem_id);
+      denom = std::max(std::abs(pic), 1e-300);
+      double rel_error_temperature = std::abs(vr - pic) / denom;
+      max_rel_error_temperature = std::max(max_rel_error_temperature, rel_error_temperature);
+    }
+
+    EXPECT_LE(max_rel_error_number_density, prev_max_rel_error_number_density);
+    prev_max_rel_error_number_density = max_rel_error_number_density;
+
+    EXPECT_LE(max_rel_error_x_bulk_velocity, prev_max_rel_error_x_bulk_velocity);
+    prev_max_rel_error_x_bulk_velocity = max_rel_error_x_bulk_velocity;
+
+    EXPECT_LE(max_rel_error_y_bulk_velocity, prev_max_rel_error_y_bulk_velocity);
+    prev_max_rel_error_y_bulk_velocity = max_rel_error_y_bulk_velocity;
+
+    EXPECT_LE(max_rel_error_z_bulk_velocity, prev_max_rel_error_z_bulk_velocity);
+    prev_max_rel_error_z_bulk_velocity = max_rel_error_z_bulk_velocity;
+
+    EXPECT_LE(max_rel_error_temperature, prev_max_rel_error_temperature);
+    prev_max_rel_error_temperature = max_rel_error_temperature;
+  }
+}
+
+TEST(ParticleOperations, VarianceReducedMomentsMatchPICForSpeciesMissingLowFidelityState) {
+  const int num_elems = 1;
+  std::shared_ptr<mfem::Mesh> mesh =
+    std::make_shared<mfem::Mesh>(mfem::Mesh::MakeCartesian1D(num_elems, .234));
+  constexpr int dg_order = 0;
+  constexpr int num_equations = 5;
+  Discretization dg_discretization(mesh.get(), dg_order, FETypes::DG, num_equations);
+  constexpr int charge_order = 1;
+  Discretization charge_discretization(mesh.get(), charge_order, FETypes::HGRAD);
+
+  const Species species_a{.charge = 1.0, .mass = 1.0};
+  const Species species_b{.charge = 2.0, .mass = 2.0};
+
+  const mfem::Vector nominal_bulk_velocity_a({300.0, 0.0, 0.0});
+  const mfem::Vector nominal_bulk_velocity_b({-150.0, 0.0, 0.0});
+
+  constexpr double temperature_a = 11600.0;
+  constexpr double temperature_b = 8000.0;
+
+  constexpr double number_density_a = 1.0e18;
+  constexpr double number_density_b = 2.5e17;
+
+  constexpr int num_particles_a = 15000;
+  constexpr int num_particles_b = 15000;
+
+  mfem::FiniteElementSpace finite_element_space = dg_discretization.getFeSpace();
+  std::shared_ptr<DGEulerAssembly> operator_ptr =
+      std::make_shared<DGEulerAssembly>(finite_element_space, species_a);
+  std::vector<std::shared_ptr<DGEulerAssembly>> dg_operators({operator_ptr});
+  DGEulerOperations dg_euler_operations(charge_discretization, dg_operators);
+
+  std::vector<std::unique_ptr<SourceParameters>> list_of_parameters;
+  list_of_parameters.push_back(std::make_unique<ConstantSourceParameters>(
+      species_a, number_density_a, temperature_a, nominal_bulk_velocity_a));
+  LowFidelityState low_fidelity_state = buildEulerState(dg_discretization, list_of_parameters);
+
+  std::mt19937 generator(12345);
+  const SourceStateParameters source_state_parameters_a{
+    .number_density = number_density_a,
+    .bulk_velocity  = nominal_bulk_velocity_a,
+    .temperature    = temperature_a,
+    .kappa = 2.0
+  };
+  const SourceStateParameters source_state_parameters_b{
+    .number_density = number_density_b,
+    .bulk_velocity  = nominal_bulk_velocity_b,
+    .temperature    = temperature_b,
+    .kappa = 3.0
+  };
+
+  ParticleContainer particles_a = loadParticles(
+    ConstantSourceParameters(species_a, source_state_parameters_a, num_particles_a),
+    generator,
+    mesh);
+
+  ParticleContainer particles_b = loadParticles(
+    ConstantSourceParameters(species_b, source_state_parameters_b, num_particles_b),
+    generator,
+    mesh);
+
+  ParticleContainer particles = particles_a;
+  particles.addParticles(particles_b);
+
+  const std::unordered_map<std::string, Species> two_species {{"species_a", species_a}, {"species_b", species_b}};
+  ParticleOperations particle_operations(
+    charge_discretization,
+    empty_particle_boundary_factory_list,
+    default_reflecting_particle_boundary_factory,
+    two_species);
+
+  const double standard_number_density_b =
+    particle_operations.getNumberDensity(particles).at(species_b)(0);
+
+  mfem::Vector standard_bulk_velocity_b;
+  particle_operations.getBulkVelocity(particles).at(species_b).GetColumn(0, standard_bulk_velocity_b);
+
+  const double standard_temperature_b =
+    particle_operations.getTemperature(particles).at(species_b)(0);
+
+  const double variance_reduced_number_density_b =
+    particle_operations.getVarianceReducedNumberDensity(
+      particles, low_fidelity_state, dg_euler_operations).at(species_b)(0);
+
+  mfem::Vector variance_reduced_bulk_velocity_b;
+  particle_operations.getVarianceReducedBulkVelocity(
+      particles, low_fidelity_state, dg_euler_operations).at(species_b).GetColumn(0, variance_reduced_bulk_velocity_b);
+
+  const double variance_reduced_temperature_b =
+    particle_operations.getVarianceReducedTemperature(
+      particles, low_fidelity_state, dg_euler_operations).at(species_b)(0);
+
+  EXPECT_NEAR(variance_reduced_number_density_b, standard_number_density_b, 1e-6);
+
+  for (int i = 0; i < 3; ++i) {
+    EXPECT_NEAR(variance_reduced_bulk_velocity_b[i], standard_bulk_velocity_b[i], 1e-6);
+  }
+  EXPECT_NEAR(variance_reduced_temperature_b, standard_temperature_b,1e-6);
+}
+
 } // namespace

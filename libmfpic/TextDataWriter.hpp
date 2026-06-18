@@ -16,7 +16,10 @@ public:
   /**
    * @brief Construct a new Text Data Writer object
    */
-  TextDataWriter(const int num_low_fidelity_models);
+  TextDataWriter(
+    const int num_low_fidelity_models,
+    const std::string &base_filename
+  );
 
   /**
    * @brief Output data to the text files
