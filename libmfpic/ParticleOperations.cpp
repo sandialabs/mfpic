@@ -313,12 +313,21 @@ std::unordered_map<Species, mfem::Vector>& ParticleOperations::getTemperature(co
     mfem::Vector fluctuation_velocity = particle.velocity;
     fluctuation_velocity -= bulk_velocity_in_element;
 
-    const double sum_of_squared_weights_in_element = sum_of_squared_weights.at(species)(elem_id);
     const double norm_squared = fluctuation_velocity * fluctuation_velocity;
-    const double bias_correction = 1.0 / (1.0 - sum_of_squared_weights_in_element / std::pow(sum_of_weights_in_element, 2.0));
+    const double sum_of_squared_weights_in_element = sum_of_squared_weights.at(species)(elem_id);
+    const double sum_of_weights_in_element_squared = std::pow(sum_of_weights_in_element, 2.0);
+    double bias_correction;
+    if (sum_of_weights_in_element_squared == sum_of_squared_weights_in_element) {
+      bias_correction = 1.0;
+    }
+    else {
+      bias_correction = 1.0 / (1.0 - sum_of_squared_weights_in_element / sum_of_weights_in_element_squared);
+    }
     const double bias_corrected_weight = bias_correction * particle.weight;
 
-    particle_temperature_.at(species)(elem_id) += norm_squared * bias_corrected_weight * particle.species.mass / (3.0 * constants::boltzmann_constant * sum_of_weights_in_element);
+    particle_temperature_.at(species)(elem_id) +=
+      norm_squared * bias_corrected_weight * particle.species.mass /
+      (3.0 * constants::boltzmann_constant * sum_of_weights_in_element);
   }
 
   return this->particle_temperature_;
