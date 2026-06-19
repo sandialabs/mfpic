@@ -19,6 +19,7 @@
 #include <libmfpic/MeshDataWriter.hpp>
 #include <libmfpic/MeshFactory.hpp>
 #include <libmfpic/ParticleOperations.hpp>
+#include <libmfpic/RandomNumberGenerator.hpp>
 #include <libmfpic/RunSimulation.hpp>
 #include <libmfpic/SourcesFactory.hpp>
 #include <libmfpic/TextDataWriter.hpp>
@@ -78,7 +79,7 @@ void runSimulation(int argc, char* argv[]) {
     species_map
   );
 
-  std::default_random_engine generator;
+  RandomNumberGenerator generator;
   ParticleContainer particle_container = buildParticlesFromYaml(
     main["Particles"]["Initial Conditions"],
     species_map,
@@ -140,7 +141,7 @@ void runSimulation(int argc, char* argv[]) {
     IntegratedCharge integrated_charge = particle_operations.assembleCharge(particle_container);
     electrostatic_field_operations->fieldSolve(particle_electrostatic_field_state, integrated_charge);
   }
-  
+
   for (int i = 0; i < std::ssize(low_fidelity_field_states); ++i) {
     IntegratedCharge integrated_charge = low_fidelity_operations[i]->assembleCharge(low_fidelity_states[i]);
     electrostatic_field_operations->fieldSolve(low_fidelity_field_states[i], integrated_charge);
