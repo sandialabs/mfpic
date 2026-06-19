@@ -1,6 +1,7 @@
 #include <libmfpic/Errors.hpp>
 #include <libmfpic/MeshDistribution.hpp>
 #include <libmfpic/MeshUtilities.hpp>
+#include <libmfpic/RandomNumberGenerator.hpp>
 
 #include <gtest/gtest.h>
 
@@ -14,13 +15,13 @@ double uniformDistribution(const mfem::Vector&) {
 
 void testThatUniformlyRandomlyGeneratedElementsAreActuallyDistributedUniformly(
   std::shared_ptr<mfem::Mesh> mesh,
-  int num_points_to_generate = 20000,
+  int num_points_to_generate = 200000,
   double relative_tolerance = 0.1
 ) {
   const int num_elements = mesh->GetNE();
   std::vector<int> num_points_generated_in_element(num_elements, 0);
 
-  std::mt19937 generator;
+  RandomNumberGenerator generator;
   MeshDistribution distribution(mesh, uniformDistribution);
   for (int i = 0; i < num_points_to_generate; i++) {
     int element;
@@ -45,7 +46,7 @@ void testThatUniformlyRandomlyGeneratedPointsAreActuallyDistributedUniformlyInAS
   ASSERT_LT(dimension, mesh->Dimension());
   std::vector<int> bins(num_bins, 0);
 
-  std::mt19937 generator;
+  RandomNumberGenerator generator;
   MeshDistribution distribution(mesh, uniformDistribution);
   for (int i = 0; i < num_points_to_generate; i++) {
     mfem::Vector point;
@@ -130,7 +131,7 @@ void testThatStepDistributedPointsAllLieToTheRightOfTheMidpoint(
 ) {
   auto mesh = std::make_shared<mfem::Mesh>(createMeshOfUnitBoxWith2ElemsPerDimension(element_type));
 
-  std::default_random_engine generator;
+  RandomNumberGenerator generator;
   MeshDistribution distribution(mesh, stepDistribution);
   for (int i = 0; i < num_points_to_generate; i++) {
     mfem::Vector point;
@@ -191,7 +192,7 @@ void testThatLinearlyDistributedPointsAreActuallyDistributedLinearly(
     errorWithDeveloperMessage("Element type not supported.");
   }
 
-  std::default_random_engine generator;
+  RandomNumberGenerator generator;
   MeshDistribution distribution(mesh, linearDistribution);
   for (int i = 0; i < num_points_to_generate; i++) {
     mfem::Vector point;

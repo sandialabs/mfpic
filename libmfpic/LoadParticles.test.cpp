@@ -18,7 +18,7 @@ TEST(LoadParticles, NoParticlesAddedWhenNoParticlesRequested) {
     .temperature = 121325.0,
   };
   constexpr int num_particles = 0;
-  std::default_random_engine generator;
+  RandomNumberGenerator generator;
 
   ParticleContainer particles = loadParticles(
     ConstantSourceParameters(default_species, source_state_parameters, num_particles),
@@ -36,7 +36,7 @@ TEST(LoadParticles, NumLoadedParticlesIsAsRequested) {
     .temperature = 12415.0,
   };
   constexpr int num_particles = 40;
-  std::default_random_engine generator;
+  RandomNumberGenerator generator;
 
   ParticleContainer particles = loadParticles(
     ConstantSourceParameters(default_species, source_state_parameters, num_particles),
@@ -56,7 +56,7 @@ TEST(LoadParticles, LoadedParticlesAllUseBulkVelocityWithZeroTemperature) {
     .kappa = 2.0,
   };
   constexpr int num_particles = 5;
-  std::default_random_engine generator;
+  RandomNumberGenerator generator;
 
   ParticleContainer particles = loadParticles(
     ConstantSourceParameters(default_species, source_state_parameters, num_particles),
@@ -80,7 +80,7 @@ TEST(LoadParticles, ParticleWeightSetCorrectly) {
     .temperature = 0.0,
   };
   constexpr int num_particles = 20;
-  std::default_random_engine generator;
+  RandomNumberGenerator generator;
 
   ParticleContainer particles = loadParticles(
     ConstantSourceParameters(default_species, source_state_parameters, num_particles),
@@ -123,7 +123,7 @@ TEST(LoadParticles, ParticlesAreUniformlyDistributedInSpace) {
     .temperature = 0.0,
   };
   constexpr int num_particles = 20000;
-  std::default_random_engine generator;
+  RandomNumberGenerator generator;
 
   ParticleContainer particles = loadParticles(
     ConstantSourceParameters(default_species, source_state_parameters, num_particles),
@@ -143,7 +143,7 @@ TEST(LoadParticles, ParticleVelocitiesAreMaxwellianWhenMaxwellianParticlesAreReq
     .temperature = temperature,
   };
   constexpr int num_particles = 20000;
-  std::default_random_engine generator;
+  RandomNumberGenerator generator;
 
   ParticleContainer particles = loadParticles(
     ConstantSourceParameters(default_species, source_state_parameters, num_particles),
@@ -182,7 +182,7 @@ TEST(LoadParticles, ParticleVelocitiesAreMaxwellianWithLargeKappa) {
     .kappa = 1e16,
   };
   constexpr int num_particles = 20000;
-  std::default_random_engine generator;
+  RandomNumberGenerator generator;
 
   ParticleContainer particles = loadParticles(
     ConstantSourceParameters(default_species, source_state_parameters, num_particles),
@@ -222,7 +222,7 @@ TEST(LoadParticles, ParticleVelocitiesMeanAndStdAreCorrectWhenKappaDistributionI
     .temperature = temperature,
     .kappa = kappa,
   };
-  std::default_random_engine generator;
+  RandomNumberGenerator generator;
 
   ParticleContainer particles = loadParticles(
     ConstantSourceParameters(default_species, source_state_parameters, num_particles),
@@ -259,7 +259,7 @@ TEST(LoadUniformMaxwellianParticles, ParticleDistributionFunctionsAreMaxwellian)
   constexpr double temperature = 300;
   mfem::Vector bulk_velocity({1.0,2.0,3.0});
   constexpr int num_particles = 1;
-  std::mt19937 generator;
+  RandomNumberGenerator generator;
 
   const SourceStateParameters source_state_parameters{
     .number_density = number_density,
@@ -291,7 +291,7 @@ TEST(LoadUniformKappaParticles, ParticleDistributionFunctionsAreKappa) {
   constexpr double temperature = 300;
   mfem::Vector bulk_velocity({1.0,2.0,3.0});
   constexpr int num_particles = 1;
-  std::mt19937 generator;
+  RandomNumberGenerator generator;
   double kappa = 2.0;
 
   const SourceStateParameters source_state_parameters{
@@ -331,7 +331,7 @@ TEST(LoadParticles, LoadedParticlesRespectSodDiscontinuity) {
     right_state_parameters,
     num_particles
   );
-  std::default_random_engine generator;
+  RandomNumberGenerator generator;
 
   ParticleContainer particles = loadParticles(
     sod_parameters,
@@ -365,7 +365,7 @@ TEST(LoadParticles, LoadedParticlesGaussianWithZeroOffsetsIsUniformInSpace) {
     pressure_height,
     num_particles
   );
-  std::default_random_engine generator;
+  RandomNumberGenerator generator;
 
   ParticleContainer particles = loadParticles(
     gaussian_parameters,

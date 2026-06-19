@@ -4,6 +4,7 @@
 #include <libmfpic/Discretization.hpp>
 #include <libmfpic/Euler.hpp>
 #include <libmfpic/KineticFluxBC.hpp>
+#include <libmfpic/RandomNumberGenerator.hpp>
 
 #include <gtest/gtest.h>
 #include <libmfpic/Euler.hpp>
@@ -12,7 +13,6 @@
 #include <mfem/fem/hyperbolic.hpp>
 #include <mfem/fem/lininteg.hpp>
 #include <mfem/linalg/densemat.hpp>
-#include <random>
 
 namespace {
 
@@ -32,7 +32,7 @@ TEST(DGEulerBoundaryConditions, DGEulerReflectingBCSetsGhostCorrectly) {
   mfem::DenseMatrix in(num_dof, num_eqns), out(num_dof,num_eqns);
 
   std::random_device rd;
-  std::mt19937 gen(rd());
+  RandomNumberGenerator gen(rd());
   std::uniform_real_distribution<> pos_dis(.1, 2.0);
   std::uniform_real_distribution<> dis(-2.0, 2.0);
 
@@ -67,9 +67,9 @@ class PickOneFlux : public mfem::NumericalFlux {
 
     mfem::real_t Eval(const mfem::Vector &state1, const mfem::Vector &state2,
                       const mfem::Vector &nor, mfem::FaceElementTransformations &transformations,
-                      mfem::Vector &flux) const override 
+                      mfem::Vector &flux) const override
     {
-      const mfem::real_t speed = pick_ghost_ ? 
+      const mfem::real_t speed = pick_ghost_ ?
         fluxFunction.ComputeFluxDotN(state2, nor, transformations, flux) :
         fluxFunction.ComputeFluxDotN(state1, nor, transformations, flux);
       return speed;
@@ -77,16 +77,16 @@ class PickOneFlux : public mfem::NumericalFlux {
   private:
     const bool pick_ghost_;
 };
-/// linear flux for testing, only has a boundary term 
+/// linear flux for testing, only has a boundary term
 class LinearFlux : public mfem::FluxFunction {
   public:
     LinearFlux(int dim) :
       mfem::FluxFunction(5, dim) {}
     mfem::real_t ComputeFluxDotN(const mfem::Vector & state, const mfem::Vector & normal,
-                                 mfem::FaceElementTransformations &, 
-                                 mfem::Vector & flux_dot_n) const override 
+                                 mfem::FaceElementTransformations &,
+                                 mfem::Vector & flux_dot_n) const override
     {
-      const double darea = normal.Norml2(); // mfem uses the normal to get the weight correct 
+      const double darea = normal.Norml2(); // mfem uses the normal to get the weight correct
       mfem::Vector unit_normal = normal;
       unit_normal /= normal.Norml2();
       const mfem::Vector momentum(state.GetData() + 1, dim);
@@ -107,14 +107,14 @@ class LinearFlux : public mfem::FluxFunction {
 TEST(DGEulerBoundaryConditions, DGEulerReflectingBCCheckGhostBoundaryIntegrator) {
   constexpr double tolerance = 1e-12;
   int order = 1;
-  int dim = 3; 
+  int dim = 3;
   int num_equations = 5;
   mfem::Mesh mesh = mfem::Mesh::MakeCartesian3D(3, 3, 3, mfem::Element::HEXAHEDRON, 1, 1, 1);
   Discretization discretization(&mesh, order, FETypes::DG, num_equations);
   mfem::FiniteElementSpace finite_element_space = discretization.getFeSpace();
 
   constexpr mfem::real_t c0(12.7), c1(-9.4), c2(2.2), c3(9.1);
-  auto solution_vec = [&](const mfem::Vector &x, mfem::Vector &y) { 
+  auto solution_vec = [&](const mfem::Vector &x, mfem::Vector &y) {
     mfem::real_t base_val = c0 + c1 * x[0] + c2 * x[1] + c3 * x[2];
     for (int i = 0; i < 5; ++i)
       y[i] = base_val * (i + 1);
@@ -137,7 +137,7 @@ TEST(DGEulerBoundaryConditions, DGEulerReflectingBCCheckGhostBoundaryIntegrator)
   rhs = 0.;
   form.Mult(fluid_dofs, rhs);
 
-  auto f_dot_n_expected = [&](const mfem::Vector &x, mfem::Vector &y) { 
+  auto f_dot_n_expected = [&](const mfem::Vector &x, mfem::Vector &y) {
     mfem::Vector u(5);
     solution_vec(x,u);
     mfem::Vector normal{1.,0.,0.};
@@ -148,7 +148,7 @@ TEST(DGEulerBoundaryConditions, DGEulerReflectingBCCheckGhostBoundaryIntegrator)
 
       mfem::Vector normal_momentum = normal;
       normal_momentum *= p_dot_n;
-    
+
       u[1] -= 2 * normal_momentum[0];
       u[2] -= 2 * normal_momentum[1];
       u[3] -= 2 * normal_momentum[2];
@@ -188,7 +188,7 @@ const Species electron_species{.charge = -constants::elementary_charge, .mass = 
 TEST(DGEulerBoundaryConditions, DummyFluxFunctionHasNoComputeFlux) {
   auto dummy_flux = DummyFluxFunction(5, 3);
   auto dummy_transform = mfem::IsoparametricTransformation();
-  auto dummy_matrix = mfem::DenseMatrix(); 
+  auto dummy_matrix = mfem::DenseMatrix();
   EXPECT_DEATH(dummy_flux.ComputeFlux(mfem::Vector(), dummy_transform, dummy_matrix),
                "ComputeFlux cannot be called!");
 }
@@ -221,19 +221,19 @@ mfem::Vector expectedFDotN(const mfem::Vector conservative_state, const mfem::Ve
   const double reduced_dot_t2     = reduced_velocity * tangent_2;
 
   // see sec 1.3.6 in Boyd and Schwartzentruber
-  const double density_flux = 1. / 4. * conservative_state[euler::ConservativeVariables::MASS_DENSITY] * 
+  const double density_flux = 1. / 4. * conservative_state[euler::ConservativeVariables::MASS_DENSITY] *
     std::sqrt(8. * constants::boltzmann_constant * temperature  / (M_PI * species.mass)) * (
-      std::exp(-reduced_dot_normal*reduced_dot_normal) + 
+      std::exp(-reduced_dot_normal*reduced_dot_normal) +
       std::sqrt(M_PI) * reduced_dot_normal * (std::erf(reduced_dot_normal) + 1.)
     );
-  const double normal_momentum_flux = conservative_state[euler::ConservativeVariables::MASS_DENSITY] * 
+  const double normal_momentum_flux = conservative_state[euler::ConservativeVariables::MASS_DENSITY] *
     constants::boltzmann_constant * temperature / species.mass * (
       reduced_dot_normal / std::sqrt(M_PI) * std::exp(-reduced_dot_normal*reduced_dot_normal) +
-      (.5 + reduced_dot_normal * reduced_dot_normal) * (std::erf(reduced_dot_normal) + 1.) 
+      (.5 + reduced_dot_normal * reduced_dot_normal) * (std::erf(reduced_dot_normal) + 1.)
     );
   const double t1_momentum_flux = density_flux * reduced_dot_t1;
   const double t2_momentum_flux = density_flux * reduced_dot_t2;
-  const double energy_flux = 1. / 4. * number_density *  constants::boltzmann_constant * temperature * 
+  const double energy_flux = 1. / 4. * number_density *  constants::boltzmann_constant * temperature *
   std::sqrt(8. * constants::boltzmann_constant * temperature  / (M_PI * species.mass)) * (
     (reduced_velocity * reduced_velocity + 2.) * std::exp(-reduced_dot_normal*reduced_dot_normal) +
     (reduced_velocity * reduced_velocity + 5./2.) * std::sqrt(M_PI) * reduced_dot_normal * (std::erf(reduced_dot_normal) + 1.)
@@ -336,7 +336,7 @@ TEST(DGEulerBoundaryConditions, KineticFluxFluxFunctionCorrectHighMachBehavior) 
   constexpr double tol = 1e-12;
   constexpr int spatial_dim = 1;
   auto dummy_flux = DummyFluxFunction(5, spatial_dim);
-  KineticFluxNumericalFlux flux(dummy_flux, electron_species);  
+  KineticFluxNumericalFlux flux(dummy_flux, electron_species);
   auto dummy_transform = mfem::FaceElementTransformations();
 
   const mfem::Vector normal {2.567, 0., 0.}; // mfem's normals are not necessarily unit vectors
@@ -426,7 +426,7 @@ TEST(DGEulerBoundaryConditions, KineticFluxFluxFunctionCorrectNoBulk) {
   f_dot_n_expected(1) = pressure / 2.;
   f_dot_n_expected(2) = 0.;
   f_dot_n_expected(3) = 0.;
-  f_dot_n_expected(4) = thermal_speed * pressure; 
+  f_dot_n_expected(4) = thermal_speed * pressure;
   mfem::Vector f_dot_n(5);
 
   flux.Eval(conservative_state, conservative_state, normal, dummy_transform, f_dot_n);
