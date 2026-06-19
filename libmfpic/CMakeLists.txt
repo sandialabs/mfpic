@@ -26,6 +26,7 @@ add_library(libmfpic
   GenerateMaxwellianVelocity.cpp
   KineticFluxBC.cpp
   IntegratedCharge.cpp
+  LoadParticles.cpp
   LowFidelityState.cpp
   MeshDataWriter.cpp
   MeshDistribution.cpp
