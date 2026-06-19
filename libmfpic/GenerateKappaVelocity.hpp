@@ -1,33 +1,29 @@
 #pragma once
 
 #include <libmfpic/Constants.hpp>
+#include <libmfpic/RandomNumberGenerator.hpp>
 
 #include <mfem/mfem.hpp>
-
-#include <random>
 
 namespace mfpic {
 
 /**
  * @brief Generate a three-dimensional velocity vector from the product of 1D Kappa distributions.
  *
- * @tparam Generator A UniformRandomBitGenerator type.
- *
  * @param[in]     bulk_velocity              Bulk (mean) velocity of distribution.
  * @param[in]     temperature                Temperature of distribution.
  * @param[in]     kappa                      Kappa parameter in the kappa-distribution.
  * @param[in]     mass                       Mass of species.
- * @param[in,out] generator                  A UniformRandomBitGenerator used to generate some random numbers.
+ * @param[in,out] generator                  Random number generator.
  *
  * @returns Velocity randomly drawn from the requested Kappa distribution.
  */
-template <std::uniform_random_bit_generator Generator>
 mfem::Vector generateKappaVelocity(
   const mfem::Vector& bulk_velocity,
   double temperature,
   double kappa,
   double mass,
-  Generator& generator
+  RandomNumberGenerator& generator
 ) {
   assert(bulk_velocity.Size() == 3);
   assert(temperature >= 0.0);
@@ -50,23 +46,20 @@ mfem::Vector generateKappaVelocity(
 /**
  * @brief Generate a three-dimensional velocity vector from an isotropic Kappa distribution.
  *
- * @tparam Generator A UniformRandomBitGenerator type.
- *
  * @param[in]     bulk_velocity              Bulk (mean) velocity of distribution.
  * @param[in]     temperature                Temperature of distribution.
  * @param[in]     kappa                      Kappa parameter in the kappa-distribution.
  * @param[in]     mass                       Mass of species.
- * @param[in,out] generator                  A UniformRandomBitGenerator used to generate some random numbers.
+ * @param[in,out] generator                  Random number generator.
  *
  * @returns Velocity randomly drawn from the requested Kappa distribution.
  */
-template <std::uniform_random_bit_generator Generator>
 mfem::Vector generateIsotropicKappaVelocity(
   const mfem::Vector& bulk_velocity,
   double temperature,
   double kappa,
   double mass,
-  Generator& generator)
+  RandomNumberGenerator& generator)
 {
   assert(bulk_velocity.Size() == 3);
   assert(temperature >= 0.0);

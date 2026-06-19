@@ -6,30 +6,26 @@
 #include <libmfpic/MeshDistribution.hpp>
 #include <libmfpic/MeshUtilities.hpp>
 #include <libmfpic/ParticleContainer.hpp>
+#include <libmfpic/RandomNumberGenerator.hpp>
 #include <libmfpic/SourcesFactory.hpp>
 #include <libmfpic/Species.hpp>
 
 #include <mfem/mfem.hpp>
-
-#include <random>
 
 namespace mfpic {
 
 /**
  * @brief Load a requested number of particles according to a parametrized distribution.
  *
- * @tparam Generator A UniformRandomBitGenerator type.
- *
  * @param[in]     source_parameters          Parameters for the particle distribution.
- * @param[in,out] generator                  A UniformRandomBitGenerator used to generate some random numbers.
+ * @param[in,out] generator                  Random number generator.
  * @param[in]     mesh                       Mesh in which to create particles.
  *
  * @returns Container of created particles.
  */
-template <std::uniform_random_bit_generator Generator>
 ParticleContainer loadParticles(
   const SourceParameters& source_parameters,
-  Generator& generator,
+  RandomNumberGenerator& generator,
   std::shared_ptr<mfem::Mesh> mesh
 ) {
   ParticleContainer particles;
