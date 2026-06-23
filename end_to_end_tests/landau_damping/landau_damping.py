@@ -1,9 +1,9 @@
 import numpy as np
-from scipy.constants import Boltzmann, electron_mass, proton_mass, elementary_charge, epsilon_0, electron_volt
+from scipy.constants import Boltzmann, electron_mass, elementary_charge, epsilon_0, electron_volt
 
 perturbation = .02
-number_density = 1e15
-temperature = 2. * electron_volt #np.sqrt(electron_mass * v_thermal / Boltzmann)
+number_density = 1e18
+temperature = 10. * electron_volt / Boltzmann
 debye_length = np.sqrt(epsilon_0 * Boltzmann * temperature / (number_density * elementary_charge**2.0))
 wavenumber = .5 / debye_length
 Lx = 2. * np.pi / wavenumber
@@ -13,7 +13,7 @@ plasma_frequency = np.sqrt(number_density * elementary_charge**2.0 / electron_ma
 dt = .01 / plasma_frequency
 num_time_steps = 2000
 dx = Lx / num_elements
-num_macroparticles_per_population = num_elements * 1000
+num_macroparticles_per_population = num_elements * 100
 
 def run(mfpic_executable):
   import subprocess
@@ -36,20 +36,11 @@ Species:
   electron:
     Mass: {electron_mass}
     Charge: {-elementary_charge}
-  immobile_proton:
-    Mass: {proton_mass}
-    Charge: {elementary_charge}
-    Charge Over Mass: 0.0
 
 Particles:
   Boundary Conditions: []
   Default Boundary Condition: Reflecting
   Initial Conditions:
-    - Species: [immobile_proton]
-      Number of Macroparticles per Species: {num_macroparticles_per_population}
-      Constant:
-        Temperature: 0.0
-        Number Density: {number_density}
     - Species: [electron]
       Number of Macroparticles per Species: {num_macroparticles_per_population}
       Periodic Perturbation:
@@ -63,8 +54,23 @@ Particles:
           Temperature: 0.
           Number Density: {perturbation}
 
+Euler Fluids:
+  Basis Order: 0
+  Initial Conditions:
+    - Species: [electron]
+      Periodic Perturbation:
+        Wavevector: [{wavenumber}, 0, 0]
+        Base Values:
+          Bulk Velocity: [0.0, 0.0, 0.0]
+          Temperature: {temperature}
+          Number Density: {number_density}
+        Perturbations:
+          Bulk Velocity: [0.0, 0.0, 0.0]
+          Temperature: 0.
+          Number Density: {perturbation}
+          
 Output:
-  Stride: 1
+  Stride: 20
 
   """
   yaml = "landau_damping.yaml"
@@ -76,6 +82,7 @@ Output:
 
 def analyze():
   return True
+  ## TODO MAKE APPROPRIATE CHECK
   #output = np.genfromtxt("output.csv", names=True)
 
   #simulation_times = output["Time"]
