@@ -145,7 +145,15 @@ void runSimulation(int argc, char* argv[]) {
   //   IntegratedCharge integrated_charge = low_fidelity_operations[i]->assembleCharge(low_fidelity_states[i]);
   //   electrostatic_field_operations->fieldSolve(low_fidelity_field_states[i], integrated_charge);
   // }
-  mesh_data_writer.output(particle_electrostatic_field_state, low_fidelity_field_states, low_fidelity_states, 0, 0.);
+  mesh_data_writer.output(
+    particle_electrostatic_field_state,
+    low_fidelity_field_states,
+    *electrostatic_field_operations,
+    electrostatic_discretization,
+    low_fidelity_states,
+    low_fidelity_operations,
+    0,
+    0.);
 
 
   TimeSteppingParameters time_stepping_parameters = buildTimeSteppingParametersFromYAML(main["Time Stepping"]);
@@ -209,7 +217,10 @@ void runSimulation(int argc, char* argv[]) {
       mesh_data_writer.output(
         particle_electrostatic_field_state,
         low_fidelity_field_states,
+        *electrostatic_field_operations,
+        electrostatic_discretization,
         low_fidelity_states,
+        low_fidelity_operations,
         i_timestep,
         end_time);
 

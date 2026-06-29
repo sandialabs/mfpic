@@ -73,6 +73,15 @@ public:
     const ElectrostaticFieldState& field_state,
     const IntegratedCharge& integrated_charge);
 
+  mfem::Vector computeIntegratedGhostCharge2(
+    const ElectrostaticFieldState& field_state,
+    const IntegratedCharge& integrated_charge);
+  mfem::GridFunction computeGhostChargeDensity2(
+    const ElectrostaticFieldState& field_state,
+    const IntegratedCharge& integrated_charge);
+
+  mfem::GridFunction computeWeakDivE(const ElectrostaticFieldState& field_state);
+
   /// Dtor.
   virtual ~ElectrostaticFieldOperations();
 
@@ -95,6 +104,10 @@ private:
 
   /// mass operator assembled into matrix
   mfem::SparseMatrix mass_matrix_;
+
+  Discretization scalar_dg_discretization_;
+
+  mfem::MixedBilinearForm weak_derivative_bilinear_form_;
 };
 
 } // namespace mfpic

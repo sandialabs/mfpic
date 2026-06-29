@@ -429,4 +429,194 @@ TEST(ElectrostaticFieldOperations, FieldSolveCorrectForPeriodicWithPinning) {
 
 }
 
+TEST(ElectrostaticFieldOperations, GaussLawErrorFromDGEField) {
+  MeshParameters mesh_parameters{
+    .mesh_type = "line",
+    .lengths = {1.},
+    .num_elements = {15},
+    .periodic_dims = {0}};
+
+  mfem::Mesh mesh = buildMesh(mesh_parameters);
+
+  constexpr int hgrad_order = 1;
+  Discretization es_discretization(&mesh, hgrad_order);
+
+  // auto pinning = std::make_unique<Pinning>();
+  // ElectrostaticFieldOperations es_field_operations(es_discretization, std::move(pinning));
+
+  ElectrostaticFieldState es_field_state(es_discretization);
+  mfem::GridFunction& e_field_dg_grid_function = es_field_state.getEFieldGridFunction();
+  auto initial_e_field_function = [&](const mfem::Vector &x, mfem::Vector &y) {
+    y[0] = 2. * M_PI * sin(2. * M_PI * x[0]);
+    y[1] = 0;
+    y[2] = 0;
+  };
+
+  mfem::VectorFunctionCoefficient initial_e_field(3, initial_e_field_function);
+  e_field_dg_grid_function.ProjectCoefficient(initial_e_field);
+
+  constexpr int dg_order = 0;
+  Discretization scalar_dg_discretization(&mesh, dg_order, FETypes::DG);
+
+  mfem::FiniteElementSpace scalar_dg_fe_space = scalar_dg_discretization.getFeSpace();
+  mfem::FiniteElementSpace es_fe_space = es_discretization.getFeSpace();
+  mfem::MixedBilinearForm weak_derivative_bilinear_form(&scalar_dg_fe_space, &es_fe_space);
+
+  mfem::ConstantCoefficient permittivity(constants::permittivity);
+  weak_derivative_bilinear_form.AddDomainIntegrator(new mfem::MixedScalarWeakDerivativeIntegrator(permittivity));
+  weak_derivative_bilinear_form.Assemble();
+
+  mfem::GridFunction e_field_x_dg(&scalar_dg_fe_space, e_field_dg_grid_function);
+  mfem::Vector integrated_ghost_charge(es_fe_space.GetVSize());
+  weak_derivative_bilinear_form.Mult(e_field_x_dg, integrated_ghost_charge);
+  auto& message = std::cout;
+  {
+    const auto vector_to_print = integrated_ghost_charge;
+    const std::string vector_name_to_print = "integrated_ghost_charge";
+    message << "MFEM Vector: " << vector_name_to_print << std::endl;
+    for(int i = 0; i < vector_to_print.Size(); ++i) {
+      message << vector_name_to_print << "[" << i << "] = ";
+      message << vector_to_print(i) << std::endl;
+    }
+    message << std::endl;
+  }
+
+  mfem::FunctionCoefficient charge_density([](const mfem::Vector& x){
+    return 4. * M_PI * M_PI * constants::permittivity * cos(2. * M_PI * x[0]);
+  });
+  mfem::LinearForm integrated_charge_linear_form(&es_discretization.getFeSpace());
+  integrated_charge_linear_form.AddDomainIntegrator(new mfem::DomainLFIntegrator(charge_density));
+  integrated_charge_linear_form.Assemble();
+
+  IntegratedCharge integrated_charge(es_discretization);
+  integrated_charge.setIntegratedCharge(integrated_charge_linear_form);
+
+  integrated_ghost_charge.Add(-1, integrated_charge.getIntegratedCharge());
+  {
+    const auto vector_to_print = integrated_ghost_charge;
+    const std::string vector_name_to_print = "integrated_ghost_charge";
+    message << "MFEM Vector: " << vector_name_to_print << std::endl;
+    for(int i = 0; i < vector_to_print.Size(); ++i) {
+      message << vector_name_to_print << "[" << i << "] = ";
+      message << vector_to_print(i) << std::endl;
+    }
+    message << std::endl;
+  }
+  {
+    const auto vector_to_print = integrated_charge.getIntegratedCharge();
+    const std::string vector_name_to_print = "integrated_charge";
+    message << "MFEM Vector: " << vector_name_to_print << std::endl;
+    for(int i = 0; i < vector_to_print.Size(); ++i) {
+      message << vector_name_to_print << "[" << i << "] = ";
+      message << vector_to_print(i) << std::endl;
+    }
+    message << std::endl;
+  }
+  {
+    const auto vector_to_print = e_field_x_dg;
+    const std::string vector_name_to_print = "e_field_x_dg";
+    message << "MFEM Vector: " << vector_name_to_print << std::endl;
+    for(int i = 0; i < vector_to_print.Size(); ++i) {
+      message << vector_name_to_print << "[" << i << "] = ";
+      message << vector_to_print(i) << std::endl;
+    }
+    message << std::endl;
+  }
+}
+
+TEST(ElectrostaticFieldOperations, GaussLawErrorFromDGEField2) {
+  MeshParameters mesh_parameters{
+    .mesh_type = "line",
+    .lengths = {1.},
+    .num_elements = {15},
+    .periodic_dims = {0}};
+
+  mfem::Mesh mesh = buildMesh(mesh_parameters);
+
+  constexpr int hgrad_order = 1;
+  Discretization es_discretization(&mesh, hgrad_order);
+
+  constexpr int dg_order = 0;
+  Discretization scalar_dg_discretization(&mesh, dg_order, FETypes::DG);
+
+  Discretization vector_dg_discretization(&mesh, dg_order, FETypes::DG, 3);
+
+  auto pinning = std::make_unique<Pinning>();
+  ElectrostaticFieldOperations es_field_operations(es_discretization, std::move(pinning));
+
+  ElectrostaticFieldState es_field_state(es_discretization);
+
+  mfem::FunctionCoefficient charge_density([](const mfem::Vector& x){
+    return 4. * M_PI * M_PI * constants::permittivity * cos(2. * M_PI * x[0]);
+  });
+  mfem::LinearForm integrated_charge_linear_form(&es_discretization.getFeSpace());
+  integrated_charge_linear_form.AddDomainIntegrator(new mfem::DomainLFIntegrator(charge_density));
+  integrated_charge_linear_form.Assemble();
+
+  IntegratedCharge integrated_charge(es_discretization);
+  integrated_charge.setIntegratedCharge(integrated_charge_linear_form);
+
+  es_field_operations.fieldSolve(es_field_state, integrated_charge);
+
+  mfem::FiniteElementSpace scalar_dg_fe_space = scalar_dg_discretization.getFeSpace();
+  mfem::FiniteElementSpace es_fe_space = es_discretization.getFeSpace();
+
+  mfem::DiscreteLinearOperator discrete_strong_gradient(&es_fe_space, &scalar_dg_fe_space);
+  discrete_strong_gradient.AddDomainIntegrator(new mfem::GradientInterpolator());
+  discrete_strong_gradient.Assemble();
+
+  mfem::GridFunction potential = es_field_state.getPotential();
+  mfem::GridFunction e_field(&scalar_dg_fe_space);
+  discrete_strong_gradient.Mult(potential, e_field);
+  e_field.Neg();
+
+  // constexpr int dg_order = 0;
+  // Discretization scalar_dg_discretization(&mesh, dg_order, FETypes::DG);
+
+  // mfem::FiniteElementSpace scalar_dg_fe_space = scalar_dg_discretization.getFeSpace();
+  // mfem::FiniteElementSpace es_fe_space = es_discretization.getFeSpace();
+  mfem::MixedBilinearForm weak_derivative_bilinear_form(&scalar_dg_fe_space, &es_fe_space);
+
+  mfem::ConstantCoefficient permittivity(constants::permittivity);
+  weak_derivative_bilinear_form.AddDomainIntegrator(new mfem::MixedScalarWeakDerivativeIntegrator(permittivity));
+  weak_derivative_bilinear_form.Assemble();
+
+  mfem::Vector integrated_ghost_charge(es_fe_space.GetVSize());
+  weak_derivative_bilinear_form.Mult(e_field, integrated_ghost_charge);
+  auto& message = std::cout;
+  {
+    const auto vector_to_print = integrated_ghost_charge;
+    const std::string vector_name_to_print = "weak_div_D";
+    message << "MFEM Vector: " << vector_name_to_print << std::endl;
+    for(int i = 0; i < vector_to_print.Size(); ++i) {
+      message << vector_name_to_print << "[" << i << "] = ";
+      message << vector_to_print(i) << std::endl;
+    }
+    message << std::endl;
+  }
+  mfem::Vector integrated_charge_vector = integrated_charge.getIntegratedCharge();
+  integrated_ghost_charge.Add(-1., integrated_charge_vector);
+
+  {
+    const auto vector_to_print = integrated_charge_vector;
+    const std::string vector_name_to_print = "integrated_charge_vector";
+    message << "MFEM Vector: " << vector_name_to_print << std::endl;
+    for(int i = 0; i < vector_to_print.Size(); ++i) {
+      message << vector_name_to_print << "[" << i << "] = ";
+      message << vector_to_print(i) << std::endl;
+    }
+    message << std::endl;
+  }
+  {
+    const auto vector_to_print = integrated_ghost_charge;
+    const std::string vector_name_to_print = "integrated_ghost_charge";
+    message << "MFEM Vector: " << vector_name_to_print << std::endl;
+    for(int i = 0; i < vector_to_print.Size(); ++i) {
+      message << vector_name_to_print << "[" << i << "] = ";
+      message << vector_to_print(i) << std::endl;
+    }
+    message << std::endl;
+  }
+}
+
 }

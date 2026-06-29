@@ -1,4 +1,7 @@
+#include <libmfpic/ElectrostaticFieldOperations.hpp>
 #include <libmfpic/ElectrostaticFieldState.hpp>
+#include <libmfpic/IntegratedCharge.hpp>
+#include <libmfpic/LowFidelityOperations.hpp>
 #include <libmfpic/LowFidelityState.hpp>
 #include <libmfpic/MeshDataWriter.hpp>
 
@@ -9,7 +12,10 @@ MeshDataWriter::MeshDataWriter(const std::string& name, mfem::Mesh& mesh) : para
 void MeshDataWriter::output(
   ElectrostaticFieldState& particle_field_state,
   std::vector<ElectrostaticFieldState>& low_fidelity_field_states,
+  ElectrostaticFieldOperations& electrostatic_field_operations,
+  Discretization& electrostatic_discretization,
   std::vector<LowFidelityState>& low_fidelity_states,
+  const std::vector<std::unique_ptr<LowFidelityOperations>>& low_fidelity_operations_vector,
   const int i_time_step,
   const double time)
 {
@@ -57,9 +63,17 @@ void MeshDataWriter::output(
 
   register_potential_and_e_field_for_model("", particle_field_state);
 
+  std::vector<mfem::GridFunction> ghost_charge_density_grid_functions;
+  ghost_charge_density_grid_functions.reserve(num_lf_models);
+  std::vector<mfem::GridFunction> ghost_charge_density_grid_functions_2;
+  ghost_charge_density_grid_functions_2.reserve(num_lf_models);
+  std::vector<mfem::GridFunction> weak_div_e_grid_functions;
+  weak_div_e_grid_functions.reserve(num_lf_models);
+
   if (low_fidelity_states.size() > 0) {
     for (unsigned int i_lf_model = 0; i_lf_model < num_lf_models; ++i_lf_model) {
       LowFidelityState& low_fidelity_state = low_fidelity_states[i_lf_model];
+      ElectrostaticFieldState& low_fidelity_field_state = low_fidelity_field_states[i_lf_model];
       const std::string suffix = "_lf_" + std::to_string(i_lf_model);
       for (int i_species = 0; i_species < low_fidelity_state.numSpecies(); ++i_species) {
         LowFidelitySpeciesState& species_state = low_fidelity_state.getSpeciesState(i_species);
@@ -68,7 +82,30 @@ void MeshDataWriter::output(
         const std::string field_name = "species_" + std::to_string(i_species) + suffix;
         paraview_data_collection_.RegisterField(field_name, &grid_function);
       }
-      register_potential_and_e_field_for_model(suffix, low_fidelity_field_states[i_lf_model]);
+      register_potential_and_e_field_for_model(suffix, low_fidelity_field_state);
+
+      const LowFidelityOperations& low_fidelity_operations = *low_fidelity_operations_vector[i_lf_model];
+      IntegratedCharge low_fidelity_charge(electrostatic_discretization);
+      low_fidelity_charge.addCharge(low_fidelity_operations.assembleCharge(low_fidelity_state));
+      ghost_charge_density_grid_functions.emplace_back(electrostatic_field_operations.computeGhostChargeDensity(
+        low_fidelity_field_state,
+        low_fidelity_charge));
+      
+      const std::string ghost_charge_density_field_name = "ghost_charge_density" + suffix;
+      auto& ghost_charge_density = ghost_charge_density_grid_functions.back();
+      paraview_data_collection_.RegisterField(ghost_charge_density_field_name, &ghost_charge_density);
+
+      ghost_charge_density_grid_functions_2.emplace_back(electrostatic_field_operations.computeGhostChargeDensity2(
+        low_fidelity_field_state,
+        low_fidelity_charge));
+      const std::string ghost_charge_density_2_field_name = "ghost_charge_density_2" + suffix;
+      auto& ghost_charge_density_2 = ghost_charge_density_grid_functions_2.back();
+      paraview_data_collection_.RegisterField(ghost_charge_density_2_field_name, &ghost_charge_density_2);
+
+      weak_div_e_grid_functions.emplace_back(electrostatic_field_operations.computeWeakDivE(low_fidelity_field_state));
+      const std::string weak_div_E_field_name = "weak_div_E" + suffix;
+      auto& weak_div_E = weak_div_e_grid_functions.back();
+      paraview_data_collection_.RegisterField(weak_div_E_field_name, &weak_div_E);
     }
   }
 

@@ -1,10 +1,15 @@
 #include <libmfpic/Constants.hpp>
+#include <libmfpic/DGBC.hpp>
 #include <libmfpic/DGEulerInitialConditionsFactory.hpp>
+#include <libmfpic/DGEulerOperationsFactory.hpp>
 #include <libmfpic/Discretization.hpp>
+#include <libmfpic/ElectrostaticFieldOperations.hpp>
 #include <libmfpic/ElectrostaticFieldState.hpp>
+#include <libmfpic/LowFidelityOperations.hpp>
 #include <libmfpic/LowFidelityState.hpp>
 #include <libmfpic/MeshDataWriter.hpp>
 #include <libmfpic/MeshFactory.hpp>
+#include <libmfpic/Pinning.hpp>
 #include <libmfpic/SourcesFactory.hpp>
 #include <libmfpic/Species.hpp>
 
@@ -33,6 +38,8 @@ TEST(MeshDataWriter, test) {
   constexpr int electrostatic_order = 1;
   Discretization electrostatic_discretization(&mesh, electrostatic_order, FETypes::HGRAD);
   ElectrostaticFieldState electrostatic_field_state(electrostatic_discretization);
+  auto pinning = std::make_unique<Pinning>();
+  ElectrostaticFieldOperations electrostatic_field_operations(electrostatic_discretization, std::move(pinning));
 
   // Nonzero data is being put into ElectrostaticFieldState and LowFidelityState to be manually checked in output but won't
   // be checked specifically in this unit test
@@ -50,10 +57,39 @@ TEST(MeshDataWriter, test) {
   list_of_parameters.push_back(std::make_unique<ConstantSourceParameters>(electron_species, 1e25, 300));
   list_of_parameters.push_back(std::make_unique<ConstantSourceParameters>(proton_species, 2e22, 320));
   std::vector<LowFidelityState> low_fidelity_states = {buildEulerState(dg_discretization, list_of_parameters)};
+
+  std::vector<std::unique_ptr<LowFidelityOperations>> low_fidelity_operations;
+  const std::vector<Species> species_list = low_fidelity_states[0].getSpeciesList();
+  std::vector<std::vector<std::unique_ptr<DGBC>>> empty_bcs(species_list.size());
+  std::vector<std::pair<Species, std::unique_ptr<mfem::VectorCoefficient>>> empty_sources{};
+  std::unique_ptr<LowFidelityOperations> dg_euler_operations = buildDGEulerOperations(
+    dg_discretization,
+    electrostatic_discretization,
+    species_list,
+    empty_bcs,
+    empty_sources);
+  low_fidelity_operations.push_back(std::move(dg_euler_operations));
+
   std::vector<ElectrostaticFieldState> low_fidelity_field_states = {electrostatic_field_state};
 
-  mesh_data_writer.output(electrostatic_field_state, low_fidelity_field_states, low_fidelity_states, 0, 0);
-  mesh_data_writer.output(electrostatic_field_state, low_fidelity_field_states, low_fidelity_states, 1, 1.);
+  mesh_data_writer.output(
+    electrostatic_field_state,
+    low_fidelity_field_states,
+    electrostatic_field_operations,
+    electrostatic_discretization,
+    low_fidelity_states,
+    low_fidelity_operations,
+    0,
+    0);
+  mesh_data_writer.output(
+    electrostatic_field_state,
+    low_fidelity_field_states,
+    electrostatic_field_operations,
+    electrostatic_discretization,
+    low_fidelity_states,
+    low_fidelity_operations,
+    1,
+    1.);
 
   EXPECT_TRUE(std::filesystem::exists(folder_name));
 

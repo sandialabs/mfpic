@@ -6,7 +6,10 @@
 
 namespace mfpic {
 
+class ElectrostaticFieldOperations;
 class ElectrostaticFieldState;
+class Discretization;
+class LowFidelityOperations;
 class LowFidelityState;
 
 class MeshDataWriter {
@@ -32,7 +35,10 @@ public:
   void output(
     ElectrostaticFieldState& electrostatic_field_state,
     std::vector<ElectrostaticFieldState>& low_fidelity_field_states,
+    ElectrostaticFieldOperations& electrostatic_field_operations,
+    Discretization& electrostatic_discretization,
     std::vector<LowFidelityState>& low_fidelity_states,
+    const std::vector<std::unique_ptr<LowFidelityOperations>>& low_fidelity_operations_vector,
     const int i_time_step,
     const double time);
 

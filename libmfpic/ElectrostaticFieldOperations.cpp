@@ -13,6 +13,8 @@ ElectrostaticFieldOperations::ElectrostaticFieldOperations(
   : dirichlet_boundary_conditions_(std::move(dirichlet_boundary_conditions))
   , electrostatic_bilinear_form_(&electrostatic_discretization.getFeSpace())
   , mass_form_(&electrostatic_discretization.getFeSpace())
+  , scalar_dg_discretization_(electrostatic_discretization.getFeSpace().GetMesh(), 0, FETypes::DG)
+  , weak_derivative_bilinear_form_(&scalar_dg_discretization_.getFeSpace(), &electrostatic_discretization.getFeSpace())
 {
   mfem::ConstantCoefficient permittivity(constants::permittivity);
   electrostatic_bilinear_form_.AddDomainIntegrator(new mfem::DiffusionIntegrator(permittivity));
@@ -20,6 +22,9 @@ ElectrostaticFieldOperations::ElectrostaticFieldOperations(
 
   mass_form_.AddDomainIntegrator(new mfem::LumpedIntegrator(new mfem::MassIntegrator));
   mass_form_.Assemble();
+
+  weak_derivative_bilinear_form_.AddDomainIntegrator(new mfem::MixedScalarWeakDerivativeIntegrator(permittivity));
+  weak_derivative_bilinear_form_.Assemble();
 }
 
 void ElectrostaticFieldOperations::fieldSolve(ElectrostaticFieldState& field_state, const IntegratedCharge& charge_state) {
@@ -109,6 +114,79 @@ mfem::GridFunction ElectrostaticFieldOperations::computeGhostChargeDensity(
   mass_form_.RecoverFEMSolution(solution_vector, integrated_ghost_charge, ghost_charge_density);
 
   return ghost_charge_density;
+}
+
+mfem::Vector ElectrostaticFieldOperations::computeIntegratedGhostCharge2(
+  const ElectrostaticFieldState& es_field_state,
+  const IntegratedCharge& integrated_charge)
+{
+  const mfem::GridFunction& e_field = es_field_state.getEFieldGridFunction();
+  const mfem::Vector integrated_charge_vector = integrated_charge.getIntegratedCharge();
+
+  mfem::Vector e_field_copy(e_field);
+  const mfem::GridFunction e_field_x(&scalar_dg_discretization_.getFeSpace(), e_field_copy);
+
+  mfem::Vector integrated_ghost_charge(integrated_charge_vector.Size());
+  weak_derivative_bilinear_form_.Mult(e_field_x, integrated_ghost_charge);
+  integrated_ghost_charge.Add(-1, integrated_charge_vector);
+
+  return integrated_ghost_charge;
+}
+
+mfem::GridFunction ElectrostaticFieldOperations::computeGhostChargeDensity2(
+  const ElectrostaticFieldState& es_field_state,
+  const IntegratedCharge& integrated_charge)
+{
+  mfem::Vector integrated_ghost_charge = computeIntegratedGhostCharge2(es_field_state, integrated_charge);
+
+  mfem::GridFunction ghost_charge_density(mass_form_.FESpace());
+
+  mfem::Vector solution_vector;
+  mfem::Vector rhs_vector;
+  mfem::Array<int> no_bcs;
+  mass_form_.FormLinearSystem(
+    no_bcs,
+    ghost_charge_density,
+    integrated_ghost_charge,
+    mass_matrix_,
+    solution_vector,
+    rhs_vector);
+
+  cg_linear_solver_.solve(mass_matrix_, solution_vector, rhs_vector);
+  mass_form_.RecoverFEMSolution(solution_vector, integrated_ghost_charge, ghost_charge_density);
+
+  return ghost_charge_density;
+}
+
+mfem::GridFunction ElectrostaticFieldOperations::computeWeakDivE(
+  const ElectrostaticFieldState& es_field_state)
+{
+  const mfem::GridFunction& e_field = es_field_state.getEFieldGridFunction();
+
+  mfem::Vector e_field_copy(e_field);
+  const mfem::GridFunction e_field_x(&scalar_dg_discretization_.getFeSpace(), e_field_copy);
+
+  mfem::Vector weak_div_e_integrated(e_field_x.Size());
+  weak_derivative_bilinear_form_.Mult(e_field_x, weak_div_e_integrated);
+
+  mfem::GridFunction weak_div_e(mass_form_.FESpace());
+
+  mfem::Vector solution_vector;
+  mfem::Vector rhs_vector;
+  mfem::Array<int> no_bcs;
+  mass_form_.FormLinearSystem(
+    no_bcs,
+    weak_div_e,
+    weak_div_e_integrated,
+    mass_matrix_,
+    solution_vector,
+    rhs_vector);
+
+  cg_linear_solver_.solve(mass_matrix_, solution_vector, rhs_vector);
+  mass_form_.RecoverFEMSolution(solution_vector, weak_div_e_integrated, weak_div_e);
+
+  return weak_div_e;
+
 }
 
 ElectrostaticFieldOperations::~ElectrostaticFieldOperations() = default;
