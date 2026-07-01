@@ -12,7 +12,7 @@ TEST(GenerateKappaVelocity, GeneratedVelocityEqualsBulkVelocityWhenTemperatureIs
   const mfem::Vector bulk_velocity({1.0, 2.0, 3.0});
   constexpr double temperature = 0.0;
   constexpr double kappa = 2.0;
-  std::default_random_engine generator;
+  RandomNumberGenerator generator;
 
   mfem::Vector velocity = generateKappaVelocity(bulk_velocity, temperature, kappa, mass, generator);
 
@@ -26,7 +26,7 @@ TEST(GenerateKappaVelocity, GeneratedVelocitiesAreMaxwellianWithLargeKappa) {
   constexpr double temperature = 11600.0;
   constexpr int num_samples = 20000;
   constexpr double kappa = 1e16;
-  std::default_random_engine generator;
+  RandomNumberGenerator generator;
 
   std::vector<mfem::Vector> generated_velocities;
   for (int i = 0; i < num_samples; i++) {
@@ -59,7 +59,7 @@ TEST(GenerateKappaVelocity, VelocitiesMeanAndStdAreCorrect) {
   constexpr double temperature = 11600.0;
   constexpr int num_samples = 20000;
   constexpr double kappa = 2.0;
-  std::default_random_engine generator;
+  RandomNumberGenerator generator;
 
   std::vector<mfem::Vector> generated_velocities;
   for (int i = 0; i < num_samples; i++) {
@@ -97,7 +97,7 @@ TEST(GenerateIsotropicKappaVelocity, VelocitiesMeanAndVarianceAreCorrect)
   constexpr double kappa = 2.0;
   constexpr int num_samples = 20000;
 
-  std::default_random_engine generator;
+  RandomNumberGenerator generator;
 
   std::vector<mfem::Vector> generated_velocities;
 

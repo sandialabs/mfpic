@@ -1,4 +1,5 @@
 #include <libmfpic/BuildParticlesFromYaml.hpp>
+#include <libmfpic/RandomNumberGenerator.hpp>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -36,7 +37,7 @@ Initial Conditions:
   )";
   const YAML::Node node = YAML::Load(yaml);
 
-  std::mt19937 generator;
+  RandomNumberGenerator generator;
   ParticleContainer particles = buildParticlesFromYaml(
     node["Initial Conditions"],
     species_map,

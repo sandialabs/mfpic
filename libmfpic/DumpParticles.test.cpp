@@ -111,7 +111,7 @@ std::pair<double, ParticleContainer> readTimeValueAndParticlesFromStep(int step)
       .position = mfem::Vector({x[i], y[i], z[i]}),
       .velocity = mfem::Vector({vx[i], vy[i], vz[i]}),
       .element = element[i],
-      .species = Species{ .name = species_name[i] },   
+      .species = Species{ .name = species_name[i] },
       .weight = weight[i],
       .is_alive = true,
       .particle_distribution_function_value = particle_distribution_function_value[i],
@@ -216,12 +216,12 @@ TEST(DumpParticles, CSVCorrectForOneSpecies)
   };
   constexpr int num_particles = 100;
 
-  std::mt19937 generator;
+  RandomNumberGenerator generator;
 
   ParticleContainer particles = loadParticles(
     ConstantSourceParameters(default_species, source_state_parameters, num_particles),
     generator,
-    mesh  
+    mesh
   );
 
   ParticleOperations particle_operations(
@@ -300,12 +300,12 @@ TEST(DumpParticles, CSVCorrectForTwoSpecies)
   constexpr int num_particles = 100;
   const std::unordered_map<std::string, Species> two_species {{"species_1", species_1}, {"species_2", species_2}};
 
-  std::mt19937 generator;
+  RandomNumberGenerator generator;
 
   ParticleContainer particles = loadParticles(
     ConstantSourceParameters(species_1, source_state_parameters, num_particles),
     generator,
-    mesh  
+    mesh
   );
 
   particles.addParticles(loadParticles(
