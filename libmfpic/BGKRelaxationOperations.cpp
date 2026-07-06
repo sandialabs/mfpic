@@ -2,7 +2,9 @@
 
 namespace mfpic {
 
-BGKRelaxationOperations::BGKRelaxationOperations(double collision_frequency) : collision_frequency_(collision_frequency)
+BGKRelaxationOperations::BGKRelaxationOperations(double collision_frequency, const Species& species_to_relax)
+: collision_frequency_(collision_frequency),
+  species_to_relax_(species_to_relax)
 {
 }
 
