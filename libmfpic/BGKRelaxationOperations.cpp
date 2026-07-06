@@ -7,9 +7,9 @@ BGKRelaxationOperations::BGKRelaxationOperations(double collision_frequency) : c
 }
 
 void BGKRelaxationOperations::performCollisions(
-  RandomNumberGenerator& ,
-  ParticleContainer& ,
-  LowFidelityState&
+  RandomNumberGenerator& generator,
+  ParticleContainer& particles,
+  ParticleOperations& particle_operations
 ) const {
 
 }

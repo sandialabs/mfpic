@@ -11,7 +11,7 @@ public:
   virtual void performCollisions(
     RandomNumberGenerator& generator,
     ParticleContainer& particles,
-    LowFidelityState&
+    ParticleOperations& particle_operations
   ) const override;
 
 private:

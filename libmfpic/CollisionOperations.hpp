@@ -3,15 +3,15 @@
 namespace mfpic {
 
 class ParticleContainer;
+class ParticleOperations;
 class RandomNumberGenerator;
-class LowFidelityState;
 
 class CollisionOperations {
 public:
   virtual void performCollisions(
     RandomNumberGenerator& generator,
     ParticleContainer& particles,
-    LowFidelityState& low_fidelity_state
+    ParticleOperations& particle_operations
   ) const = 0;
 };
 
