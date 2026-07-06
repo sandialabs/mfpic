@@ -3,6 +3,7 @@
 namespace mfpic {
 
 class ParticleContainer;
+class RandomNumberGenerator;
 class LowFidelityState;
 
 class CollisionOperations {
