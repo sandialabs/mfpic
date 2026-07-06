@@ -11,7 +11,7 @@ constexpr double mass = 1.0;
 TEST(GenerateMaxwellianVelocity, GeneratedVelocityEqualsBulkVelocityWhenTemperatureIsZero) {
   const mfem::Vector bulk_velocity({1.0, 2.0, 3.0});
   constexpr double temperature = 0.0;
-  std::default_random_engine generator;
+  RandomNumberGenerator generator;
 
   mfem::Vector velocity = generateMaxwellianVelocity(bulk_velocity, temperature, mass, generator);
 
@@ -24,7 +24,7 @@ TEST(GenerateMaxwellianVelocity, GeneratedVelocitiesAreMaxwellian) {
   const mfem::Vector nominal_bulk_velocity({300.0, 600.0, 1000.0});
   constexpr double temperature = 11600.0;
   constexpr int num_samples = 20000;
-  std::default_random_engine generator;
+  RandomNumberGenerator generator;
 
   std::vector<mfem::Vector> generated_velocities;
   for (int i = 0; i < num_samples; i++) {

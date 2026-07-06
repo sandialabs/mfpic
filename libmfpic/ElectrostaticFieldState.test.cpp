@@ -1,4 +1,5 @@
 #include <libmfpic/ElectrostaticFieldState.hpp>
+#include <libmfpic/RandomNumberGenerator.hpp>
 
 #include <mfem/fem/fespace.hpp>
 #include <mfem/mfem.hpp>
@@ -99,7 +100,7 @@ TEST(ElectrostaticFieldState, getEFieldAtRandomPointInElement) {
   es_field_state.setPotential(potential);
 
   constexpr double dx = length / num_elems;
-  std::mt19937 gen;
+  RandomNumberGenerator gen;
   std::uniform_real_distribution<> dis(0., dx);
 
   constexpr int element_index = 0;

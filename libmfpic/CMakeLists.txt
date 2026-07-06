@@ -22,8 +22,11 @@ add_library(libmfpic
   Euler.cpp
   EulerFlux.cpp
   ForwardEulerTimeIntegrator.cpp
+  GenerateKappaVelocity.cpp
+  GenerateMaxwellianVelocity.cpp
   KineticFluxBC.cpp
   IntegratedCharge.cpp
+  LoadParticles.cpp
   LowFidelityState.cpp
   MeshDataWriter.cpp
   MeshDistribution.cpp
