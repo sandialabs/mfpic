@@ -10,6 +10,7 @@ public:
   BGKRelaxationOperations(double collision_frequency, const Species& species_to_relax);
 
   virtual void performCollisions(
+    double dt,
     RandomNumberGenerator& generator,
     ParticleContainer& particles,
     ParticleOperations& particle_operations

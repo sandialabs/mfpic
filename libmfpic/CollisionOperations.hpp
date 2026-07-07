@@ -9,6 +9,7 @@ class RandomNumberGenerator;
 class CollisionOperations {
 public:
   virtual void performCollisions(
+    double dt,
     RandomNumberGenerator& generator,
     ParticleContainer& particles,
     ParticleOperations& particle_operations
