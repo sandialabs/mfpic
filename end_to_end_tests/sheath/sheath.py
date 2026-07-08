@@ -12,6 +12,7 @@ dx = debye_length
 num_elements = 60
 domain_length = num_elements * debye_length
 most_probable_ion_speed = np.sqrt(2.0 * Boltzmann * temperature / proton_mass)
+ion_thermal_speed = np.sqrt(Boltzmann * temperature / proton_mass)
 ion_acoustic_transit_time = domain_length / most_probable_ion_speed
 ion_plasma_frequency = np.sqrt(number_density * elementary_charge**2.0 / proton_mass / epsilon_0)
 dt = min(dx / (3.0 * most_probable_ion_speed), 0.1 / ion_plasma_frequency)
@@ -73,7 +74,7 @@ Particles:
         Number Density: {source_number_density}
 
 Output:
-  Stride: {num_timesteps}
+  Stride: 1
 
   """
 
@@ -103,7 +104,7 @@ def analyze():
   import h5py
 
   particle_file = h5py.File("particles.h5part")
-  particle_data_at_last_timestep = particle_file[f"Step#1"]
+  particle_data_at_last_timestep = particle_file[f"Step#{num_timesteps}"]
   sheath_entrance_element = findElementWhereIonDriftSpeedSatisfiesBohmCriterion(particle_data_at_last_timestep)
   sheath_entrance_node = sheath_entrance_element - 1
 
@@ -119,25 +120,76 @@ def analyze():
 
 def plot():
   import h5py
+  import matplotlib.animation as animation
   import matplotlib.pyplot as plt
+  import matplotlib as mpl
+
+  particle_moments = np.genfromtxt("particle_moments_proton.csv", delimiter=",", names=True)
+  cell_centers = np.compress(particle_moments["step"] == 0, particle_moments["x"])
+  number_densities = np.compress(particle_moments["step"] == 0, particle_moments["number_density"])
+  number_density_fig, number_density_ax = plt.subplots()
+  number_density_plot, = number_density_ax.plot(
+    cell_centers / debye_length,
+    number_densities
+  )
+  number_density_ax.set_xlim((cell_centers[0] / debye_length, cell_centers[-1] / debye_length))
+  number_density_ax.set_xlabel(r"$x / \lambda_D$")
+  number_density_ax.set_ylim((0, number_density * 1.4))
+  number_density_ax.set_ylabel(r"Number density ($m^{-3}$)")
+
+  def update_number_density(frame):
+    number_densities = np.compress(particle_moments["step"] == frame, particle_moments["number_density"])
+    number_density_plot.set_ydata(number_densities)
+    return number_density_plot
+
+  number_density_animation = animation.FuncAnimation(
+    fig=number_density_fig,
+    func=update_number_density,
+    frames=num_timesteps,
+    interval=30,
+  )
+  number_density_animation.save("number_density.mp4")
 
   particle_file = h5py.File("particles.h5part")
-  particle_data_at_last_timestep = particle_file[f"Step#1"]
-  sheath_entrance_element = findElementWhereIonDriftSpeedSatisfiesBohmCriterion(particle_data_at_last_timestep)
-  sheath_entrance_node = sheath_entrance_element - 1
 
   _, mesh_data = read_mesh_data.read_mesh_data()
   mesh_data_at_last_timestep = mesh_data[-1]
+  mesh_points = mesh_data_at_last_timestep["points"]
 
-  plt.plot(
-    mesh_data_at_last_timestep["points"],
-    mesh_data_at_last_timestep["electrostatic_potential"]
+  velocity_colormap = mpl.colormaps["plasma"]
+  velocity_min = -4
+  velocity_max =  4
+  velocity_colormap_normalizer = mpl.colors.Normalize(vmin=velocity_min, vmax=velocity_max)
+
+  phase_space_fig, phase_space_ax = plt.subplots()
+  particle_data = particle_file["/Step#0"]
+  phase_space_scatter = phase_space_ax.scatter(
+    particle_data["x"] / debye_length,
+    particle_data["vx"] / ion_thermal_speed,
+    marker='.',
+    c=particle_data["vx"] / ion_thermal_speed,
+    cmap=velocity_colormap,
+    norm=velocity_colormap_normalizer
   )
-  plt.axvline(mesh_data_at_last_timestep["points"][2*sheath_entrance_node], color="C1", label="Sheath entrance")
-  plt.xlabel("x (m)")
-  plt.ylabel("Electrostatic potential (V)")
-  plt.legend()
-  plt.savefig("sheath.png")
+  phase_space_ax.set_xlim((mesh_points[0][0] / debye_length, mesh_points[-1][0] / debye_length))
+  phase_space_ax.set_xlabel(r"$x / \lambda_D$")
+  phase_space_ax.set_ylim((velocity_min, velocity_max))
+  phase_space_ax.set_ylabel(r"$v_x / v_{th}$")
+
+  def update_phase_space(frame):
+    particle_data = particle_file[f"/Step#{frame}"]
+    updated_phase_space_data = np.stack([particle_data["x"] / debye_length, particle_data["vx"] / ion_thermal_speed]).T
+    phase_space_scatter.set_offsets(updated_phase_space_data)
+    phase_space_scatter.set_array(particle_data["vx"] / ion_thermal_speed)
+    return phase_space_scatter
+
+  phase_space_animation = animation.FuncAnimation(
+    fig=phase_space_fig,
+    func=update_phase_space,
+    frames=num_timesteps,
+    interval=30
+  )
+  phase_space_animation.save("phase_space.mp4")
 
 if __name__ == "__main__":
   if "run" in sys.argv[1:]:
