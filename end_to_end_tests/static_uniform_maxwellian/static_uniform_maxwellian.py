@@ -66,12 +66,38 @@ Output:
 
 def plot():
   import h5py
+  import matplotlib.animation as animation
   import matplotlib.pyplot as plt
 
   particle_file = h5py.File("particles.h5part")
 
-  for step in range(num_timesteps):
-    particle_data = particle_file[f"/Step#{step}"]
+  particle_data = particle_file[f"/Step#0"]
+  particle_skip_interval = 20
+  velocities = particle_data["vx"][::particle_skip_interval]
+  pdfs = particle_data["particle_distribution_function_value"][::particle_skip_interval]
+
+  fig, ax = plt.subplots()
+  xlim = (-2.5 * most_probable_speed, 2.5 * most_probable_speed)
+  ax.set_xlim(xlim)
+  phase_space_scatter = ax.scatter(velocities, pdfs / number_density, color="C1")
+  plot_points = np.linspace(xlim[0], xlim[1], 100)
+  ax.plot(plot_points, np.sqrt(proton_mass / (2.0 * np.pi * Boltzmann * temperature)) * np.exp(- np.power(plot_points / most_probable_speed, 2.0)), color="C2")
+
+  def update_phase_space(frame):
+    particle_data = particle_file[f"/Step#{frame}"]
+    velocities = particle_data["vx"][::particle_skip_interval]
+    pdfs = particle_data["particle_distribution_function_value"][::particle_skip_interval]
+    updated_phase_space_data = np.stack([velocities, pdfs / number_density]).T
+    phase_space_scatter.set_offsets(updated_phase_space_data)
+    return phase_space_scatter
+
+  phase_space_animation = animation.FuncAnimation(
+    fig=fig,
+    func=update_phase_space,
+    frames=num_timesteps+1,
+    interval=30
+  )
+  phase_space_animation.save("phase_space.mp4")
 
 if __name__ == "__main__":
   if "run" in sys.argv[1:]:
