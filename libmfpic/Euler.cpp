@@ -163,7 +163,7 @@ double evaluateMaxwellian(const mfem::Vector& primitive_state,
     const double sigma = std::sqrt(constants::boltzmann_constant * temperature / species.mass);
 
     if ((sigma <= 0.0) or not std::isfinite(sigma)) {
-      return std::numeric_limits<double>::quiet_NaN();   
+      return std::numeric_limits<double>::quiet_NaN();
     }
 
     const double inv_sq_sigma = 1.0 / (sigma * sigma);
@@ -173,6 +173,29 @@ double evaluateMaxwellian(const mfem::Vector& primitive_state,
     difference -= bulk_velocity;
     double exponent = inv_sq_sigma * (difference * difference);
     const double norm = 1.0 / std::pow(std::sqrt(2.0 * M_PI) * sigma, 3);
+    const double probability_density_function = norm * std::exp(-0.5 * exponent);
+
+    return probability_density_function * primitive_state(euler::PrimitiveVariables::NUMBER_DENSITY);
+  }
+
+double evaluate1DMaxwellian(const mfem::Vector& primitive_state,
+                          const mfem::Vector& velocity,
+                          const Species& species)
+  {
+    const double temperature = primitive_state(euler::PrimitiveVariables::TEMPERATURE);
+    const double sigma = std::sqrt(constants::boltzmann_constant * temperature / species.mass);
+
+    if ((sigma <= 0.0) or not std::isfinite(sigma)) {
+      return std::numeric_limits<double>::quiet_NaN();
+    }
+
+    const double inv_sq_sigma = 1.0 / (sigma * sigma);
+
+    const mfem::Vector bulk_velocity = getBulkVelocityFromPrimitiveState(primitive_state);
+    mfem::Vector difference = velocity;
+    difference -= bulk_velocity;
+    double exponent = inv_sq_sigma * (difference * difference);
+    const double norm = 1.0 / (std::sqrt(2.0 * M_PI) * sigma);
     const double probability_density_function = norm * std::exp(-0.5 * exponent);
 
     return probability_density_function * primitive_state(euler::PrimitiveVariables::NUMBER_DENSITY);
