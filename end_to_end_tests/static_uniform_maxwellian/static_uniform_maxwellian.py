@@ -77,17 +77,19 @@ def plot():
   pdfs = particle_data["particle_distribution_function_value"][::particle_skip_interval]
 
   fig, ax = plt.subplots()
-  xlim = (-2.5 * most_probable_speed, 2.5 * most_probable_speed)
+  xlim = (-2.5, 2.5)
   ax.set_xlim(xlim)
-  phase_space_scatter = ax.scatter(velocities, pdfs / number_density, color="C1")
+  ax.set_ylabel(r"$f$")
+  ax.set_xlabel(r"$v_x / v_{th}$")
+  phase_space_scatter = ax.scatter(velocities / most_probable_speed, pdfs / number_density, color="C1")
   plot_points = np.linspace(xlim[0], xlim[1], 100)
-  ax.plot(plot_points, np.sqrt(proton_mass / (2.0 * np.pi * Boltzmann * temperature)) * np.exp(- np.power(plot_points / most_probable_speed, 2.0)), color="C2")
+  ax.plot(plot_points, np.sqrt(proton_mass / (2.0 * np.pi * Boltzmann * temperature)) * np.exp(- np.power(plot_points, 2.0)), color="C2")
 
   def update_phase_space(frame):
     particle_data = particle_file[f"/Step#{frame}"]
     velocities = particle_data["vx"][::particle_skip_interval]
     pdfs = particle_data["particle_distribution_function_value"][::particle_skip_interval]
-    updated_phase_space_data = np.stack([velocities, pdfs / number_density]).T
+    updated_phase_space_data = np.stack([velocities / most_probable_speed, pdfs / number_density]).T
     phase_space_scatter.set_offsets(updated_phase_space_data)
     return phase_space_scatter
 
