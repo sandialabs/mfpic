@@ -13,10 +13,11 @@ num_elements = 60
 domain_length = num_elements * debye_length
 most_probable_speed = np.sqrt(2.0 * Boltzmann * temperature / proton_mass)
 acoustic_transit_time = domain_length / most_probable_speed
+final_time = 2*acoustic_transit_time
 plasma_frequency = np.sqrt(number_density * elementary_charge**2.0 / proton_mass / epsilon_0)
 dt = min(dx / (3.0 * most_probable_speed), 0.1 / plasma_frequency)
 num_macroparticles_per_population = 100 * num_elements
-num_timesteps = int(np.ceil(acoustic_transit_time / dt))
+num_timesteps = int(np.ceil(final_time / dt))
 
 def run(mfpic_executable):
   import subprocess
@@ -33,7 +34,7 @@ Mesh:
   Periodic Dimensions: ["x"]
 
 Time Stepping:
-  Final Time: {acoustic_transit_time}
+  Final Time: {final_time}
   Time Step Size: {dt}
 
 Species:
