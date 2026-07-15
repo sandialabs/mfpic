@@ -35,6 +35,7 @@ add_library(libmfpic
   MFEMHelpers.cpp
   ParticleBoundary.cpp
   ParticleContainer.cpp
+  ParticleDistributionGaussianKernelDensityEstimator.cpp
   ParticleOperations.cpp
   PeriodicParticleBoundary.cpp
   Pinning.cpp
