@@ -35,9 +35,11 @@ void VerletTimeIntegrator::advanceTimestep(
   particle_container = particle_operations.move(dt, particle_container);
   particle_container.cleanOutDeadParticles();
   particle_charge.addCharge(particle_operations.assembleCharge(particle_container));
-  //field_operations.fieldSolve(particle_field_state, particle_charge);
-  IntegratedCharge variance_reduced_integrated_charge = particle_operations.assembleVarianceReducedCharge(particle_container,low_fidelity_states[0],*low_fidelity_operations[0]);
-  field_operations.fieldSolve(particle_field_state, variance_reduced_integrated_charge);
+  field_operations.fieldSolve(particle_field_state, particle_charge);
+
+  //BWR HACK
+  // IntegratedCharge variance_reduced_integrated_charge = particle_operations.assembleVarianceReducedCharge(particle_container,low_fidelity_states[0],*low_fidelity_operations[0]);
+  // field_operations.fieldSolve(particle_field_state, variance_reduced_integrated_charge);
  
 
   for (int i = 0; i < std::ssize(low_fidelity_operations); i++) {

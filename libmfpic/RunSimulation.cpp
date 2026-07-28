@@ -90,8 +90,8 @@ void runSimulation(int argc, char* argv[]) {
   );
   const std::string prefix = "particle_moments";
   dumpParticleMoments(particle_operations,particle_container, prefix, 0, 0.0);
-  const std::string avg_prefix = "avg_particle_moments";
-  dumpAvgParticleMoments(particle_operations,particle_container, avg_prefix, 0, 0.0);
+  // const std::string avg_prefix = "avg_particle_moments";
+  // dumpAvgParticleMoments(particle_operations,particle_container, avg_prefix, 0, 0.0);
   dumpParticles(particle_container, 0.0);
 
   std::vector<LowFidelityState> low_fidelity_states;
@@ -140,8 +140,8 @@ void runSimulation(int argc, char* argv[]) {
     if (!ops) throw std::runtime_error("Cannot compute variance reduced moments for low_fidelity_operations[i] that is not DGEulerOperations.");
     const std::string variance_reduced_prefix = "variance_reduced_particle_moments";
     dumpVarianceReducedParticleMoments(particle_operations,particle_container,low_fidelity_states[i],*ops,variance_reduced_prefix, 0, 0.0);
-    const std::string avg_variance_reduced_prefix = "avg_variance_reduced_particle_moments";
-    dumpAvgVarianceReducedParticleMoments(particle_operations,particle_container,low_fidelity_states[i],*ops,avg_variance_reduced_prefix, 0, 0.0);
+    // const std::string avg_variance_reduced_prefix = "avg_variance_reduced_particle_moments";
+    // dumpAvgVarianceReducedParticleMoments(particle_operations,particle_container,low_fidelity_states[i],*ops,avg_variance_reduced_prefix, 0, 0.0);
     const std::string low_fidelity_prefix = "low_fidelity_moments";
     dumpLowFidelityMoments(low_fidelity_states[i],*ops,low_fidelity_prefix, 0, 0.0);
   }
@@ -163,7 +163,7 @@ void runSimulation(int argc, char* argv[]) {
     IntegratedCharge variance_reduced_integrated_charge = particle_operations.assembleVarianceReducedCharge(particle_container,low_fidelity_states[0],*low_fidelity_operations[0]);
     electrostatic_field_operations->fieldSolve(variance_reduced_particle_electrostatic_field_state, variance_reduced_integrated_charge);
     // TODO BWR HACK
-    electrostatic_field_operations->fieldSolve(particle_electrostatic_field_state, variance_reduced_integrated_charge);
+    //electrostatic_field_operations->fieldSolve(particle_electrostatic_field_state, variance_reduced_integrated_charge);
   }
   
   for (int i = 0; i < std::ssize(low_fidelity_field_states); ++i) {
@@ -258,23 +258,23 @@ void runSimulation(int argc, char* argv[]) {
     if (i_timestep % output_parameters.output_stride == 0) {
       const std::string prefix = "particle_moments";
       dumpParticleMoments(particle_operations,particle_container, prefix, i_timestep, end_time);
-      const std::string avg_prefix = "avg_particle_moments";
-      dumpAvgParticleMoments(particle_operations,particle_container, avg_prefix, i_timestep, end_time);
+      // const std::string avg_prefix = "avg_particle_moments";
+      // dumpAvgParticleMoments(particle_operations,particle_container, avg_prefix, i_timestep, end_time);
       dumpParticles(particle_container, end_time, output_parameters.particle_dump_filename);
       for (int i = 0; i < std::ssize(low_fidelity_field_states); ++i) {
         auto* ops = dynamic_cast<DGEulerOperations*>(low_fidelity_operations[i].get());
         if (!ops) throw std::runtime_error("Cannot compute variance reduced moments for low_fidelity_operations[i] that is not DGEulerOperations.");
         const std::string variance_reduced_prefix = "variance_reduced_particle_moments";
         dumpVarianceReducedParticleMoments(particle_operations,particle_container,low_fidelity_states[i],*ops,variance_reduced_prefix, i_timestep, end_time);
-        const std::string avg_variance_reduced_prefix = "avg_variance_reduced_particle_moments";
-        dumpAvgVarianceReducedParticleMoments(particle_operations,particle_container,low_fidelity_states[i],*ops,avg_variance_reduced_prefix, i_timestep, end_time);
+        // const std::string avg_variance_reduced_prefix = "avg_variance_reduced_particle_moments";
+        // dumpAvgVarianceReducedParticleMoments(particle_operations,particle_container,low_fidelity_states[i],*ops,avg_variance_reduced_prefix, i_timestep, end_time);
         const std::string low_fidelity_prefix = "low_fidelity_moments";
         dumpLowFidelityMoments(low_fidelity_states[i],*ops,low_fidelity_prefix, i_timestep, end_time);
       }
 
       // TODO BWR remove this so we see the E field from the actual push
-      //IntegratedCharge integrated_charge = particle_operations.assembleCharge(particle_container);
-      //electrostatic_field_operations->fieldSolve(particle_electrostatic_field_state, integrated_charge);
+      IntegratedCharge integrated_charge = particle_operations.assembleCharge(particle_container);
+      electrostatic_field_operations->fieldSolve(particle_electrostatic_field_state, integrated_charge);
       mesh_data_writer.output(
         particle_electrostatic_field_state,
         low_fidelity_field_states,

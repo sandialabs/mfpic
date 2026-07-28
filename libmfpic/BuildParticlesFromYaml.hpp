@@ -81,7 +81,7 @@ ParticleContainer buildParticlesFromYaml(
     ));
   }
 
-  updateParticleDistributionFunctionValues(particles, list_of_parameters);
+  //updateParticleDistributionFunctionValues(particles, list_of_parameters);
 
   return particles;
 }

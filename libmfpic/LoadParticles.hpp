@@ -96,6 +96,7 @@ ParticleContainer loadParticles(
       .is_alive = true,
       .particle_distribution_function_value = particle_distribution_function_value,
     });
+
   }
 
   return particles;
