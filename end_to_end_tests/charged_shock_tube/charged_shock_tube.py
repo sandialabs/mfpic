@@ -19,7 +19,7 @@ electron_species = species.Species(mass=electron_mass,charge=-elementary_charge)
 max_cfl = 0.8
 
 base_num_elements = 50
-refinement_levels = [2, 4]
+refinement_levels = [2] #[2, 4]
 
 n_base = 1e16
 T_base = 1 * electron_volt / Boltzmann
@@ -47,7 +47,7 @@ def get_input_deck(refinement_level, alpha):
 
     num_elements = base_num_elements * refinement_level
     dt = .002 * t_scale
-    t_final = 1. * t_scale
+    t_final = 100. * dt
 
     mesh_folder_name = format_mesh_folder_name(refinement_level, alpha)
 
