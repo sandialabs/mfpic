@@ -1,4 +1,5 @@
 #include <libmfpic/BGKRelaxationOperations.hpp>
+#include <libmfpic/Euler.hpp>
 #include <libmfpic/GenerateMaxwellianVelocity.hpp>
 #include <libmfpic/ParticleOperations.hpp>
 
@@ -16,8 +17,12 @@ void BGKRelaxationOperations::performCollisions(
   ParticleContainer& particles,
   ParticleOperations& particle_operations
 ) const {
-  const std::unordered_map<Species, mfem::DenseMatrix>& bulk_velocities = particle_operations.getBulkVelocity(particles);
   constexpr bool recompute_lower_order_moments = false;
+  const std::unordered_map<Species, mfem::Vector>& number_densities = particle_operations.getNumberDensity(particles);
+  // cannot be const if sending to mfem...
+  std::unordered_map<Species, mfem::DenseMatrix>& bulk_velocities = particle_operations.getBulkVelocity(
+    particles,
+    recompute_lower_order_moments);
   const std::unordered_map<Species, mfem::Vector>& temperatures = particle_operations.getTemperature(
     particles,
     recompute_lower_order_moments,
@@ -37,6 +42,15 @@ void BGKRelaxationOperations::performCollisions(
       const mfem::Vector bulk_velocity(bulk_velocities.at(species_to_relax_).GetColumn(element), 3);
       const double temperature = temperatures.at(species_to_relax_)[element];
       particle.velocity = generateMaxwellianVelocity(bulk_velocity, temperature, species_to_relax_.mass, generator);
+
+      const mfem::Vector primitive_state {
+        number_densities.at(species_to_relax_)(element), 
+        bulk_velocity(0),
+        bulk_velocity(1),
+        bulk_velocity(2),
+        temperature};
+      
+      particle.particle_distribution_function_value = euler::evaluateMaxwellian(primitive_state, particle.velocity, species_to_relax_);
     }
   }
 }
