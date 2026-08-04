@@ -1,0 +1,84 @@
+SpatiallyConstantMaxwellian:
+  Physics:
+    Fields:
+      Pinning: 0
+      Electrostatic0:
+        Regions: [eblock-0_0]
+    Particles:
+      Relativistic Push: False
+
+  Solver Parameters:
+    Tolerance: 1e-16
+    Maximum Iterations: 100
+
+  Mesh:
+    Inline:
+      Type: Quad
+      Elements: [ 10, 2 ]
+      Blocks:   [    1,    1 ]
+      Start:    [  0.0,  0.0 ]
+      End:      [ 1.1952706075239776e-05, 2.4e-06 ]
+
+  Species:
+    electron:
+      Mass: 9.1093837139e-31
+      Charge: -1.602176634e-19
+      Override Predefined Species: True
+    proton:
+      Mass: 1.67262192595e-27
+      Charge: 1.602176634e-19
+      Override Predefined Species: True
+
+  Initial Conditions:
+    Fields:
+      Regions: [eblock-0_0]
+      Zero:
+        Fields: [E_Field, ES_POTENTIAL]
+    Particles:
+      Element By Element Electrons:
+        Regions: [eblock-0_0]
+        Species: [electron, proton]
+        Position Algorithm: random
+        Particle Count: 1000
+        Number Density: 1e16
+        Maxwellian Velocity Distribution:
+          Temperature: 300
+
+  Boundary Conditions:
+    Fields:
+      Periodic x:
+        Sidesets: [ left, right ]
+        Direction: x
+      Periodic y:
+        Sidesets: [ top, bottom ]
+        Direction: y
+
+  Time Stepping:
+    Number of Timesteps: 10
+    Timestep Size: 1.1137515919827708e-10
+
+  Mesh History Diagnostics:
+    Fields:
+      Solver Field:
+    Particles:
+      Moments Charge:
+        Moment Order: 0
+        Scale by Weight: true
+        Scale by Charge: true
+      Moments Number:
+        Moment Order: 0
+        Scale by Weight: true
+        Scale by Charge: false
+
+  Mesh History Outputs:
+    spatially_constant_maxwellian_empire.exo:
+      Diagnostics:
+        - Solver Field
+        - Moments Charge
+        - Moments Number
+
+  Particle Dumps:
+    spatially_constant_maxwellian_empire.h5part:
+      Stride:
+        Force First: ON
+        Force Last: 1
