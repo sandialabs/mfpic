@@ -18,7 +18,7 @@ gaussian_center = 4 * gaussian_standard_deviation
 domain_length = 9 * gaussian_standard_deviation
 
 base_num_elements = 100
-number_macroparticles_per_cell = 100
+number_macroparticles_per_cell = 1000
 # number_macroparticles_per_cell = 300000
 
 N2_species = species.Species(mass=4.65e-26, specific_heat_ratio=1.4)
