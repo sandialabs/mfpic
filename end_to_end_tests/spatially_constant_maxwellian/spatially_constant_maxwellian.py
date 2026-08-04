@@ -96,7 +96,9 @@ def analyze():
 
     for i in range(num_steps + 1):
         fig, axes = plt.subplots()
-        axes.plot(particle_moments_over_time[i]['x'], particle_moments_over_time[i]['number_density'], label="Number Density")
+        x_points = particle_moments_over_time[i]['x']
+        axes.plot(x_points, particle_moments_over_time[i]['number_density'], label="MFPIC")
+        axes.plot(x_points, np.ones(x_points.shape) * number_density, label="EMPIRE")
         axes.set_xlabel("x")
         axes.set_ylabel("n")
         fig.savefig(f"{figures_directory}/NumberDensity{i:02}.png")
