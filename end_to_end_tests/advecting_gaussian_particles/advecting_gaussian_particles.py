@@ -18,12 +18,12 @@ gaussian_center = 4 * gaussian_standard_deviation
 domain_length = 9 * gaussian_standard_deviation
 
 base_num_elements = 100
-number_macroparticles_per_cell = 1000
-# number_macroparticles_per_cell = 300000
+number_macroparticles_per_cell = 100
+# number_macroparticles_per_cell = 1000000
 
 N2_species = species.Species(mass=4.65e-26, specific_heat_ratio=1.4)
 number_density_offset = 1e26
-perturbation = 0.1
+perturbation = 1.0
 number_density_height = perturbation * number_density_offset
 
 max_mass_density = (number_density_height + number_density_offset) * N2_species.mass
