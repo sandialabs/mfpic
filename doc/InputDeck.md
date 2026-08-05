@@ -291,9 +291,9 @@ Valid parameters are the same as for the [Constant](#constant) initial condition
 Describes a drifting Maxwellian distribution whose parameters are all Gaussian functions in space,
 given by
 $$
-    n = h_n e^{-(x - c)^2 / \sigma^2} + o_n, \\
-    u = h_u e^{-(x - c)^2 / \sigma^2} + o_u, \\
-    P = h_P e^{-(x - c)^2 / \sigma^2} + o_P.
+    n = h_n e^{-\frac{1}{2} (x - c)^2 / \sigma^2} + o_n, \\
+    u = h_u e^{-\frac{1}{2} (x - c)^2 / \sigma^2} + o_u, \\
+    P = h_P e^{-\frac{1}{2} (x - c)^2 / \sigma^2} + o_P.
 $$
 *Note*: This condition specifies pressure instead of temprature for the fluid.
 The fluid temperature will be given by the ideal gas law,
