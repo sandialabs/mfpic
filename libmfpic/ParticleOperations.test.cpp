@@ -2,6 +2,7 @@
 #include <libmfpic/DGEulerOperations.hpp>
 #include <libmfpic/DGEulerInitialConditionsFactory.hpp>
 #include <libmfpic/Discretization.hpp>
+#include <libmfpic/BuildVarianceReductionParametersFromYaml.hpp>
 #include <libmfpic/ElectromagneticFieldsEvaluator.hpp>
 #include <libmfpic/LoadParticles.hpp>
 #include <libmfpic/LowFidelityState.hpp>
@@ -944,7 +945,8 @@ TEST(ParticleOperations, ParticleMovesAcrossPeriodicBoundariesIn3D) {
 }
 
 TEST(ParticleOperations, VarianceReducedChargeIsExactForMaxwellianIn3D) {
-  Species species{.charge = -constants::elementary_charge, .mass = constants::electron_mass};
+  Species species{.charge = -constants::elementary_charge, .mass = constants::electron_mass, .name="one"};
+  const std::unordered_map<std::string, Species> species_map {{"one", species}};
   constexpr double number_density = 1e22;
   constexpr double temperature = 300;
   mfem::Vector bulk_velocity({1.0,2.0,3.0});
@@ -994,8 +996,12 @@ TEST(ParticleOperations, VarianceReducedChargeIsExactForMaxwellianIn3D) {
     charge_discretization,
     empty_particle_boundary_factory_list,
     default_reflecting_particle_boundary_factory,
-    one_species
+    species_map 
   );
+
+  VarianceReductionParameters variance_reduction_parameters;
+  variance_reduction_parameters.strategy = VarianceReductionParameters::Strategy::EulerFluid;
+  particle_operations.setVarianceReductionParameters(variance_reduction_parameters);
   IntegratedCharge variance_reduced_charge_state = particle_operations.assembleVarianceReducedCharge(particles,low_fidelity_state,dg_euler_operations);
 
   for (int dof = 0; dof < charge_discretization.getFeSpace().GetNDofs(); dof++) {
@@ -1015,7 +1021,8 @@ ParticleContainer takePrefix(const ParticleContainer& all, int num_particles) {
 
 TEST(ParticleOperations, VarianceReducedChargeAndPICChargeConvergeForKappa) {
 
-  Species species{.charge = -constants::elementary_charge, .mass = constants::electron_mass};
+  Species species{.charge = -constants::elementary_charge, .mass = constants::electron_mass, .name="one"};
+  const std::unordered_map<std::string, Species> species_map {{"one", species}};
   constexpr double number_density = 1e22;
   constexpr double temperature = 300;
   mfem::Vector bulk_velocity({1.0, 0.0, 0.0});
@@ -1051,7 +1058,7 @@ TEST(ParticleOperations, VarianceReducedChargeAndPICChargeConvergeForKappa) {
       charge_discretization,
       empty_particle_boundary_factory_list,
       default_reflecting_particle_boundary_factory,
-      one_species
+      species_map
     );
 
   double prev_max_rel_error = std::numeric_limits<double>::infinity();
@@ -1293,6 +1300,12 @@ TEST(ParticleOperations, VarianceReducedMomentsAreExactForMaxwellianIn3D) {
     default_reflecting_particle_boundary_factory,
     species_map
   );
+  VarianceReductionParameters variance_reduction_parameters; 
+  variance_reduction_parameters.strategy = VarianceReductionParameters::Strategy::EulerFluid;
+  variance_reduction_parameters.limit_variance_reduction = false;
+  variance_reduction_parameters.use_variance_reduced_electric_field = false;
+  variance_reduction_parameters.specified_lf_moments = false;
+  particle_operations.setVarianceReductionParameters(variance_reduction_parameters);
 
   std::unordered_map<Species, mfem::Vector> variance_reduced_number_density = particle_operations.getVarianceReducedNumberDensity(particles,low_fidelity_state,dg_euler_operations);
   std::unordered_map<Species, mfem::DenseMatrix> variance_reduced_bulk_velocity = particle_operations.getVarianceReducedBulkVelocity(particles,low_fidelity_state,dg_euler_operations);

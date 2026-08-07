@@ -1,8 +1,7 @@
 #pragma once
 
+#include <libmfpic/BuildVarianceReductionParametersFromYaml.hpp>
 #include <libmfpic/DGEulerOperations.hpp>
-#include <libmfpic/Discretization.hpp>
-#include <libmfpic/ElectromagneticFieldsEvaluator.hpp>
 #include <libmfpic/Discretization.hpp>
 #include <libmfpic/ElectromagneticFieldsEvaluator.hpp>
 #include <libmfpic/ElementFaceContainer.hpp>
@@ -195,6 +194,19 @@ public:
    */
   mfem::Mesh& getMesh() const {return *discretization_.getFeSpace().GetMesh();};
 
+  /**
+   * @brief Setter for variance reduction parameters
+   */
+  void setVarianceReductionParameters(const VarianceReductionParameters& parameters) {
+    variance_reduction_parameters_ = parameters;
+  }
+
+  /**
+   * @brief Getter for variance reduction parameters
+   */
+  const VarianceReductionParameters getVarianceReductionParameters() const {
+    return variance_reduction_parameters_;
+  }
 
 private: 
 
@@ -258,6 +270,9 @@ private:
 
   /// Variance reduced postprocessors
   VarianceReducedPostprocessors variance_reduced_postprocessors_;
+
+  /// Variance reduction parameters
+  VarianceReductionParameters variance_reduction_parameters_;
 
   /// Particle sum of weights
   std::unordered_map<Species, mfem::Vector> sum_of_weights_;

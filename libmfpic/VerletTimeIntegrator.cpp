@@ -1,3 +1,4 @@
+#include <libmfpic/BuildVarianceReductionParametersFromYaml.hpp>
 #include <libmfpic/ElectrostaticFieldOperations.hpp>
 #include <libmfpic/ElectromagneticFieldsEvaluator.hpp>
 #include <libmfpic/ElectrostaticFieldState.hpp>
@@ -34,13 +35,19 @@ void VerletTimeIntegrator::advanceTimestep(
   particle_container = particle_operations.accelerate(dt/2, particle_container, particle_field_state);
   particle_container = particle_operations.move(dt, particle_container);
   particle_container.cleanOutDeadParticles();
-  particle_charge.addCharge(particle_operations.assembleCharge(particle_container));
-  field_operations.fieldSolve(particle_field_state, particle_charge);
 
-  //BWR HACK
-  // IntegratedCharge variance_reduced_integrated_charge = particle_operations.assembleVarianceReducedCharge(particle_container,low_fidelity_states[0],*low_fidelity_operations[0]);
-  // field_operations.fieldSolve(particle_field_state, variance_reduced_integrated_charge);
- 
+  const VarianceReductionParameters variance_reduction_parameters = particle_operations.getVarianceReductionParameters();
+  if ((variance_reduction_parameters.strategy != VarianceReductionParameters::Strategy::None) && 
+      (variance_reduction_parameters.use_variance_reduced_electric_field))
+  {
+    IntegratedCharge variance_reduced_integrated_charge = particle_operations.assembleVarianceReducedCharge(particle_container,low_fidelity_states[0],*low_fidelity_operations[0]);
+    field_operations.fieldSolve(particle_field_state, variance_reduced_integrated_charge);
+  }
+  else
+  {
+    particle_charge.addCharge(particle_operations.assembleCharge(particle_container));
+    field_operations.fieldSolve(particle_field_state, particle_charge);
+  }
 
   for (int i = 0; i < std::ssize(low_fidelity_operations); i++) {
     const ElectrostaticFieldState& field_state = push_lf_with_particle_fields_ ? particle_field_state : low_fidelity_field_states[i];

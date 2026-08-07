@@ -4,6 +4,7 @@ add_library(libmfpic
   BuildOutputParametersFromYaml.cpp
   BuildParticleBoundariesFromYaml.cpp
   BuildSpeciesMapFromYaml.cpp
+  BuildVarianceReductionParametersFromYaml.cpp
   ConjugateGradientLinearSolver.cpp
   DGAssembly.cpp
   DGEulerAssembly.cpp
@@ -62,6 +63,7 @@ mfpic_unit_test(BuildOutputParametersFromYaml)
 mfpic_unit_test(BuildParticleBoundariesFromYaml)
 mfpic_unit_test(BuildParticlesFromYaml)
 mfpic_unit_test(BuildSpeciesMapFromYaml)
+mfpic_unit_test(BuildVarianceReductionParametersFromYaml)
 mfpic_unit_test(ConjugateGradientLinearSolver)
 mfpic_unit_test(DGEulerAssembly)
 mfpic_unit_test(DGEulerBoundaryConditions)
