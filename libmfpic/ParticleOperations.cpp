@@ -1109,5 +1109,67 @@ std::unordered_map<Species,double>& ParticleOperations::getAvgVarianceReducedTem
   return this->avg_variance_reduced_particle_temperature_;
 }
 
+VelocityHistogram ParticleOperations::buildVelocityHistogram(
+    const ParticleContainer& particles,
+    int nbins)
+{
+    VelocityHistogram hist;
+
+    double vmin = std::numeric_limits<double>::max();
+    double vmax = -std::numeric_limits<double>::max();
+
+    for (const Particle& particle : particles) {
+        if (!particle.is_alive) continue;
+
+        double vx = particle.velocity(0);
+
+        vmin = std::min(vmin, vx);
+        vmax = std::max(vmax, vx);
+    }
+
+    hist.vmin = vmin;
+    hist.vmax = vmax;
+    hist.dv   = (vmax - vmin) / nbins;
+
+    hist.bin_values.assign(nbins, 0.0);
+    hist.bin_edges.resize(nbins + 1);
+
+    for (int k = 0; k <= nbins; ++k)
+        hist.bin_edges[k] = vmin + k * hist.dv;
+
+    double total_weight = 0.0;
+
+    for (const Particle& particle : particles) {
+        if (!particle.is_alive) continue;
+
+        double vx = particle.velocity(0);
+
+        int k = static_cast<int>((vx - vmin) / hist.dv);
+
+        k = std::max(0, std::min(k, nbins - 1));
+
+        hist.bin_values[k] += particle.weight;
+        total_weight += particle.weight;
+    }
+
+    for (auto& value : hist.bin_values)
+        value /= (total_weight * hist.dv);
+        //value /= (volume * hist.dv);
+
+    return hist;
+}
+
+void ParticleOperations::updateParticleDistributionFunctionValue(
+    ParticleContainer& particles,
+    const VelocityHistogram& hist)
+{
+    for (Particle& particle : particles) {
+
+        if (!particle.is_alive) continue;
+
+        particle.particle_distribution_function_value =
+            hist.evaluate(particle.velocity(0));
+    }
+}
 
 } // namespace mfpic

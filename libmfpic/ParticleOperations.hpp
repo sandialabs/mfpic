@@ -4,6 +4,7 @@
 #include <libmfpic/DGEulerOperations.hpp>
 #include <libmfpic/Discretization.hpp>
 #include <libmfpic/ElectromagneticFieldsEvaluator.hpp>
+#include <libmfpic/VelocityHistogram.hpp>
 #include <libmfpic/ElementFaceContainer.hpp>
 #include <libmfpic/IntegratedCharge.hpp>
 #include <libmfpic/LowFidelityOperations.hpp>
@@ -27,6 +28,10 @@ struct VarianceReducedPostprocessors{
 
 class ParticleOperations {
 public:
+
+  static VelocityHistogram buildVelocityHistogram(
+      const ParticleContainer& particles,
+      int nbins);
 
   /**
   * @brief Construct a new ParticleOperations 
@@ -185,6 +190,11 @@ public:
     double number_density,
     mfem::Vector bulk_velocity,
     double temperature
+  );
+
+  static void updateParticleDistributionFunctionValue(
+    ParticleContainer& particles,  
+    const VelocityHistogram& hist
   );
 
   /**

@@ -1550,4 +1550,104 @@ TEST(ParticleOperations, VarianceReducedMomentsMatchPICForSpeciesMissingLowFidel
   EXPECT_NEAR(variance_reduced_temperature_b, standard_temperature_b,1e-6);
 }
 
+TEST(ParticleOperations, VelocityHistogramIntegratesToOne)
+{
+    ParticleContainer particles;
+
+    Species electron {.mass = constants::electron_mass};
+
+    particles.addParticle({
+        .velocity = mfem::Vector({-1.0, 0.0, 0.0}),
+        .species = electron,
+        .weight = 1.0,
+        .is_alive = true
+    });
+
+    particles.addParticle({
+        .velocity = mfem::Vector({0.0, 0.0, 0.0}),
+        .species = electron,
+        .weight = 2.0,
+        .is_alive = true
+    });
+
+    particles.addParticle({
+        .velocity = mfem::Vector({1.0, 0.0, 0.0}),
+        .species = electron,
+        .weight = 1.0,
+        .is_alive = true
+    });
+
+    particles.addParticle({
+        .velocity = mfem::Vector({100.0, 0.0, 0.0}),
+        .species = electron,
+        .weight = 100.0,
+        .is_alive = false
+    });
+
+    constexpr int nbins = 4;
+
+    VelocityHistogram hist =
+        ParticleOperations::buildVelocityHistogram(particles, nbins);
+
+    EXPECT_EQ(hist.bin_values.size(), nbins);
+    EXPECT_EQ(hist.bin_edges.size(), nbins + 1);
+
+    EXPECT_DOUBLE_EQ(hist.vmin, -1.0);
+    EXPECT_DOUBLE_EQ(hist.vmax, 1.0);
+
+    EXPECT_DOUBLE_EQ(hist.dv, 0.5);
+
+    double integral = 0.0;
+    for (double value : hist.bin_values)
+        integral += value * hist.dv;
+
+    EXPECT_NEAR(integral, 1.0, 1e-12);
+}
+
+TEST(ParticleOperations, UpdatesParticleDistributionFunctionValueFromHistogram)
+{
+    ParticleContainer particles;
+
+    Species electron {.mass = constants::electron_mass};
+
+    particles.addParticle({
+        .velocity = mfem::Vector({-0.75, 0.0, 0.0}),
+        .species = electron,
+        .weight = 1.0,
+        .is_alive = true
+    });
+
+    particles.addParticle({
+        .velocity = mfem::Vector({0.75, 0.0, 0.0}),
+        .species = electron,
+        .weight = 1.0,
+        .is_alive = true
+    });
+
+
+    VelocityHistogram hist =
+        ParticleOperations::buildVelocityHistogram(particles, 2);
+
+    ParticleOperations::updateParticleDistributionFunctionValue(
+        particles,
+        hist);
+
+
+    int index = 0;
+
+    for (const Particle& particle : particles)
+    {
+        if (!particle.is_alive)
+            continue;
+
+        EXPECT_DOUBLE_EQ(
+            particle.particle_distribution_function_value,
+            hist.evaluate(particle.velocity(0)));
+
+        index++;
+    }
+
+    EXPECT_EQ(index, 2);
+}
+
 } // namespace

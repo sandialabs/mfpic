@@ -22,6 +22,7 @@ add_library(libmfpic
   Errors.cpp
   Euler.cpp
   EulerFlux.cpp
+  VelocityHistogram.cpp
   ForwardEulerTimeIntegrator.cpp
   KineticFluxBC.cpp
   IntegratedCharge.cpp
