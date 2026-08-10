@@ -29,10 +29,6 @@ struct VarianceReducedPostprocessors{
 class ParticleOperations {
 public:
 
-  static VelocityHistogram buildVelocityHistogram(
-      const ParticleContainer& particles,
-      int nbins);
-
   /**
   * @brief Construct a new ParticleOperations 
   *

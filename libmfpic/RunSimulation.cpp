@@ -193,7 +193,7 @@ void runSimulation(int argc, char* argv[]) {
 
   std::optional<VelocityHistogram> particle_velocity_histogram;
   if (variance_reduction_parameters.strategy == VarianceReductionParameters::Strategy::SpatiallyAveraged) {
-    particle_velocity_histogram = particle_operations.buildVelocityHistogram(particle_container,100);
+    particle_velocity_histogram->buildVelocityHistogram(particle_container,*mesh,100);
     particle_operations.updateParticleDistributionFunctionValue(particle_container,*particle_velocity_histogram);
     particle_velocity_histogram->writeToCSVFile("velocity_histogram", 0.0, 0.0);
   }
@@ -286,7 +286,7 @@ void runSimulation(int argc, char* argv[]) {
     }
 
     if (variance_reduction_parameters.strategy == VarianceReductionParameters::Strategy::SpatiallyAveraged) {
-      particle_velocity_histogram = particle_operations.buildVelocityHistogram(particle_container,100);
+      particle_velocity_histogram->buildVelocityHistogram(particle_container,*mesh,100);
       particle_operations.updateParticleDistributionFunctionValue(particle_container,*particle_velocity_histogram);
     }
 
