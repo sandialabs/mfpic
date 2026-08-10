@@ -21,6 +21,7 @@ struct VarianceReductionParameters
     None,
     EulerFluid,
     LocalMaxwellian,
+    SpatiallyAveraged,
   };
 
   Strategy strategy = Strategy::None;

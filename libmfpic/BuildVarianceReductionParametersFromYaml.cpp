@@ -13,6 +13,7 @@ VarianceReductionParameters buildVarianceReductionParametersFromYAML(const YAML:
   if (strategy == "none") parameters.strategy = VarianceReductionParameters::Strategy::None;
   else if (strategy == "Euler Fluid") parameters.strategy = VarianceReductionParameters::Strategy::EulerFluid;
   else if (strategy == "Local Maxwellian") parameters.strategy = VarianceReductionParameters::Strategy::LocalMaxwellian;
+  else if (strategy == "Spatially Averaged") parameters.strategy = VarianceReductionParameters::Strategy::SpatiallyAveraged;
   else
     throw std::runtime_error("Unknown variance reduction Strategy: " + strategy);
 

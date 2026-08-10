@@ -191,6 +191,12 @@ void runSimulation(int argc, char* argv[]) {
     electrostatic_field_operations->fieldSolve(low_fidelity_field_states[i], integrated_charge);
   }
 
+  std::optional<VelocityHistogram> particle_velocity_histogram;
+  if (variance_reduction_parameters.strategy == VarianceReductionParameters::Strategy::SpatiallyAveraged) {
+    particle_velocity_histogram = particle_operations.buildVelocityHistogram(particle_container,100);
+    particle_operations.updateParticleDistributionFunctionValue(particle_container,*particle_velocity_histogram);
+    particle_velocity_histogram->writeToCSVFile("velocity_histogram", 0.0, 0.0);
+  }
 
   mesh_data_writer.output(particle_electrostatic_field_state, low_fidelity_field_states, low_fidelity_states, 0, 0.);
   if (variance_reduction_parameters.strategy != VarianceReductionParameters::Strategy::None) 
@@ -279,6 +285,11 @@ void runSimulation(int argc, char* argv[]) {
       particle_container.addParticles(source_particles);
     }
 
+    if (variance_reduction_parameters.strategy == VarianceReductionParameters::Strategy::SpatiallyAveraged) {
+      particle_velocity_histogram = particle_operations.buildVelocityHistogram(particle_container,100);
+      particle_operations.updateParticleDistributionFunctionValue(particle_container,*particle_velocity_histogram);
+    }
+
     if (i_timestep % output_parameters.output_stride == 0) {
       const std::string prefix = "particle_moments";
       dumpParticleMoments(particle_operations,particle_container, prefix, i_timestep, end_time);
@@ -337,6 +348,11 @@ void runSimulation(int argc, char* argv[]) {
           i_timestep,
           end_time);
       }
+
+      if (variance_reduction_parameters.strategy == VarianceReductionParameters::Strategy::SpatiallyAveraged) {
+        particle_velocity_histogram->writeToCSVFile("velocity_histogram",i_timestep,end_time);
+      }
+
     }
   }
 
