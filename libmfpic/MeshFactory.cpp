@@ -38,6 +38,11 @@ MeshParameters buildMeshParametersFromYAML(const YAML::Node& mesh) {
     for (const YAML::Node& num_elements_in_dim : mesh["Number of Elements"]) {
       mesh_parameters.num_elements.push_back(num_elements_in_dim.as<int>());
     }
+
+    if (mesh["Number of Velocity Dimensions"]) {
+      mesh_parameters.num_velocity_dims = mesh["Number of Velocity Dimensions"].as<int>();
+    }
+
   }
   for (const YAML::Node& periodic_dimension : mesh["Periodic Dimensions"]) {
     const std::string periodic_dimension_str = periodic_dimension.as<std::string>();

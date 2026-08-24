@@ -5,10 +5,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 project(mfpic)
 
-if (ONE_V)
-  add_compile_options(-DONE_V=ON)
-endif()
-
 if(MSVC)
   add_compile_options(/W4 /WX)
 else()

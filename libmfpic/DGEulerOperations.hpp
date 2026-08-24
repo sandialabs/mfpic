@@ -176,7 +176,8 @@ public:
 
   std::unordered_map<Species,mfem::Vector> integralForVarianceReducedTemperature(
     mfem::FiniteElementSpace finite_element_space, 
-    const LowFidelityState& current_state
+    const LowFidelityState& current_state,
+    const int velocity_dims
   ) const;
 
   std::unordered_map<Species,mfem::Vector> getCellAveragedNumberDensity(

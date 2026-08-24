@@ -425,7 +425,7 @@ std::unordered_map<Species,mfem::Vector> DGEulerOperations::integralForVarianceR
     return bulk_velocity_integral;
   }
 
-  std::unordered_map<Species,mfem::Vector> DGEulerOperations::integralForVarianceReducedTemperature(mfem::FiniteElementSpace finite_element_space, const LowFidelityState& current_state) const
+  std::unordered_map<Species,mfem::Vector> DGEulerOperations::integralForVarianceReducedTemperature(mfem::FiniteElementSpace finite_element_space, const LowFidelityState& current_state, const int velocity_dims) const
   {
     mfem::Mesh& mesh = *finite_element_space.GetMesh();
     std::unordered_map<Species, mfem::Vector> temperature_integral;
@@ -437,7 +437,7 @@ std::unordered_map<Species,mfem::Vector> DGEulerOperations::integralForVarianceR
       temperature_integral.at(current_species) = 0.0;
       const mfem::GridFunction& current_species_grid_function = current_species_state.getGridFunction();
       mfem::DenseMatrix fluid_state_at_integration_point_locations, integration_point_locations_in_physical_frame;
-
+      const double m_over_3kb = current_species.mass / (velocity_dims * constants::boltzmann_constant);
       for (int element=0; element<finite_element_space.GetNE(); element++)
       {
         const mfem::IntegrationRule &integration_rule = mfem::IntRules.Get(
@@ -464,7 +464,7 @@ std::unordered_map<Species,mfem::Vector> DGEulerOperations::integralForVarianceR
             = primitive_state(euler::PrimitiveVariables::X_BULK_VELOCITY) *primitive_state(euler::PrimitiveVariables::X_BULK_VELOCITY)
             + primitive_state(euler::PrimitiveVariables::Y_BULK_VELOCITY) *primitive_state(euler::PrimitiveVariables::Y_BULK_VELOCITY)
             + primitive_state(euler::PrimitiveVariables::Z_BULK_VELOCITY) *primitive_state(euler::PrimitiveVariables::Z_BULK_VELOCITY);
-          temperature_integral.at(current_species)(element) += weight * primitive_state(euler::PrimitiveVariables::NUMBER_DENSITY) * (primitive_state(euler::PrimitiveVariables::TEMPERATURE) + current_species.mass/(3 * constants::boltzmann_constant) * bulk_velocity_mag_squared);
+          temperature_integral.at(current_species)(element) += weight * primitive_state(euler::PrimitiveVariables::NUMBER_DENSITY) * (primitive_state(euler::PrimitiveVariables::TEMPERATURE) + m_over_3kb * bulk_velocity_mag_squared);
         }
       }
     }

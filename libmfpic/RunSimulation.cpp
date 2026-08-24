@@ -84,7 +84,8 @@ void runSimulation(int argc, char* argv[]) {
     electrostatic_discretization,
     particle_boundary_factories,
     default_particle_boundary_factory,
-    species_map
+    species_map,
+    mesh_parameters.num_velocity_dims
   );
 
   particle_operations.setVarianceReductionParameters(variance_reduction_parameters);
@@ -96,7 +97,8 @@ void runSimulation(int argc, char* argv[]) {
     main["Particles"]["Initial Conditions"],
     species_map,
     generator,
-    mesh
+    mesh,
+    mesh_parameters.num_velocity_dims
   );
   const std::string prefix = "particle_moments";
   dumpParticleMoments(particle_operations,particle_container, prefix, 0, 0.0);

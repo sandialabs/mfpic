@@ -41,7 +41,8 @@ public:
     Discretization &discretization,
     std::vector<std::shared_ptr<ParticleBoundaryFactory>> particle_boundary_factories,
     std::shared_ptr<ParticleBoundaryFactory> default_particle_boundary_factory,
-    std::unordered_map<std::string, Species> species_map
+    std::unordered_map<std::string, Species> species_map,
+    const int velocity_dims = 3
   );
 
   ParticleContainer accelerate(
@@ -285,6 +286,9 @@ private:
 
   /// Mesh dimension
   const int dim_;
+
+  /// Velocity dimension
+  int velocity_dims_ = 3; 
 
 };
 

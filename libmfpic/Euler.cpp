@@ -158,29 +158,32 @@ double getInternalEnergyDensityFromPrimitiveState(const mfem::Vector& primitive_
 double evaluateMaxwellian(const mfem::Vector& primitive_state,
                           const mfem::Vector& velocity,
                           const Species& species)
-  {
-    const double temperature = primitive_state(euler::PrimitiveVariables::TEMPERATURE);
-    const double sigma = std::sqrt(constants::boltzmann_constant * temperature / species.mass);
+{
+  const double temperature = primitive_state(euler::PrimitiveVariables::TEMPERATURE);
+  const double sigma = std::sqrt(constants::boltzmann_constant * temperature / species.mass);
 
-    if ((sigma <= 0.0) or not std::isfinite(sigma)) {
-      return std::numeric_limits<double>::quiet_NaN();   
-    }
-
-    const double inv_sq_sigma = 1.0 / (sigma * sigma);
-
-    const mfem::Vector bulk_velocity = getBulkVelocityFromPrimitiveState(primitive_state);
-    mfem::Vector difference = velocity;
-    difference -= bulk_velocity;
-    double exponent = inv_sq_sigma * (difference * difference);
-#ifdef ONE_V
-    const double norm = 1.0 / (std::sqrt(2.0 * M_PI) * sigma);
-#else
-    const double norm = 1.0 / std::pow(std::sqrt(2.0 * M_PI) * sigma, 3);
-#endif
-    const double probability_density_function = norm * std::exp(-0.5 * exponent);
-
-    return probability_density_function * primitive_state(euler::PrimitiveVariables::NUMBER_DENSITY);
+  if ((sigma <= 0.0) || !std::isfinite(sigma)) {
+    return std::numeric_limits<double>::quiet_NaN();
   }
+
+  const int vdim = velocity.Size(); 
+  const mfem::Vector bulk_velocity = getBulkVelocityFromPrimitiveState(primitive_state);
+
+  mfem::Vector difference = velocity;
+  for (int i=0; i < vdim; ++i )
+    difference(i) -= bulk_velocity(i);
+
+  const double inv_sq_sigma = 1.0 / (sigma * sigma);
+  const double exponent = inv_sq_sigma * (difference * difference);
+
+  const double norm_base = 1.0 / (std::sqrt(2.0 * M_PI) * sigma);
+  const double norm = std::pow(norm_base, static_cast<double>(vdim));
+
+  const double probability_density_function = norm * std::exp(-0.5 * exponent);
+
+  return probability_density_function *
+         primitive_state(euler::PrimitiveVariables::NUMBER_DENSITY);
+}
 
 double evaluateProductOf1DKappaDistributions(
   const mfem::Vector& primitive_state,
@@ -238,50 +241,59 @@ double evaluateProductOf1DKappaDistributions(
 }
 
 double evaluateIsotropicKappaDistribution(
-  const mfem::Vector& primitive_state,
-  const mfem::Vector& velocity,
-  double kappa,
-  const Species& species)
+    const mfem::Vector& primitive_state,
+    const mfem::Vector& velocity,
+    double kappa,
+    const Species& species,
+    const int velocity_dimensions)
 {
-  const double temperature =
-    primitive_state(PrimitiveVariables::TEMPERATURE);
+    const double temperature =
+        primitive_state(PrimitiveVariables::TEMPERATURE);
 
-  const double number_density =
-    primitive_state(PrimitiveVariables::NUMBER_DENSITY);
+    const double number_density =
+        primitive_state(PrimitiveVariables::NUMBER_DENSITY);
 
-  if (temperature < 0.0 ||
-      species.mass <= 0.0 ||
-      kappa <= 1.5) {
-    return std::numeric_limits<double>::quiet_NaN();
-  }
+    if (temperature < 0.0 ||
+        species.mass <= 0.0 ||
+        kappa <= 1.5 ||
+        velocity_dimensions <= 0) {
+        return std::numeric_limits<double>::quiet_NaN();
+    }
 
-  const double nu = 2.0 * kappa - 1.0;
+    const double nu = 2.0 * kappa - 1.0;
 
-  const double w_squared =
-    ((nu - 2.0) / nu) *
-    constants::boltzmann_constant *
-    temperature / species.mass;
+    const double w_squared =
+        ((nu - 2.0) / nu) *
+        constants::boltzmann_constant *
+        temperature / species.mass;
 
-  const mfem::Vector bulk_velocity =
-    getBulkVelocityFromPrimitiveState(
-      primitive_state);
+    const mfem::Vector bulk_velocity =
+        getBulkVelocityFromPrimitiveState(primitive_state);
 
-  mfem::Vector difference = velocity;
-  difference -= bulk_velocity;
+    mfem::Vector difference = velocity;
+    difference -= bulk_velocity;
 
-  const double c_squared =
-    difference * difference;
+    const double c_squared =
+        difference * difference;
 
-  const double log_normalization =
-      std::lgamma(0.5 * (nu + 3.0))
-    - std::lgamma(0.5 * nu)
-    - 1.5 * std::log(nu * M_PI)
-    - 1.5 * std::log(w_squared);
+    const double d = static_cast<double>(velocity_dimensions);
 
-  const double log_shape =
-    -0.5 * (nu + 3.0) * std::log1p(c_squared / (nu * w_squared));
-  const double log_pdf = std::log(number_density) + log_normalization + log_shape;
-  return std::exp(log_pdf);
+    const double log_normalization =
+          std::lgamma(0.5 * (nu + d))
+        - std::lgamma(0.5 * nu)
+        - 0.5 * d * std::log(nu * M_PI)
+        - 0.5 * d * std::log(w_squared);
+
+    const double log_shape =
+        -0.5 * (nu + d) *
+        std::log1p(c_squared / (nu * w_squared));
+
+    const double log_pdf =
+        std::log(number_density)
+        + log_normalization
+        + log_shape;
+
+    return std::exp(log_pdf);
 }
 
 }
