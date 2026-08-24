@@ -1,10 +1,11 @@
 #pragma once
 
+#include <libmfpic/RandomNumberGenerator.hpp>
+
 namespace mfpic {
 
 class ParticleContainer;
 class ParticleOperations;
-class RandomNumberGenerator;
 
 class CollisionOperations {
 public:
