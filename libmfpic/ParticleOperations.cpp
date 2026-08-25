@@ -11,6 +11,7 @@
 #include <mfem/mfem.hpp>
 
 #include <limits>
+#include <ranges>
 #include <unordered_map>
 
 namespace mfpic {
@@ -172,7 +173,7 @@ IntegratedCharge ParticleOperations::assembleCharge(
     mfem::ElementTransformation * element_transformation = mesh.GetElementTransformation(elem_id);
     const mfem::FiniteElement *fe = finite_element_space.GetFE(elem_id);
 
-    const mfem::Vector particle_position(particle.position.GetData(), dim_); 
+    const mfem::Vector particle_position(particle.position.GetData(), dim_);
     element_transformation->TransformBack(particle_position, integration_point);
     element_transformation->SetIntPoint(&integration_point);
     mfem::Vector psi(fe->GetDof());
@@ -211,7 +212,7 @@ IntegratedCharge ParticleOperations::assembleVarianceReducedCharge(
     mfem::ElementTransformation * element_transformation = mesh.GetElementTransformation(elem_id);
     const mfem::FiniteElement *fe = finite_element_space.GetFE(elem_id);
 
-    const mfem::Vector particle_position(particle.position.GetData(), dim_); 
+    const mfem::Vector particle_position(particle.position.GetData(), dim_);
     element_transformation->TransformBack(particle_position, integration_point);
     element_transformation->SetIntPoint(&integration_point);
     mfem::Vector psi(fe->GetDof());
@@ -290,27 +291,41 @@ std::unordered_map<Species, mfem::Vector>& ParticleOperations::getTemperature(co
   if (sum_weights) this->sumParticleWeights_(particles);
   if (compute_bulk_velocity) this->getBulkVelocity(particles, false);
 
+  std::unordered_map<Species, mfem::Vector> sum_of_squared_weights = sum_of_weights_;
+  for (mfem::Vector& sum_of_squared_weights_for_species : std::views::values(sum_of_squared_weights)) {
+    sum_of_squared_weights_for_species = 0.0;
+  }
+  for (const Particle& particle : particles) {
+    if (not particle.is_alive) continue;
+
+    sum_of_squared_weights.at(particle.species)(particle.element) += particle.weight * particle.weight;
+  }
+
   for (const Particle& particle : particles) {
     if (not particle.is_alive) continue;
 
     const int elem_id = particle.element;
     const Species & species = particle.species;
-    const double sum_weights = sum_of_weights_.at(species)(elem_id);
-    if (sum_weights <= 0.0) continue;
+    const double sum_of_weights_in_element = sum_of_weights_.at(species)(elem_id);
+    if (sum_of_weights_in_element <= 0.0) continue;
 
     const mfem::Vector bulk_velocity_in_element(particle_bulk_velocity_.at(species).GetColumn(elem_id), 3);
     mfem::Vector fluctuation_velocity = particle.velocity;
     fluctuation_velocity -= bulk_velocity_in_element;
-
     const double norm_squared = fluctuation_velocity * fluctuation_velocity;
 
-    // this only holds for constant weights
-    const double number_of_samples = sum_weights / particle.weight;
-    if (number_of_samples <= 1.) continue;
-
-    const double bias_corrected_weight = particle.weight * number_of_samples / (number_of_samples - 1.);
-
-    particle_temperature_.at(species)(elem_id) += norm_squared * bias_corrected_weight * particle.species.mass / (3.0 * constants::boltzmann_constant * sum_weights);
+    const double sum_of_squared_weights_in_element = sum_of_squared_weights.at(species)(elem_id);
+    const double sum_of_weights_in_element_squared = std::pow(sum_of_weights_in_element, 2.0);
+    const double effective_num_particles = sum_of_weights_in_element_squared / sum_of_squared_weights_in_element;
+    if (effective_num_particles == 1.0) {
+      particle_temperature_.at(species)(elem_id) = 0.0;
+    }
+    else {
+      const double bias_corrected_weight = effective_num_particles / (effective_num_particles - 1.0) * particle.weight;
+      particle_temperature_.at(species)(elem_id) +=
+        norm_squared * bias_corrected_weight * particle.species.mass /
+        (3.0 * constants::boltzmann_constant * sum_of_weights_in_element);
+    }
   }
 
   return this->particle_temperature_;
