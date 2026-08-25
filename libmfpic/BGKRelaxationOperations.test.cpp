@@ -124,4 +124,40 @@ TEST(BGKRelaxationOperations, FractionOfRelaxedParticlesIsAsExpected) {
   EXPECT_NEAR(num_relaxed_particles, expected_num_relaxed_particles, tolerance);
 }
 
+TEST(BGKRelaxationOperations, MomentsAreApproximatelyConservedWhenAllParticlesRelax) {
+  Discretization discretization(&mesh, order);
+  ParticleOperations particle_operations(
+    discretization,
+    empty_particle_boundary_factory_list,
+    default_reflecting_particle_boundary_factory,
+    one_species
+  );
+  constexpr int num_particles = 1000;
+  ParticleContainer unrelaxed_particles;
+  for (int iparticle = 0; iparticle < num_particles; iparticle++) {
+    unrelaxed_particles.addParticle(Particle{.velocity=mfem::Vector{iparticle, 2*iparticle, 3*iparticle}, .species=default_species, .weight=1.0});
+  }
+
+  ParticleContainer relaxed_particles = unrelaxed_particles;
+  constexpr double collision_frequency = 1.0;
+  BGKRelaxationOperations relaxer(collision_frequency, default_species);
+  constexpr double dt = 1.0e15 / collision_frequency;
+  RandomNumberGenerator generator;
+  relaxer.performCollisions(dt, generator, relaxed_particles, particle_operations);
+
+  EXPECT_EQ(unrelaxed_particles.numParticles(), relaxed_particles.numParticles());
+  constexpr double relative_tolerance = 0.1;
+  double unrelaxed_number_density = particle_operations.getNumberDensity(unrelaxed_particles).at(default_species)[0];
+  double relaxed_number_density = particle_operations.getNumberDensity(relaxed_particles).at(default_species)[0];
+  EXPECT_NEAR(relaxed_number_density, unrelaxed_number_density, relative_tolerance*unrelaxed_number_density);
+  for (int idim = 0; idim < 3; idim++) {
+    double unrelaxed_bulk_velocity = particle_operations.getBulkVelocity(unrelaxed_particles).at(default_species)(0, idim);
+    double relaxed_bulk_velocity = particle_operations.getBulkVelocity(relaxed_particles).at(default_species)(0, idim);
+    EXPECT_NEAR(relaxed_bulk_velocity, unrelaxed_bulk_velocity, relative_tolerance*unrelaxed_bulk_velocity);
+  }
+  double unrelaxed_temperature = particle_operations.getTemperature(unrelaxed_particles).at(default_species)[0];
+  double relaxed_temperature = particle_operations.getTemperature(relaxed_particles).at(default_species)[0];
+  EXPECT_NEAR(relaxed_temperature, unrelaxed_temperature, relative_tolerance*unrelaxed_temperature);
+}
+
 } // namespace
