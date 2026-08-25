@@ -151,8 +151,8 @@ TEST(BGKRelaxationOperations, MomentsAreApproximatelyConservedWhenAllParticlesRe
   double relaxed_number_density = particle_operations.getNumberDensity(relaxed_particles).at(default_species)[0];
   EXPECT_NEAR(relaxed_number_density, unrelaxed_number_density, relative_tolerance*unrelaxed_number_density);
   for (int idim = 0; idim < 3; idim++) {
-    double unrelaxed_bulk_velocity = particle_operations.getBulkVelocity(unrelaxed_particles).at(default_species)(0, idim);
-    double relaxed_bulk_velocity = particle_operations.getBulkVelocity(relaxed_particles).at(default_species)(0, idim);
+    double unrelaxed_bulk_velocity = particle_operations.getBulkVelocity(unrelaxed_particles).at(default_species)(idim, 0);
+    double relaxed_bulk_velocity = particle_operations.getBulkVelocity(relaxed_particles).at(default_species)(idim, 0);
     EXPECT_NEAR(relaxed_bulk_velocity, unrelaxed_bulk_velocity, relative_tolerance*unrelaxed_bulk_velocity);
   }
   double unrelaxed_temperature = particle_operations.getTemperature(unrelaxed_particles).at(default_species)[0];
