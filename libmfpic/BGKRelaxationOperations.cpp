@@ -17,11 +17,9 @@ void BGKRelaxationOperations::performCollisions(
   ParticleContainer& particles,
   ParticleOperations& particle_operations
 ) const {
-  constexpr bool recompute_lower_order_moments = false;
   const std::unordered_map<Species, mfem::Vector>& number_densities = particle_operations.getNumberDensity(particles);
-  std::unordered_map<Species, mfem::DenseMatrix>& bulk_velocities = particle_operations.getBulkVelocity(
-    particles,
-    recompute_lower_order_moments);
+  std::unordered_map<Species, mfem::DenseMatrix>& bulk_velocities = particle_operations.getBulkVelocity(particles);
+  constexpr bool recompute_lower_order_moments = false;
   const std::unordered_map<Species, mfem::Vector>& temperatures = particle_operations.getTemperature(
     particles,
     recompute_lower_order_moments,
