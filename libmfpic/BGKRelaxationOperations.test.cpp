@@ -33,9 +33,9 @@ TEST(BGKRelaxationOperations, NothingHappensToParticlesWhenTimestepIsSmallCompar
     one_species
   );
   ParticleContainer unrelaxed_particles;
-  unrelaxed_particles.addParticle(Particle{.velocity=mfem::Vector{100, 200, 300}, .element=0, .species=default_species, .weight=1.0});
-  unrelaxed_particles.addParticle(Particle{.velocity=mfem::Vector{142, 834, 123}, .element=0, .species=default_species, .weight=1.0});
-  unrelaxed_particles.addParticle(Particle{.velocity=mfem::Vector{721, 175, 435}, .element=0, .species=default_species, .weight=1.0});
+  unrelaxed_particles.addParticle(Particle{.velocity=mfem::Vector{100, 200, 300}, .species=default_species, .weight=1.0});
+  unrelaxed_particles.addParticle(Particle{.velocity=mfem::Vector{142, 834, 123}, .species=default_species, .weight=1.0});
+  unrelaxed_particles.addParticle(Particle{.velocity=mfem::Vector{721, 175, 435}, .species=default_species, .weight=1.0});
 
   ParticleContainer relaxed_particles = unrelaxed_particles;
   constexpr double collision_frequency = 1.0;
@@ -63,9 +63,9 @@ TEST(BGKRelaxationOperations, EveryParticleRelaxesWhenTimestepIsLargeComparedToM
     one_species
   );
   ParticleContainer unrelaxed_particles;
-  unrelaxed_particles.addParticle(Particle{.velocity=mfem::Vector{100, 200, 300}, .element=0, .species=default_species, .weight=1.0});
-  unrelaxed_particles.addParticle(Particle{.velocity=mfem::Vector{142, 834, 123}, .element=0, .species=default_species, .weight=1.0});
-  unrelaxed_particles.addParticle(Particle{.velocity=mfem::Vector{721, 175, 435}, .element=0, .species=default_species, .weight=1.0});
+  unrelaxed_particles.addParticle(Particle{.velocity=mfem::Vector{100, 200, 300}, .species=default_species, .weight=1.0});
+  unrelaxed_particles.addParticle(Particle{.velocity=mfem::Vector{142, 834, 123}, .species=default_species, .weight=1.0});
+  unrelaxed_particles.addParticle(Particle{.velocity=mfem::Vector{721, 175, 435}, .species=default_species, .weight=1.0});
 
   ParticleContainer relaxed_particles = unrelaxed_particles;
   constexpr double collision_frequency = 1.0;
@@ -95,7 +95,7 @@ TEST(BGKRelaxationOperations, FractionOfRelaxedParticlesIsAsExpected) {
   constexpr int num_particles = 1000;
   ParticleContainer unrelaxed_particles;
   for (int iparticle = 0; iparticle < num_particles; iparticle++) {
-    unrelaxed_particles.addParticle(Particle{.velocity=mfem::Vector{iparticle, 2*iparticle, 300*iparticle}, .element=0, .species=default_species, .weight=1.0});
+    unrelaxed_particles.addParticle(Particle{.velocity=mfem::Vector{iparticle, 2*iparticle, 300*iparticle}, .species=default_species, .weight=1.0});
   }
 
   ParticleContainer relaxed_particles = unrelaxed_particles;
