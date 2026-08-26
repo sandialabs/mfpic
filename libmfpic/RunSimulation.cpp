@@ -1,3 +1,4 @@
+#include <libmfpic/BuildCollisionOperationsFromYaml.hpp>
 #include <libmfpic/BuildElectrostaticFieldOperationsFromYaml.hpp>
 #include <libmfpic/BuildOutputParametersFromYaml.hpp>
 #include <libmfpic/BuildParticleBoundariesFromYaml.hpp>
@@ -130,6 +131,11 @@ void runSimulation(int argc, char* argv[]) {
     low_fidelity_operations.push_back(std::move(dg_euler_operations));
     low_fidelity_field_states.emplace_back(electrostatic_discretization);
   }
+
+  std::vector<std::unique_ptr<CollisionOperations>> collision_operations = buildCollisionOperationsFromYaml(
+    main["Collisions"],
+    species_map
+  );
 
   OutputParameters output_parameters;
   if (main["Output"].IsDefined())
