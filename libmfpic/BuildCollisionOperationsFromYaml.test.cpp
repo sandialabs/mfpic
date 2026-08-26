@@ -83,4 +83,18 @@ TEST(BuildCollisionOperationsFromYaml, InvalidSpeciesInBGKRelaxationErrorsOut) {
   ));
 }
 
+TEST(BuildCollisionOperationsFromYaml, NegativeCollisionFrequencyInBGKRelaxationErrorsOut) {
+  const std::string yaml = R"(
+- BGK Relaxation:
+    Species: electron
+    Collision Frequency: -0.1
+  )";
+  const YAML::Node collisions_nodes = YAML::Load(yaml);
+
+  EXPECT_ANY_THROW(std::vector<std::unique_ptr<CollisionOperations>> collision_operations = buildCollisionOperationsFromYaml(
+    collisions_nodes,
+    species_map_with_electron
+  ));
+}
+
 } // namespace
