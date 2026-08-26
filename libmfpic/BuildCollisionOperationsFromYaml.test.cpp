@@ -20,4 +20,20 @@ TEST(BuildCollisionOperationsFromYaml, EmptyYAMLYieldsNoCollisionOperations) {
   ASSERT_TRUE(collision_operations.empty());
 }
 
+TEST(BuildCollisionOperationsFromYaml, OneCollisionOperationsCreatedWhenYAMLSequenceContainsOneObject) {
+  const std::string yaml = R"(
+- BGK Relaxation:
+    Species: electron
+    Collision Frequency: 0.1
+  )";
+  const YAML::Node collisions_nodes = YAML::Load(yaml);
+
+  std::vector<std::unique_ptr<CollisionOperations>> collision_operations = buildCollisionOperationsFromYaml(
+    collisions_nodes,
+    species_map_with_electron
+  );
+
+  ASSERT_EQ(std::ssize(collision_operations), 1);
+}
+
 } // namespace
