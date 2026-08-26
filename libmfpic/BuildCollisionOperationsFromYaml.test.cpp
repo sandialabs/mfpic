@@ -36,4 +36,23 @@ TEST(BuildCollisionOperationsFromYaml, OneCollisionOperationsCreatedWhenYAMLSequ
   ASSERT_EQ(std::ssize(collision_operations), 1);
 }
 
+TEST(BuildCollisionOperationsFromYaml, TwoCollisionOperationsCreatedWhenYAMLSequenceContainsTwoObjects) {
+  const std::string yaml = R"(
+- BGK Relaxation:
+    Species: electron
+    Collision Frequency: 0.1
+- BGK Relaxation:
+    Species: electron
+    Collision Frequency: 0.4
+  )";
+  const YAML::Node collisions_nodes = YAML::Load(yaml);
+
+  std::vector<std::unique_ptr<CollisionOperations>> collision_operations = buildCollisionOperationsFromYaml(
+    collisions_nodes,
+    species_map_with_electron
+  );
+
+  ASSERT_EQ(std::ssize(collision_operations), 2);
+}
+
 } // namespace
