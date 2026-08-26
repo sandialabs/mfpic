@@ -1,3 +1,4 @@
+#include <libmfpic/CollisionOperations.hpp>
 #include <libmfpic/ElectrostaticFieldOperations.hpp>
 #include <libmfpic/ElectromagneticFieldsEvaluator.hpp>
 #include <libmfpic/ElectrostaticFieldState.hpp>
@@ -9,11 +10,13 @@
 namespace mfpic {
 
 void VerletTimeIntegrator::advanceTimestep(
+  RandomNumberGenerator& generator,
   std::vector<LowFidelityState>& low_fidelity_states,
   std::vector<ElectrostaticFieldState>& low_fidelity_field_states,
   const std::vector<std::unique_ptr<LowFidelityOperations>>& low_fidelity_operations,
   ParticleContainer& particle_container,
-  const ParticleOperations& particle_operations,
+  ParticleOperations& particle_operations,
+  const std::vector<std::unique_ptr<CollisionOperations>>& collision_operations,
   ElectrostaticFieldState& particle_field_state,
   ElectrostaticFieldOperations& field_operations,
   double dt) const
@@ -48,6 +51,10 @@ void VerletTimeIntegrator::advanceTimestep(
   }
 
   particle_container = particle_operations.accelerate(dt/2, particle_container, particle_field_state);
+
+  for (const std::unique_ptr<CollisionOperations>& collision_operator : collision_operations) {
+    collision_operator->performCollisions(dt, generator, particle_container, particle_operations);
+  }
 }
 
 } // namespace mfpic

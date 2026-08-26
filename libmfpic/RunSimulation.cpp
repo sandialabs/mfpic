@@ -179,11 +179,13 @@ void runSimulation(int argc, char* argv[]) {
     std::cout << "Time Step: " << i_timestep << "    Time: " << begin_time << std::endl;
 
     time_integrator->advanceTimestep(
+      generator,
       low_fidelity_states,
       low_fidelity_field_states,
       low_fidelity_operations,
       particle_container,
       particle_operations,
+      collision_operations,
       particle_electrostatic_field_state,
       *electrostatic_field_operations,
       timestep_size

@@ -18,11 +18,13 @@ constexpr double b2 =  4. / 11.;
 }
 
 void SSPERK32TimeIntegrator::advanceTimestep(
+  RandomNumberGenerator& /*generator*/,
   std::vector<LowFidelityState>& low_fidelity_states,
   std::vector<ElectrostaticFieldState>& low_fidelity_field_states,
   const std::vector<std::unique_ptr<LowFidelityOperations>>& low_fidelity_operations,
   ParticleContainer& particle_container,
-  const ParticleOperations& /*particle_operations*/,
+  ParticleOperations& /*particle_operations*/,
+  const std::vector<std::unique_ptr<CollisionOperations>>& /*collision_operations*/,
   ElectrostaticFieldState& /*field_state*/,
   ElectrostaticFieldOperations& field_operations,
   double dt) const
