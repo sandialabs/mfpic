@@ -24,6 +24,8 @@ public:
     ParticleContainer& particles,
     ParticleOperations& particle_operations
   ) const = 0;
+
+  virtual ~CollisionOperations() = default;
 };
 
 } // namespace mfpic
