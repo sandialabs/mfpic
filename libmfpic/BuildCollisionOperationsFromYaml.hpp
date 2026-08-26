@@ -7,8 +7,8 @@
 
 namespace mfpic {
 
-std::vector<CollisionOperations> buildCollisionOperationsFromYaml(
-  const YAML::Node& collisions_node,
+std::vector<std::unique_ptr<CollisionOperations>> buildCollisionOperationsFromYaml(
+  const YAML::Node& collisions_nodes,
   const std::unordered_map<std::string, Species>& species_map
 );
 
