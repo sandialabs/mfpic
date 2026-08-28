@@ -1,3 +1,4 @@
+#include <libmfpic/BuildCollisionOperationsFromYaml.hpp>
 #include <libmfpic/BuildElectrostaticFieldOperationsFromYaml.hpp>
 #include <libmfpic/BuildOutputParametersFromYaml.hpp>
 #include <libmfpic/BuildParticleBoundariesFromYaml.hpp>
@@ -131,6 +132,11 @@ void runSimulation(int argc, char* argv[]) {
     low_fidelity_field_states.emplace_back(electrostatic_discretization);
   }
 
+  std::vector<std::unique_ptr<CollisionOperations>> collision_operations = buildCollisionOperationsFromYaml(
+    main["Collisions"],
+    species_map
+  );
+
   OutputParameters output_parameters;
   if (main["Output"].IsDefined())
     output_parameters = buildOutputParametersFromYAML(main["Output"]);
@@ -173,11 +179,13 @@ void runSimulation(int argc, char* argv[]) {
     std::cout << "Time Step: " << i_timestep << "    Time: " << begin_time << std::endl;
 
     time_integrator->advanceTimestep(
+      generator,
       low_fidelity_states,
       low_fidelity_field_states,
       low_fidelity_operations,
       particle_container,
       particle_operations,
+      collision_operations,
       particle_electrostatic_field_state,
       *electrostatic_field_operations,
       timestep_size

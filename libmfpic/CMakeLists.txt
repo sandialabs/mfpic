@@ -1,6 +1,7 @@
 add_library(libmfpic
   AbsorbingParticleBoundary.cpp
   BGKRelaxationOperations.cpp
+  BuildCollisionOperationsFromYaml.cpp
   BuildElectrostaticFieldOperationsFromYaml.cpp
   BuildOutputParametersFromYaml.cpp
   BuildParticleBoundariesFromYaml.cpp
@@ -62,6 +63,7 @@ target_link_libraries(libmfpic
 
 mfpic_unit_test(AbsorbingParticleBoundary)
 mfpic_unit_test(BGKRelaxationOperations)
+mfpic_unit_test(BuildCollisionOperationsFromYaml)
 mfpic_unit_test(BuildElectrostaticFieldOperationsFromYaml)
 mfpic_unit_test(BuildOutputParametersFromYaml)
 mfpic_unit_test(BuildParticleBoundariesFromYaml)
