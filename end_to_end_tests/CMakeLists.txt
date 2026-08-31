@@ -29,6 +29,7 @@ file(CREATE_LINK ${CMAKE_CURRENT_SOURCE_DIR}/python ${CMAKE_CURRENT_BINARY_DIR}/
 
 add_subdirectory(advecting_gaussian)
 add_subdirectory(expanding_gaussian)
+add_subdirectory(landau_damping)
 add_subdirectory(sheath)
 add_subdirectory(sod_shock_tube)
 add_subdirectory(twostream_instability)

@@ -1,0 +1,162 @@
+import numpy as np
+from scipy.constants import Boltzmann, electron_mass, elementary_charge, epsilon_0, electron_volt
+
+perturbation = .02
+number_density = 1e18
+temperature = 10. * electron_volt / Boltzmann
+debye_length = np.sqrt(epsilon_0 * Boltzmann * temperature / (number_density * elementary_charge**2.0))
+wavenumber = .5 / debye_length
+Lx = 2. * np.pi / wavenumber
+num_elements = 128
+
+plasma_frequency = np.sqrt(number_density * elementary_charge**2.0 / electron_mass / epsilon_0)
+dt = .01 / plasma_frequency
+num_time_steps = 2000
+dx = Lx / num_elements
+num_macroparticles_per_population = num_elements * 100
+
+def run(mfpic_executable):
+  import subprocess
+
+  input_deck_contents = f"""
+Fields:
+  Basis Order: 1
+
+Mesh:
+  Type: line
+  Lengths: [{Lx}]
+  Number of Elements: [{num_elements}]
+  Periodic Dimensions: [x]
+
+Time Stepping:
+  Number of Time Steps: {num_time_steps}
+  Time Step Size: {dt}
+
+Species:
+  electron:
+    Mass: {electron_mass}
+    Charge: {-elementary_charge}
+
+Particles:
+  Boundary Conditions: []
+  Default Boundary Condition: Reflecting
+  Initial Conditions:
+    - Species: [electron]
+      Number of Macroparticles per Species: {num_macroparticles_per_population}
+      Periodic Perturbation:
+        Wavevector: [{wavenumber}, 0, 0]
+        Base Values:
+          Bulk Velocity: [0.0, 0.0, 0.0]
+          Temperature: {temperature}
+          Number Density: {number_density}
+        Perturbations:
+          Bulk Velocity: [0.0, 0.0, 0.0]
+          Temperature: 0.
+          Number Density: {perturbation}
+
+Euler Fluids:
+  Basis Order: 0
+  Initial Conditions:
+    - Species: [electron]
+      Periodic Perturbation:
+        Wavevector: [{wavenumber}, 0, 0]
+        Base Values:
+          Bulk Velocity: [0.0, 0.0, 0.0]
+          Temperature: {temperature}
+          Number Density: {number_density}
+        Perturbations:
+          Bulk Velocity: [0.0, 0.0, 0.0]
+          Temperature: 0.
+          Number Density: {perturbation}
+          
+Output:
+  Stride: 20
+
+  """
+  yaml = "landau_damping.yaml"
+  with open("landau_damping.yaml", 'w') as input_deck:
+    input_deck.write(input_deck_contents)
+
+  result = subprocess.run([mfpic_executable, "-i", yaml])
+  result.check_returncode()
+
+def analyze():
+  return True
+  ## TODO MAKE APPROPRIATE CHECK
+  #output = np.genfromtxt("output.csv", names=True)
+
+  #simulation_times = output["Time"]
+  #log_energy = np.log10(output["Field_Energy"])
+
+  ## Find a stretch of time where the log of the electrostatic energy is "most" linear,
+  ## judged using the residual for the best fit line.
+  ## The slope is the growth rate.
+  #linear_regime_min_timestep_window = 150
+  #linear_regime_max_timestep_window = 300
+  #best_linear_regime_fit_residual = 1.0e100
+  #for timestep_window in range(linear_regime_min_timestep_window, linear_regime_max_timestep_window + 1):
+  #  for timestep_start in range(num_time_steps - timestep_window):
+  #    linear_fit, linear_fit_results = np.polynomial.polynomial.Polynomial.fit(
+  #      simulation_times[timestep_start:timestep_start+timestep_window],
+  #      log_energy[timestep_start:timestep_start+timestep_window],
+  #      1,
+  #      full=True
+  #    )
+  #    residual = linear_fit_results[0][0]
+  #    if residual < best_linear_regime_fit_residual:
+  #      best_linear_regime_timestep_start = timestep_start
+  #      best_linear_regime_timestep_window = timestep_window
+  #      best_linear_regime_fit_residual = residual
+  #      best_linear_regime_fit = linear_fit
+  #best_fit_growth_rate = best_linear_regime_fit.convert().coef[1]
+
+  #wavenumber = 2.0 * np.pi / domain_length
+  #expected_growth_rate = np.imag(np.sqrt(
+  #  0.5 * (plasma_frequency**2.0 + 2.0 * wavenumber**2.0 * bulk_speed**2.0) -
+  #  0.5 * plasma_frequency * np.sqrt(plasma_frequency**2.0 + 8.0 * wavenumber**2.0 * bulk_speed**2.0) +
+  #  0j
+  #))
+
+  #assert np.isclose(expected_growth_rate, best_fit_growth_rate, rtol=2.5e-1), f"Expected growth rate of {expected_growth_rate}, but best fit from simulation was {best_fit_growth_rate}"
+
+  #return best_linear_regime_timestep_start, best_linear_regime_timestep_window, best_linear_regime_fit, expected_growth_rate
+
+def plot():
+  import matplotlib.pyplot as plt
+
+  best_linear_regime_timestep_start, best_linear_regime_timestep_window, best_linear_regime_fit, expected_growth_rate = analyze()
+
+  output = np.genfromtxt("output.csv", names=True)
+
+  simulation_times = output["Time"]
+  energy = output["Field_Energy"]
+
+  windowed_times = simulation_times[best_linear_regime_timestep_start:best_linear_regime_timestep_start+best_linear_regime_timestep_window]
+
+  plt.semilogy(simulation_times *plasma_frequency / (2.0 * np.pi), energy, label="simulation")
+  plt.semilogy(
+    windowed_times *plasma_frequency / (2.0 * np.pi),
+    np.pow(10, best_linear_regime_fit(windowed_times)),
+    label="growth fit"
+  )
+  plt.semilogy(
+    windowed_times *plasma_frequency / (2.0 * np.pi),
+    energy[best_linear_regime_timestep_start] * np.pow(10, expected_growth_rate * (windowed_times - windowed_times[0])),
+    label="expected growth"
+  )
+  plt.axvline(simulation_times[best_linear_regime_timestep_start] *plasma_frequency / (2.0 * np.pi))
+  plt.axvline(simulation_times[best_linear_regime_timestep_start+best_linear_regime_timestep_window] *plasma_frequency / (2.0 * np.pi))
+  plt.xlabel("Simulation time (plasma frequencies)")
+  plt.ylabel("Electrostatic energy (J)")
+  plt.legend()
+  plt.savefig("twostream.png")
+
+if __name__ == "__main__":
+  import sys
+
+  if "run" in sys.argv[1:]:
+    run(sys.argv[2])
+  elif "plot" in sys.argv[1:]:
+    plot()
+  else:
+    analyze()
