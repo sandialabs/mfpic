@@ -1,0 +1,71 @@
+
+Mesh:
+  Type: line
+  Lengths: [0.01]
+  Number of Elements: [300]
+  Periodic Dimensions: [x]
+
+Time Stepping:
+  #Number of Time Steps: 1081
+  Number of Time Steps: 50
+  Time Step Size: 1.503174136825223e-11
+
+Species:
+
+  electron:
+    Mass: 9.1093837139e-31
+    Charge: -1.602176634e-19
+
+  beam_electron:
+    Mass: 9.1093837139e-31
+    Charge: -1.602176634e-19
+
+Particles:
+  Basis Order: 0
+
+  Initial Conditions:
+
+    # ------------------------------------------------
+    # Maxwellian electron background
+    # ------------------------------------------------
+
+    - Species: [electron]
+      Number of Macroparticles per Species: 38000
+      Constant:
+        Number Density: 9900000000000000.0
+        Temperature: 1000.0
+        Bulk Velocity: [0.0, 0.0, 0.0]
+
+    # ------------------------------------------------
+    # Positive beam
+    # ------------------------------------------------
+
+    - Species: [beam_electron]
+      Number of Macroparticles per Species: 1000
+      Constant:
+        Number Density: 1000000000000000.0
+        Temperature: 500.0
+        Bulk Velocity: [492444.3222996433, 0.0, 0.0]
+
+    # ------------------------------------------------
+    # Negative beam
+    # ------------------------------------------------
+
+    - Species: [beam_electron]
+      Number of Macroparticles per Species: 1000
+      Constant:
+        Number Density: 1000000000000000.0
+        Temperature: 500.0
+        Bulk Velocity: [-492444.3222996433, 0.0, 0.0]
+
+Euler Fluids:
+  Basis Order: 0
+  Initial Conditions:
+    - Species: [electron]
+      Constant:
+        Number Density: 9900000000000000.0
+        Temperature: 1000.0
+        Bulk Velocity: [0.0, 0.0, 0.0]
+
+Output:
+  Stride: 1
