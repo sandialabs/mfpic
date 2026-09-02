@@ -79,16 +79,21 @@ void runSimulation(int argc, char* argv[]) {
     species_map
   );
 
-  RandomNumberGenerator generator;
+  std::random_device rd;
+  RandomNumberGenerator generator(rd());
   ParticleContainer particle_container = buildParticlesFromYaml(
     main["Particles"]["Initial Conditions"],
     species_map,
     generator,
     mesh
   );
+
+  OutputParameters output_parameters;
+  if (main["Output"].IsDefined())
+    output_parameters = buildOutputParametersFromYAML(main["Output"]);
   const std::string prefix = "particle_moments";
   dumpParticleMoments(particle_operations,particle_container, prefix, 0, 0.0);
-  dumpParticles(particle_container, 0.0);
+  dumpParticles(particle_container, 0.0, output_parameters.particle_dump_filename);
 
   std::vector<LowFidelityState> low_fidelity_states;
   std::vector<std::unique_ptr<LowFidelityOperations>> low_fidelity_operations;
@@ -131,9 +136,7 @@ void runSimulation(int argc, char* argv[]) {
     low_fidelity_field_states.emplace_back(electrostatic_discretization);
   }
 
-  OutputParameters output_parameters;
-  if (main["Output"].IsDefined())
-    output_parameters = buildOutputParametersFromYAML(main["Output"]);
+
 
   MeshDataWriter mesh_data_writer(output_parameters.mesh_output_folder_name, *mesh);
 
