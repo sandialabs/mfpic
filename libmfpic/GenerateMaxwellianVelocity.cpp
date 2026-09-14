@@ -6,7 +6,8 @@ mfem::Vector generateMaxwellianVelocity(
   const mfem::Vector& bulk_velocity,
   double temperature,
   double mass,
-  RandomNumberGenerator& generator
+  RandomNumberGenerator& generator,
+  const int velocity_dims
 ) {
   assert(bulk_velocity.Size() == 3);
   assert(temperature >= 0.0);
@@ -17,9 +18,9 @@ mfem::Vector generateMaxwellianVelocity(
   if (thermal_speed > 0.0) {
     constexpr double peculiar_velocity_distribution_mean = 0.0;
     std::normal_distribution<double> peculiar_velocity_distribution(peculiar_velocity_distribution_mean, thermal_speed);
-    for (int dimension = 0; dimension < 3; dimension++) {
+
+    for (int dimension = 0; dimension < velocity_dims; dimension++)
       velocity[dimension] += peculiar_velocity_distribution(generator);
-    }
   }
 
   return velocity;

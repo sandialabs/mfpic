@@ -24,7 +24,8 @@ ParticleContainer buildParticlesFromYaml(
   const YAML::Node& sources_node,
   const std::unordered_map<std::string, Species>& species_map,
   Generator& generator,
-  std::shared_ptr<mfem::Mesh> mesh
+  std::shared_ptr<mfem::Mesh> mesh,
+  int velocity_dims=3
 ) {
   std::vector<std::unique_ptr<SourceParameters>> list_of_parameters = buildListOfSourceParametersFromYAML(
     sources_node,
@@ -36,11 +37,13 @@ ParticleContainer buildParticlesFromYaml(
     particles.addParticles(loadParticles(
       *parameters,
       generator,
-      mesh
+      mesh,
+      velocity_dims
     ));
   }
 
   return particles;
 }
+
 
 } // namespace mfpic

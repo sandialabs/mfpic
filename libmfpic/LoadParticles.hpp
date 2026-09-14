@@ -26,7 +26,8 @@ namespace mfpic {
 ParticleContainer loadParticles(
   const SourceParameters& source_parameters,
   RandomNumberGenerator& generator,
-  std::shared_ptr<mfem::Mesh> mesh
-);
+  std::shared_ptr<mfem::Mesh> mesh,
+  const int velocity_dims=3
+); 
 
 } // namespace mfpic

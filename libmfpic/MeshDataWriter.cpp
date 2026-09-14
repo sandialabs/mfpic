@@ -18,6 +18,9 @@ void MeshDataWriter::output(
 
   const unsigned int num_lf_models = std::ssize(low_fidelity_states);
 
+  std::vector<mfem::GridFunction> charge_grid_functions;
+  charge_grid_functions.reserve(num_lf_models + 1);
+
   std::vector<mfem::GridFunction> potential_grid_functions;
   potential_grid_functions.reserve(num_lf_models + 1);
 
@@ -29,6 +32,10 @@ void MeshDataWriter::output(
     potential_grid_functions.emplace_back(field_state.getPotential());
     auto & potential_grid_function = potential_grid_functions.back();
     paraview_data_collection_.RegisterField("electrostatic_potential" + suffix, &potential_grid_function);
+
+    charge_grid_functions.emplace_back(field_state.getIntegratedCharge());
+    auto & charge_grid_function = charge_grid_functions.back();
+    paraview_data_collection_.RegisterField("integrated_charge" + suffix, &charge_grid_function);
 
     // TODO: the electric field doesn't appear quite right in ParaView, GetDerivative should be projecting onto an L2 finite element
     //  space not an HGRAD element space, also this is always being output to nodes in Paraview which is also skewing things.

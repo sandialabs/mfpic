@@ -69,4 +69,23 @@ void LowFidelityState::addScaledState(const double scale, const LowFidelityState
   }
 }
 
+bool LowFidelityState::containsSpecies(const Species& species) const
+{
+  return std::any_of(species_states_.begin(), species_states_.end(),
+                     [&](const LowFidelitySpeciesState& sstate) {
+                       return sstate.getSpecies() == species;
+                     });
+}
+
+int LowFidelityState::getSpeciesIndex(const Species& species) const
+{
+  auto it = std::find_if(species_states_.begin(), species_states_.end(),
+                         [&](const LowFidelitySpeciesState& sstate) {
+                           return sstate.getSpecies() == species;
+                         });
+
+  if (it == species_states_.end()) return -1;
+  return static_cast<int>(std::distance(species_states_.begin(), it));
+}
+
 }
