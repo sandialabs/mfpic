@@ -22,6 +22,7 @@ struct VarianceReductionParameters
     EulerFluid,
     LocalMaxwellian,
     SpatiallyAveraged,
+    PerturbedEulerFluidF,
   };
 
   Strategy strategy = Strategy::None;
@@ -31,6 +32,7 @@ struct VarianceReductionParameters
   bool specified_lf_moments = false;
   bool limit_variance_reduction = true;
   bool use_variance_reduced_electric_field = false;
+  double f_bulk_and_temperature_noise = 0.0;
 };
 
 /**

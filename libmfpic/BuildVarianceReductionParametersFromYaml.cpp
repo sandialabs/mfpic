@@ -14,6 +14,7 @@ VarianceReductionParameters buildVarianceReductionParametersFromYAML(const YAML:
   else if (strategy == "Euler Fluid") parameters.strategy = VarianceReductionParameters::Strategy::EulerFluid;
   else if (strategy == "Local Maxwellian") parameters.strategy = VarianceReductionParameters::Strategy::LocalMaxwellian;
   else if (strategy == "Spatially Averaged") parameters.strategy = VarianceReductionParameters::Strategy::SpatiallyAveraged;
+  else if (strategy == "Perturbed Euler Fluid f") parameters.strategy = VarianceReductionParameters::Strategy::PerturbedEulerFluidF;
   else
     throw std::runtime_error("Unknown variance reduction Strategy: " + strategy);
 
@@ -32,6 +33,8 @@ VarianceReductionParameters buildVarianceReductionParametersFromYAML(const YAML:
   parameters.limit_variance_reduction = node["Apply Cell Limiting"].as<bool>(true);
 
   parameters.use_variance_reduced_electric_field = node["Use VR E Field"].as<bool>(false);
+
+  parameters.f_bulk_and_temperature_noise = node["f Noise"].as<double>(0.0);
 
   return parameters;
 } 

@@ -14,6 +14,7 @@
 #include <mfem/mfem.hpp>
 
 #include <limits>
+#include <random>
 #include <unordered_map>
 
 namespace mfpic {
@@ -407,7 +408,6 @@ std::unordered_map<Species, mfem::Vector>& ParticleOperations::getVarianceReduce
       if (variance_reduction_parameters_.strategy == VarianceReductionParameters::Strategy::LocalMaxwellian)
       {
         mfem::Vector primitive_state(5);
-        primitive_state(0) = number_density.at(particle.species)[elem_id];
         const mfem::Vector bulk_velocity_in_element(bulk_velocity.at(particle.species).GetColumn(elem_id), 3);
         primitive_state(0) = number_density.at(particle.species)(elem_id);
         primitive_state(1) = bulk_velocity_in_element(0);
@@ -420,9 +420,6 @@ std::unordered_map<Species, mfem::Vector>& ParticleOperations::getVarianceReduce
         low_fidelity_particle_distribution_function_value = low_fidelity_operations.evaluateParticleDistributionFunction(low_fidelity_state,particle_position,particle_velocity,particle.element,low_fidelity_species_index);
 
       double noise_reducing_factor = (1 - low_fidelity_particle_distribution_function_value / particle.particle_distribution_function_value);
-      // std::cout << "noise reducing factor: " << noise_reducing_factor << std::endl;
-      // std::cout << "fnr : " << low_fidelity_particle_distribution_function_value << std::endl;
-      // std::cout << "f: " << particle.particle_distribution_function_value << std::endl;
       variance_reduced_particle_number_density_.at(particle.species)(elem_id) += (particle.weight * noise_reducing_factor) / element_volume;
     }
     else
@@ -571,9 +568,8 @@ std::unordered_map<Species, mfem::DenseMatrix>& ParticleOperations::getVarianceR
         low_fidelity_particle_distribution_function_value = low_fidelity_operations.evaluateParticleDistributionFunction(low_fidelity_state,particle_position,particle_velocity,particle.element,low_fidelity_species_index);
 
       double noise_reducing_factor = (1 - low_fidelity_particle_distribution_function_value / particle.particle_distribution_function_value);
-      velocity_in_element(0) += (particle.weight * particle.velocity(0) * noise_reducing_factor) / (variance_reduced_number_density * element_volume);
-      velocity_in_element(1) += (particle.weight * particle.velocity(1) * noise_reducing_factor) / (variance_reduced_number_density * element_volume);
-      velocity_in_element(2) += (particle.weight * particle.velocity(2) * noise_reducing_factor) / (variance_reduced_number_density * element_volume);
+      for (int vel_dim = 0; vel_dim < velocity_dims_; ++vel_dim)
+        velocity_in_element(vel_dim) += particle.weight * particle.velocity(vel_dim) * noise_reducing_factor / (variance_reduced_number_density * element_volume);
     }
     else
     {
@@ -601,11 +597,8 @@ std::unordered_map<Species, mfem::DenseMatrix>& ParticleOperations::getVarianceR
           velocity_in_element(2) += variance_reduction_parameters_.reference_bulk_velocity[2];
         }
         else
-        {
-          velocity_in_element(0) += low_fidelity_integral_in_element(0) / (variance_reduced_number_density * element_volume);
-          velocity_in_element(1) += low_fidelity_integral_in_element(1) / (variance_reduced_number_density * element_volume);
-          velocity_in_element(2) += low_fidelity_integral_in_element(2) / (variance_reduced_number_density * element_volume);
-        }
+          for (int vel_dim = 0; vel_dim < velocity_dims_; ++vel_dim)
+            velocity_in_element(vel_dim) += low_fidelity_integral_in_element(vel_dim) / (variance_reduced_number_density * element_volume);
       }
     }
   } 
@@ -685,150 +678,468 @@ std::unordered_map<Species, double>& ParticleOperations::getAvgTemperature(const
   return this->avg_particle_temperature_;
 }
 
-std::unordered_map<Species,mfem::Vector>& ParticleOperations::getVarianceReducedTemperature(
-  const ParticleContainer& particles, 
+std::unordered_map<Species, mfem::Vector>&
+ParticleOperations::getVarianceReducedTemperature(
+  const ParticleContainer& particles,
   const LowFidelityState& low_fidelity_state,
   const DGEulerOperations& low_fidelity_operations
 ) {
-
-  for (auto & species_and_temperature : variance_reduced_particle_temperature_)
-    species_and_temperature.second = 0.0;
-
   mfem::FiniteElementSpace finite_element_space = discretization_.getFeSpace();
-  mfem::Mesh &mesh = *finite_element_space.GetMesh();
+  mfem::Mesh& mesh = *finite_element_space.GetMesh();
+  const int number_of_elements = finite_element_space.GetNE();
 
-  //TODO: Store and reuse from previous moments
-  std::unordered_map<Species,mfem::Vector> low_fidelity_number_density_integral = low_fidelity_operations.integralForVarianceReducedNumberDensity(finite_element_space, low_fidelity_state);
-  std::unordered_map<Species,mfem::DenseMatrix> low_fidelity_bulk_velocity_integral = low_fidelity_operations.integralForVarianceReducedBulkVelocity(finite_element_space, low_fidelity_state);
-  std::unordered_map<Species,mfem::Vector> low_fidelity_temperature_integral = low_fidelity_operations.integralForVarianceReducedTemperature(finite_element_space, low_fidelity_state, velocity_dims_);
+  /*
+   * Temperature depends on the variance-reduced density and velocity.
+   * These calls remove the previous hidden call-order requirement.
+   */
+  this->getVarianceReducedNumberDensity(
+    particles,
+    low_fidelity_state,
+    low_fidelity_operations
+  );
 
-  this->sumParticleWeights_(particles);
-  this->getVarianceReducedPostprocessors(particles,low_fidelity_state,low_fidelity_operations);
+  this->getVarianceReducedBulkVelocity(
+    particles,
+    low_fidelity_state,
+    low_fidelity_operations
+  );
 
-  std::unordered_map<Species, std::vector<char>> variance_reduction_performed; 
-  std::unordered_map<Species, std::vector<char>> more_than_one_macro_particle;
-  variance_reduction_performed.reserve(variance_reduced_particle_number_density_.size());
-  more_than_one_macro_particle.reserve(variance_reduced_particle_number_density_.size());
-  for (const auto& kv : variance_reduced_particle_number_density_)
-  {
-    variance_reduction_performed.emplace(kv.first, std::vector<char>(finite_element_space.GetNE(), 0));
-    more_than_one_macro_particle.emplace(kv.first, std::vector<char>(finite_element_space.GetNE(), 1.0));
+  const auto low_fidelity_number_density_integral =
+    low_fidelity_operations.integralForVarianceReducedNumberDensity(
+      finite_element_space,
+      low_fidelity_state
+    );
+
+  const auto low_fidelity_bulk_velocity_integral =
+    low_fidelity_operations.integralForVarianceReducedBulkVelocity(
+      finite_element_space,
+      low_fidelity_state
+    );
+
+  const auto low_fidelity_temperature_integral =
+    low_fidelity_operations.integralForVarianceReducedTemperature(
+      finite_element_space,
+      low_fidelity_state,
+      velocity_dims_
+    );
+
+  /*
+   * These standard moments are needed both for the LocalMaxwellian
+   * control and as a safe fallback.
+   */
+  auto standard_number_density =
+    this->getNumberDensity(particles);
+
+  auto standard_bulk_velocity =
+    this->getBulkVelocity(particles, true);
+
+  auto standard_temperature =
+    this->getTemperature(particles, true, true);
+
+  this->getVarianceReducedPostprocessors(
+    particles,
+    low_fidelity_state,
+    low_fidelity_operations
+  );
+
+  /*
+   * Start with standard PIC temperature. Cells that successfully use
+   * variance reduction will overwrite these values below.
+   */
+  for (auto& species_and_temperature : variance_reduced_particle_temperature_) {
+    const Species& species = species_and_temperature.first;
+    species_and_temperature.second = standard_temperature.at(species);
   }
 
-  /////
-  //Compute standard PIC moments
-  std::unordered_map<Species, mfem::Vector> number_density     = this->getNumberDensity(particles);
-  std::unordered_map<Species, mfem::DenseMatrix> bulk_velocity = this->getBulkVelocity(particles,true);
-  std::unordered_map<Species, mfem::Vector> temperature        = this->getTemperature(particles,true,true);
-  /////
+  /*
+   * Uncorrected CV temperature and sum of squared residual weights.
+   *
+   * For particle i:
+   *
+   *   residual_weight_i = w_i * (1 - f_LF / f)
+   */
+  auto uncorrected_temperature = variance_reduced_particle_temperature_;
 
-  mfem::Vector particle_velocity(velocity_dims_);  
+  auto residual_weight_squared_sum = variance_reduced_particle_temperature_;
+
+  for (auto& species_and_temperature : uncorrected_temperature)
+    species_and_temperature.second = 0.0;
+
+  for (auto& species_and_sum : residual_weight_squared_sum)
+    species_and_sum.second = 0.0;
+
+  std::unordered_map<Species, std::vector<char>> variance_reduction_performed;
+
+  std::unordered_map<Species, std::vector<char>> variance_reduction_valid;
+
+  variance_reduction_performed.reserve(variance_reduced_particle_temperature_.size());
+  variance_reduction_valid.reserve(variance_reduced_particle_temperature_.size());
+
+  for (const auto& species_and_temperature : variance_reduced_particle_temperature_) {
+    const Species& species = species_and_temperature.first;
+    
+    variance_reduction_performed.emplace(
+      species,
+      std::vector<char>(number_of_elements, 0)
+    );
+
+    variance_reduction_valid.emplace(
+      species,
+      std::vector<char>(number_of_elements, 1)
+    );
+  }
+
+  mfem::Vector particle_velocity(velocity_dims_);
+  mfem::Vector fluctuation_velocity(velocity_dims_);
+
   for (const Particle& particle : particles) {
-    if (not particle.is_alive) continue;
+    if (!particle.is_alive)
+      continue;
+
+    const Species& species = particle.species;
+    const int elem_id = particle.element;
+    const double element_volume = mesh.GetElementVolume(elem_id);
 
     for (int vel_dim = 0; vel_dim < velocity_dims_; ++vel_dim)
       particle_velocity(vel_dim) = particle.velocity(vel_dim);
 
-    const int elem_id = particle.element;
-    const double element_volume = mesh.GetElementVolume(elem_id);
+    const mfem::Vector particle_position(particle.position.GetData(),dim_);
 
-    const mfem::Vector particle_position(particle.position.GetData(), dim_);
+    const int low_fidelity_species_index = low_fidelity_state.getSpeciesIndex(species);
 
-    double variance_reduced_number_density = variance_reduced_particle_number_density_.at(particle.species)(elem_id);
-    mfem::Vector fluctuation_velocity = particle_velocity;
-    for (int vel_dim = 0; vel_dim < velocity_dims_; ++vel_dim)
-      fluctuation_velocity(vel_dim) = particle.velocity(vel_dim) - variance_reduced_particle_bulk_velocity_.at(particle.species)(vel_dim, elem_id);
+    bool perform_variance_reduction = low_fidelity_species_index >= 0;
 
-    const double sum_weights = sum_of_weights_.at(particle.species)(elem_id);
-    if (sum_weights <= 0.0) continue;
-    const double number_of_macro_particles = sum_weights / particle.weight;
-
-    const double norm_squared = fluctuation_velocity * fluctuation_velocity;
-    const double m_over_3kb = particle.species.mass / (velocity_dims_ * constants::boltzmann_constant);
-    const int low_fidelity_species_index =
-      low_fidelity_state.getSpeciesIndex(particle.species);
-    bool perform_variance_reduction = (low_fidelity_species_index >= 0);
-    if (variance_reduction_parameters_.limit_variance_reduction)
-    {
-      perform_variance_reduction = (low_fidelity_species_index >= 0) &&
-        (variance_reduced_postprocessors_.noise_reducing_factor
-            .at(particle.species)(elem_id) < 1.0);
+    if (variance_reduction_parameters_.limit_variance_reduction) {
+      perform_variance_reduction =
+        perform_variance_reduction &&
+        variance_reduced_postprocessors_.noise_reducing_factor
+          .at(species)(elem_id) < 1.0;
     }
 
-    if (number_of_macro_particles > 1)
-    {
-      if (perform_variance_reduction)
-      {
-        variance_reduction_performed.at(particle.species)[elem_id] = 1;
+    if (!perform_variance_reduction)
+      continue;
 
-        double low_fidelity_particle_distribution_function_value = 0.0;
-        if (variance_reduction_parameters_.strategy == VarianceReductionParameters::Strategy::LocalMaxwellian)
-        {
-          mfem::Vector primitive_state(5);
-          const mfem::Vector bulk_velocity_in_element(bulk_velocity.at(particle.species).GetColumn(elem_id), 3);
-          primitive_state(0) = number_density.at(particle.species)[elem_id];
-          primitive_state(1) = bulk_velocity_in_element(0);
-          primitive_state(2) = bulk_velocity_in_element(1);
-          primitive_state(3) = bulk_velocity_in_element(2);
-          primitive_state(4) = temperature.at(particle.species)(elem_id);
-          low_fidelity_particle_distribution_function_value = euler::evaluateMaxwellian(primitive_state,particle_velocity,particle.species);
+    variance_reduction_performed.at(species)[elem_id] = 1;
+
+    double low_fidelity_pdf = 0.0;
+
+    if (variance_reduction_parameters_.strategy == VarianceReductionParameters::Strategy::LocalMaxwellian) {
+      mfem::Vector primitive_state(5);
+      const mfem::Vector bulk_velocity_in_element(standard_bulk_velocity.at(species).GetColumn(elem_id),3);
+      primitive_state(0) = standard_number_density.at(species)(elem_id);
+      primitive_state(1) = bulk_velocity_in_element(0);
+      primitive_state(2) = bulk_velocity_in_element(1);
+      primitive_state(3) = bulk_velocity_in_element(2);
+      primitive_state(4) = standard_temperature.at(species)(elem_id);
+      low_fidelity_pdf = euler::evaluateMaxwellian(primitive_state,particle_velocity,species);
+    }
+    else {
+      low_fidelity_pdf =
+        low_fidelity_operations.evaluateParticleDistributionFunction(
+          low_fidelity_state,
+          particle_position,
+          particle_velocity,
+          elem_id,
+          low_fidelity_species_index
+        );
+    }
+
+    const double high_fidelity_pdf = particle.particle_distribution_function_value;
+    if (
+      !(high_fidelity_pdf > 0.0) ||
+      !std::isfinite(high_fidelity_pdf) ||
+      !std::isfinite(low_fidelity_pdf)
+    ) {
+      variance_reduction_valid.at(species)[elem_id] = 0;
+      continue;
+    }
+
+    const double residual_multiplier = 1.0 - low_fidelity_pdf / high_fidelity_pdf;
+    const double residual_weight = particle.weight * residual_multiplier;
+
+    if (!std::isfinite(residual_weight)) {
+      variance_reduction_valid.at(species)[elem_id] = 0;
+      continue;
+    }
+
+    double fluctuation_speed_squared = 0.0;
+
+    for (int vel_dim = 0; vel_dim < velocity_dims_; ++vel_dim) {
+      fluctuation_velocity(vel_dim) =
+        particle_velocity(vel_dim) -
+        variance_reduced_particle_bulk_velocity_
+          .at(species)(vel_dim, elem_id);
+
+      fluctuation_speed_squared += fluctuation_velocity(vel_dim) * fluctuation_velocity(vel_dim);
+    }
+
+    const double corrected_number_density = variance_reduced_particle_number_density_.at(species)(elem_id);
+    const double corrected_mass = corrected_number_density * element_volume;
+
+    if (
+      !(corrected_mass > 0.0) ||
+      !std::isfinite(corrected_mass)
+    ) {
+      variance_reduction_valid.at(species)[elem_id] = 0;
+      continue;
+    }
+
+    const double m_over_dkb = species.mass / (velocity_dims_ * constants::boltzmann_constant);
+
+    uncorrected_temperature.at(species)(elem_id) +=
+      m_over_dkb *
+      residual_weight *
+      fluctuation_speed_squared /
+      corrected_mass;
+
+    residual_weight_squared_sum.at(species)(elem_id) +=
+      residual_weight * residual_weight;
+  }
+
+  /*
+   * Add the analytic LF contribution and then apply the cell-level
+   * effective-weight correction to the entire central moment.
+   */
+  for (int ispecies = 0; ispecies < low_fidelity_state.numSpecies(); ++ispecies) {
+    const Species species = low_fidelity_state.getSpeciesState(ispecies).getSpecies();
+
+    for (int elem_id = 0; elem_id < number_of_elements; ++elem_id) {
+      if (!variance_reduction_performed.at(species)[elem_id])
+        continue;
+
+      if (!variance_reduction_valid.at(species)[elem_id])
+        continue;
+
+      const double element_volume = mesh.GetElementVolume(elem_id);
+      const double corrected_number_density = variance_reduced_particle_number_density_.at(species)(elem_id);
+      const double corrected_mass = corrected_number_density * element_volume;
+
+      if (!(corrected_mass > 0.0) || !std::isfinite(corrected_mass)) {
+        continue;
+      }
+
+      const double m_over_dkb = species.mass / (velocity_dims_ * constants::boltzmann_constant);
+      double low_fidelity_temperature_contribution = 0.0;
+      if (variance_reduction_parameters_.specified_lf_moments) {
+        /*
+         * The LF distribution must be centered around the estimated
+         * VR velocity. This includes both thermal and drift energy.
+         */
+        double bulk_velocity_difference_squared = 0.0;
+        for (int vel_dim = 0; vel_dim < velocity_dims_; ++vel_dim) {
+          const double velocity_difference =
+            variance_reduction_parameters_
+              .reference_bulk_velocity[vel_dim] -
+            variance_reduced_particle_bulk_velocity_
+              .at(species)(vel_dim, elem_id);
+
+          bulk_velocity_difference_squared +=
+            velocity_difference * velocity_difference;
         }
-        else
-          low_fidelity_particle_distribution_function_value = low_fidelity_operations.evaluateParticleDistributionFunction(low_fidelity_state,particle_position,particle_velocity,particle.element,low_fidelity_species_index);
 
-        double noise_reducing_factor = (1 - low_fidelity_particle_distribution_function_value / particle.particle_distribution_function_value);
-        variance_reduced_particle_temperature_.at(particle.species)(elem_id) += number_of_macro_particles / (number_of_macro_particles - 1) * m_over_3kb * norm_squared * particle.weight * noise_reducing_factor / (variance_reduced_number_density * element_volume) ;
+        const double lf_to_corrected_density_ratio =
+          variance_reduction_parameters_
+            .reference_number_density /
+          corrected_number_density;
+
+        low_fidelity_temperature_contribution =
+          lf_to_corrected_density_ratio *
+          (
+            variance_reduction_parameters_
+              .reference_temperature +
+            m_over_dkb * bulk_velocity_difference_squared
+          );
       }
-      else
-      {
-        const double bias_corrected_weight = particle.weight * number_of_macro_particles / (number_of_macro_particles - 1.);
-        variance_reduced_particle_temperature_.at(particle.species)(elem_id) += norm_squared * bias_corrected_weight * m_over_3kb / sum_weights;
+      else {
+        double corrected_bulk_velocity_squared = 0.0;
+        double corrected_velocity_dot_lf_momentum = 0.0;
+
+        for (int vel_dim = 0; vel_dim < velocity_dims_; ++vel_dim) {
+          const double corrected_velocity = variance_reduced_particle_bulk_velocity_.at(species)(vel_dim, elem_id);
+          corrected_bulk_velocity_squared += corrected_velocity * corrected_velocity;
+          corrected_velocity_dot_lf_momentum += corrected_velocity * low_fidelity_bulk_velocity_integral.at(species)(vel_dim, elem_id);
+        }
+
+        low_fidelity_temperature_contribution = low_fidelity_temperature_integral.at(species)(elem_id) / corrected_mass;
+        low_fidelity_temperature_contribution += m_over_dkb * corrected_bulk_velocity_squared * low_fidelity_number_density_integral.at(species)(elem_id) / corrected_mass;
+        low_fidelity_temperature_contribution -= 2.0 * m_over_dkb * corrected_velocity_dot_lf_momentum / corrected_mass;
       }
-    }
-    else
-    {
-      more_than_one_macro_particle.at(particle.species)[elem_id] = 0.0;
+
+      double& temperature = uncorrected_temperature.at(species)(elem_id);
+      temperature += low_fidelity_temperature_contribution;
+      const double squared_mass = corrected_mass * corrected_mass;
+      const double squared_residual_weight_sum = residual_weight_squared_sum.at(species)(elem_id);
+      const double bias_denominator = squared_mass - squared_residual_weight_sum;
+
+      /*
+       * A singular or negative denominator can occur because control
+       * variate residual weights may be signed. In that case, leave
+       * the output at its standard-PIC fallback value.
+       */
+      if (
+        !(bias_denominator > 0.0) ||
+        !std::isfinite(bias_denominator) ||
+        !std::isfinite(temperature)
+      ) {
+        continue;
+      }
+
+      const double bias_factor = squared_mass / bias_denominator;
+      const double corrected_temperature = bias_factor * temperature;
+      if (!std::isfinite(corrected_temperature))
+        continue;
+
+      variance_reduced_particle_temperature_.at(species)(elem_id) = corrected_temperature;
     }
   }
 
-  for (int elem_id = 0; elem_id < finite_element_space.GetNE(); ++elem_id)
-  {
-    const double element_volume = mesh.GetElementVolume(elem_id);
-    for(int ispecies = 0; ispecies < low_fidelity_state.numSpecies(); ++ispecies)
-    {
-      const LowFidelitySpeciesState& current_species_state = low_fidelity_state.getSpeciesState(ispecies);
-      Species current_species = current_species_state.getSpecies();
-      if (variance_reduction_performed.at(current_species)[elem_id] == 1) 
-      {
-        if (variance_reduction_parameters_.specified_lf_moments)
-        {
-          variance_reduced_particle_temperature_.at(current_species)(elem_id) += variance_reduction_parameters_.reference_temperature;
-        }
-        else
-        {
-          const double m_over_3kb = current_species.mass / (velocity_dims_ * constants::boltzmann_constant);
-          double number_density = variance_reduced_particle_number_density_.at(current_species)(elem_id);
-
-          double x_bulk_velocity = variance_reduced_particle_bulk_velocity_.at(current_species)(0,elem_id);
-          double y_bulk_velocity = variance_reduced_particle_bulk_velocity_.at(current_species)(1,elem_id);
-          double z_bulk_velocity = variance_reduced_particle_bulk_velocity_.at(current_species)(2,elem_id);
-          double bulk_velocity_mag_squared = x_bulk_velocity * x_bulk_velocity + y_bulk_velocity * y_bulk_velocity + z_bulk_velocity * z_bulk_velocity;
-          const double bulk_velocity_dot_low_fidelity_bulk_velocity_integral 
-          = x_bulk_velocity * low_fidelity_bulk_velocity_integral.at(current_species)(0,elem_id)
-          + y_bulk_velocity * low_fidelity_bulk_velocity_integral.at(current_species)(1,elem_id)
-          + z_bulk_velocity * low_fidelity_bulk_velocity_integral.at(current_species)(2,elem_id);
-
-          variance_reduced_particle_temperature_.at(current_species)(elem_id) 
-            += more_than_one_macro_particle.at(current_species)[elem_id] * 
-            (low_fidelity_temperature_integral.at(current_species)(elem_id) / (number_density * element_volume)
-            + m_over_3kb * bulk_velocity_mag_squared * low_fidelity_number_density_integral.at(current_species)(elem_id) / (number_density * element_volume)
-            - m_over_3kb * 2.0 * bulk_velocity_dot_low_fidelity_bulk_velocity_integral / (number_density * element_volume));
-        }
-      }
-    }
-  } 
-  return this->variance_reduced_particle_temperature_;
+  return variance_reduced_particle_temperature_;
 }
+
+// std::unordered_map<Species,mfem::Vector>& ParticleOperations::getVarianceReducedTemperature(
+//   const ParticleContainer& particles, 
+//   const LowFidelityState& low_fidelity_state,
+//   const DGEulerOperations& low_fidelity_operations
+// ) {
+
+//   for (auto & species_and_temperature : variance_reduced_particle_temperature_)
+//     species_and_temperature.second = 0.0;
+
+//   mfem::FiniteElementSpace finite_element_space = discretization_.getFeSpace();
+//   mfem::Mesh &mesh = *finite_element_space.GetMesh();
+
+//   //TODO: Store and reuse from previous moments
+//   std::unordered_map<Species,mfem::Vector> low_fidelity_number_density_integral = low_fidelity_operations.integralForVarianceReducedNumberDensity(finite_element_space, low_fidelity_state);
+//   std::unordered_map<Species,mfem::DenseMatrix> low_fidelity_bulk_velocity_integral = low_fidelity_operations.integralForVarianceReducedBulkVelocity(finite_element_space, low_fidelity_state);
+//   std::unordered_map<Species,mfem::Vector> low_fidelity_temperature_integral = low_fidelity_operations.integralForVarianceReducedTemperature(finite_element_space, low_fidelity_state, velocity_dims_);
+
+//   this->sumParticleWeights_(particles);
+//   this->getVarianceReducedPostprocessors(particles,low_fidelity_state,low_fidelity_operations);
+
+//   std::unordered_map<Species, std::vector<char>> variance_reduction_performed; 
+//   std::unordered_map<Species, std::vector<char>> more_than_one_macro_particle;
+//   variance_reduction_performed.reserve(variance_reduced_particle_number_density_.size());
+//   more_than_one_macro_particle.reserve(variance_reduced_particle_number_density_.size());
+//   for (const auto& kv : variance_reduced_particle_number_density_)
+//   {
+//     variance_reduction_performed.emplace(kv.first, std::vector<char>(finite_element_space.GetNE(), 0));
+//     more_than_one_macro_particle.emplace(kv.first, std::vector<char>(finite_element_space.GetNE(), 1.0));
+//   }
+
+//   /////
+//   //Compute standard PIC moments
+//   std::unordered_map<Species, mfem::Vector> number_density     = this->getNumberDensity(particles);
+//   std::unordered_map<Species, mfem::DenseMatrix> bulk_velocity = this->getBulkVelocity(particles,true);
+//   std::unordered_map<Species, mfem::Vector> temperature        = this->getTemperature(particles,true,true);
+//   /////
+
+//   mfem::Vector particle_velocity(velocity_dims_);  
+//   for (const Particle& particle : particles) {
+//     if (not particle.is_alive) continue;
+
+//     for (int vel_dim = 0; vel_dim < velocity_dims_; ++vel_dim)
+//       particle_velocity(vel_dim) = particle.velocity(vel_dim);
+
+//     const int elem_id = particle.element;
+//     const double element_volume = mesh.GetElementVolume(elem_id);
+
+//     const mfem::Vector particle_position(particle.position.GetData(), dim_);
+
+//     double variance_reduced_number_density = variance_reduced_particle_number_density_.at(particle.species)(elem_id);
+//     mfem::Vector fluctuation_velocity = particle_velocity;
+//     for (int vel_dim = 0; vel_dim < velocity_dims_; ++vel_dim)
+//       fluctuation_velocity(vel_dim) = particle.velocity(vel_dim) - variance_reduced_particle_bulk_velocity_.at(particle.species)(vel_dim, elem_id);
+
+//     const double sum_weights = sum_of_weights_.at(particle.species)(elem_id);
+//     if (sum_weights <= 0.0) continue;
+//     const double number_of_macro_particles = sum_weights / particle.weight;
+
+//     const double norm_squared = fluctuation_velocity * fluctuation_velocity;
+//     const double m_over_3kb = particle.species.mass / (velocity_dims_ * constants::boltzmann_constant);
+//     const int low_fidelity_species_index =
+//       low_fidelity_state.getSpeciesIndex(particle.species);
+//     bool perform_variance_reduction = (low_fidelity_species_index >= 0);
+//     if (variance_reduction_parameters_.limit_variance_reduction)
+//     {
+//       perform_variance_reduction = (low_fidelity_species_index >= 0) &&
+//         (variance_reduced_postprocessors_.noise_reducing_factor
+//             .at(particle.species)(elem_id) < 1.0);
+//     }
+
+//     if (number_of_macro_particles > 1)
+//     {
+//       if (perform_variance_reduction)
+//       {
+//         variance_reduction_performed.at(particle.species)[elem_id] = 1;
+
+//         double low_fidelity_particle_distribution_function_value = 0.0;
+//         if (variance_reduction_parameters_.strategy == VarianceReductionParameters::Strategy::LocalMaxwellian)
+//         {
+//           mfem::Vector primitive_state(5);
+//           const mfem::Vector bulk_velocity_in_element(bulk_velocity.at(particle.species).GetColumn(elem_id), 3);
+//           primitive_state(0) = number_density.at(particle.species)[elem_id];
+//           primitive_state(1) = bulk_velocity_in_element(0);
+//           primitive_state(2) = bulk_velocity_in_element(1);
+//           primitive_state(3) = bulk_velocity_in_element(2);
+//           primitive_state(4) = temperature.at(particle.species)(elem_id);
+//           low_fidelity_particle_distribution_function_value = euler::evaluateMaxwellian(primitive_state,particle_velocity,particle.species);
+//         }
+//         else
+//           low_fidelity_particle_distribution_function_value = low_fidelity_operations.evaluateParticleDistributionFunction(low_fidelity_state,particle_position,particle_velocity,particle.element,low_fidelity_species_index);
+
+//         double noise_reducing_factor = (1 - low_fidelity_particle_distribution_function_value / particle.particle_distribution_function_value);
+//         variance_reduced_particle_temperature_.at(particle.species)(elem_id) += number_of_macro_particles / (number_of_macro_particles - 1) * m_over_3kb * norm_squared * particle.weight * noise_reducing_factor / (variance_reduced_number_density * element_volume) ;
+//       }
+//       else
+//       {
+//         const double bias_corrected_weight = particle.weight * number_of_macro_particles / (number_of_macro_particles - 1.);
+//         variance_reduced_particle_temperature_.at(particle.species)(elem_id) += norm_squared * bias_corrected_weight * m_over_3kb / sum_weights;
+//       }
+//     }
+//     else
+//     {
+//       more_than_one_macro_particle.at(particle.species)[elem_id] = 0.0;
+//     }
+//   }
+
+//   for (int elem_id = 0; elem_id < finite_element_space.GetNE(); ++elem_id)
+//   {
+//     const double element_volume = mesh.GetElementVolume(elem_id);
+//     for(int ispecies = 0; ispecies < low_fidelity_state.numSpecies(); ++ispecies)
+//     {
+//       const LowFidelitySpeciesState& current_species_state = low_fidelity_state.getSpeciesState(ispecies);
+//       Species current_species = current_species_state.getSpecies();
+//       if (variance_reduction_performed.at(current_species)[elem_id] == 1) 
+//       {
+//         if (variance_reduction_parameters_.specified_lf_moments)
+//         {
+//           variance_reduced_particle_temperature_.at(current_species)(elem_id) += variance_reduction_parameters_.reference_temperature;
+//         }
+//         else
+//         {
+//           const double m_over_3kb = current_species.mass / (velocity_dims_ * constants::boltzmann_constant);
+//           double number_density = variance_reduced_particle_number_density_.at(current_species)(elem_id);
+
+//           double x_bulk_velocity = variance_reduced_particle_bulk_velocity_.at(current_species)(0,elem_id);
+//           double y_bulk_velocity = variance_reduced_particle_bulk_velocity_.at(current_species)(1,elem_id);
+//           double z_bulk_velocity = variance_reduced_particle_bulk_velocity_.at(current_species)(2,elem_id);
+//           double bulk_velocity_mag_squared = x_bulk_velocity * x_bulk_velocity + y_bulk_velocity * y_bulk_velocity + z_bulk_velocity * z_bulk_velocity;
+//           const double bulk_velocity_dot_low_fidelity_bulk_velocity_integral 
+//           = x_bulk_velocity * low_fidelity_bulk_velocity_integral.at(current_species)(0,elem_id)
+//           + y_bulk_velocity * low_fidelity_bulk_velocity_integral.at(current_species)(1,elem_id)
+//           + z_bulk_velocity * low_fidelity_bulk_velocity_integral.at(current_species)(2,elem_id);
+
+//           variance_reduced_particle_temperature_.at(current_species)(elem_id) 
+//             += more_than_one_macro_particle.at(current_species)[elem_id] * 
+//             (low_fidelity_temperature_integral.at(current_species)(elem_id) / (number_density * element_volume)
+//             + m_over_3kb * bulk_velocity_mag_squared * low_fidelity_number_density_integral.at(current_species)(elem_id) / (number_density * element_volume)
+//             - m_over_3kb * 2.0 * bulk_velocity_dot_low_fidelity_bulk_velocity_integral / (number_density * element_volume));
+//         }
+//       }
+//     }
+//   } 
+//   return this->variance_reduced_particle_temperature_;
+// }
 
 void ParticleOperations::sumParticleWeights_(
   const ParticleContainer& particles
@@ -1141,6 +1452,97 @@ void ParticleOperations::updateParticleDistributionFunctionValue(
         particle.particle_distribution_function_value =
             hist.evaluate(particle.velocity(0));
     }
+}
+
+void ParticleOperations::updateParticleDistributionFunctionValue(
+    ParticleContainer& particles,
+    const LowFidelityState& low_fidelity_state,
+    const DGEulerOperations& low_fidelity_operations,
+    const double bulk_velocity_noise_level,
+    const double temperature_noise_level,
+    std::default_random_engine& generator)
+{
+
+  std::unordered_map<Species, mfem::Vector> number_density =
+      low_fidelity_operations.getCellAveragedNumberDensity(
+          low_fidelity_state);
+
+  std::unordered_map<Species, mfem::DenseMatrix> bulk_velocity =
+      low_fidelity_operations.getCellAveragedBulkVelocity(
+          low_fidelity_state);
+
+  std::unordered_map<Species, mfem::Vector> temperature =
+      low_fidelity_operations.getCellAveragedTemperature(
+          low_fidelity_state);
+
+  std::normal_distribution<double> normal_distribution(0.0, 1.0);
+
+  // ------------------------------------------------------------
+  // Store ONE noisy Maxwellian per species.
+  //
+  // Homogeneous assumption:
+  // use the low-fidelity moments from element 0 as the
+  // reference moments everywhere.
+  // ------------------------------------------------------------
+  struct NoisyMaxwellianParameters
+  {
+      double number_density = 0.0;
+      mfem::Vector bulk_velocity;
+      double temperature = 0.0;
+
+      NoisyMaxwellianParameters()
+          : bulk_velocity(3)
+      {
+          bulk_velocity = 0.0;
+      }
+  };
+
+  std::unordered_map<Species, NoisyMaxwellianParameters>
+      noisy_maxwellian_parameters;
+
+  for (int ispecies = 0; ispecies < low_fidelity_state.numSpecies(); ++ispecies)
+  {
+    const Species species = low_fidelity_state.getSpeciesState(ispecies).getSpecies();
+    int reference_element = 0;
+    double reference_number_density = number_density.at(species)(reference_element);
+    double reference_temperature = temperature.at(species)(reference_element);
+    mfem::Vector reference_bulk_velocity(bulk_velocity.at(species).GetColumn(reference_element),3);
+
+    const double thermal_velocity = std::sqrt(constants::boltzmann_constant * reference_temperature / species.mass);
+    NoisyMaxwellianParameters parameters;
+
+    parameters.number_density = reference_number_density;
+    parameters.bulk_velocity = reference_bulk_velocity;
+    for (int vel_dim = 0; vel_dim < velocity_dims_; ++vel_dim)
+      parameters.bulk_velocity(vel_dim) += bulk_velocity_noise_level * thermal_velocity * normal_distribution(generator);
+    parameters.temperature = reference_temperature * std::exp(temperature_noise_level * normal_distribution(generator));
+
+    noisy_maxwellian_parameters.emplace(species,std::move(parameters));
+  }
+
+  mfem::Vector particle_velocity(velocity_dims_);
+  for (Particle& particle : particles)
+  {
+    if (not particle.is_alive)
+        continue;
+
+    const auto it = noisy_maxwellian_parameters.find(particle.species);
+
+    if (it == noisy_maxwellian_parameters.end())
+        continue;
+
+    for (int vel_dim = 0; vel_dim < velocity_dims_; ++vel_dim)
+      particle_velocity(vel_dim) = particle.velocity(vel_dim);
+
+    const NoisyMaxwellianParameters& parameters = it->second;
+    mfem::Vector primitive_state(5);
+    primitive_state(0) = parameters.number_density;
+    primitive_state(1) = parameters.bulk_velocity(0);
+    primitive_state(2) = parameters.bulk_velocity(1);
+    primitive_state(3) = parameters.bulk_velocity(2);
+    primitive_state(4) = parameters.temperature;
+    particle.particle_distribution_function_value = euler::evaluateMaxwellian(primitive_state,particle_velocity,particle.species);
+  }
 }
 
 } // namespace mfpic

@@ -194,6 +194,15 @@ public:
     const VelocityHistogram& hist
   );
 
+  void updateParticleDistributionFunctionValue(
+    ParticleContainer& particles,
+    const LowFidelityState& low_fidelity_state,
+    const DGEulerOperations& low_fidelity_operations,
+    const double bulk_velocity_noise_level,
+    const double temperature_noise_level,
+    std::default_random_engine& generator
+  );
+
   /**
    * @brief Get mfem mesh associated with the discretization
    *

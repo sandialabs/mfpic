@@ -147,6 +147,27 @@ void runSimulation(int argc, char* argv[]) {
     low_fidelity_field_states.emplace_back(electrostatic_discretization);
   }
 
+  std::optional<VelocityHistogram> particle_velocity_histogram;
+  if (variance_reduction_parameters.strategy == VarianceReductionParameters::Strategy::SpatiallyAveraged) {
+    particle_velocity_histogram->buildVelocityHistogram(particle_container,*mesh,100);
+    particle_operations.updateParticleDistributionFunctionValue(particle_container,*particle_velocity_histogram);
+    particle_velocity_histogram->writeToCSVFile("velocity_histogram", 0.0, 0.0);
+  }
+
+  if (variance_reduction_parameters.strategy == VarianceReductionParameters::Strategy::PerturbedEulerFluidF) 
+  {
+    for (int i = 0; i < std::ssize(low_fidelity_field_states); ++i) {
+      auto& ops = dynamic_cast<DGEulerOperations&>(*low_fidelity_operations[i].get());
+      particle_operations.updateParticleDistributionFunctionValue(
+        particle_container,
+        low_fidelity_states[i],
+        ops,
+        variance_reduction_parameters.f_bulk_and_temperature_noise,
+        variance_reduction_parameters.f_bulk_and_temperature_noise,
+        generator);
+    }
+  }
+
   if (variance_reduction_parameters.strategy != VarianceReductionParameters::Strategy::None) {
     for (int i = 0; i < std::ssize(low_fidelity_field_states); ++i) {
       auto* ops = dynamic_cast<DGEulerOperations*>(low_fidelity_operations[i].get());
@@ -191,13 +212,6 @@ void runSimulation(int argc, char* argv[]) {
   for (int i = 0; i < std::ssize(low_fidelity_field_states); ++i) {
     IntegratedCharge integrated_charge = low_fidelity_operations[i]->assembleCharge(low_fidelity_states[i]);
     electrostatic_field_operations->fieldSolve(low_fidelity_field_states[i], integrated_charge);
-  }
-
-  std::optional<VelocityHistogram> particle_velocity_histogram;
-  if (variance_reduction_parameters.strategy == VarianceReductionParameters::Strategy::SpatiallyAveraged) {
-    particle_velocity_histogram->buildVelocityHistogram(particle_container,*mesh,100);
-    particle_operations.updateParticleDistributionFunctionValue(particle_container,*particle_velocity_histogram);
-    particle_velocity_histogram->writeToCSVFile("velocity_histogram", 0.0, 0.0);
   }
 
   mesh_data_writer.output(particle_electrostatic_field_state, low_fidelity_field_states, low_fidelity_states, 0, 0.);
@@ -312,10 +326,11 @@ void runSimulation(int argc, char* argv[]) {
       }
 
       if (variance_reduction_parameters.strategy != VarianceReductionParameters::Strategy::None) {
+        ElectrostaticFieldState full_pic_diagnostic_field_state(electrostatic_discretization);
         IntegratedCharge integrated_charge = particle_operations.assembleCharge(particle_container);
-        electrostatic_field_operations->fieldSolve(particle_electrostatic_field_state, integrated_charge);
+        electrostatic_field_operations->fieldSolve(full_pic_diagnostic_field_state, integrated_charge);
         mesh_data_writer.output(
-          particle_electrostatic_field_state,
+          full_pic_diagnostic_field_state,
           low_fidelity_field_states,
           low_fidelity_states,
           i_timestep,
