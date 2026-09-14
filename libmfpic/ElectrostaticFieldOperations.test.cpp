@@ -6,6 +6,7 @@
 #include <libmfpic/MeshFactory.hpp>
 #include <libmfpic/MeshUtilities.hpp>
 #include <libmfpic/Pinning.hpp>
+#include <libmfpic/RandomNumberGenerator.hpp>
 
 #include <mfem/mfem.hpp>
 
@@ -303,7 +304,7 @@ TEST(ElectrostaticFieldOperations, QuadraticOffsetGivesConstantChargeError) {
   potential *= 2.;
 
   mfem::Vector integrated_ghost_charge = es_field_operations.computeIntegratedGhostCharge(es_field_state, integrated_charge);
-  
+
   // we doubled the potential so should have an error equal to the charge we started with
   const mfem::Vector expected_ghost_charge = integrated_charge.getIntegratedCharge();
   const mfem::Vector integrated_ghost_charge_interior = excludeBoundaryEntries(integrated_ghost_charge, dirichlet_dofs);
@@ -387,7 +388,7 @@ TEST(ElectrostaticFieldOperations, FieldSolveCorrectForPeriodicWithPinning) {
   integrated_charge.setIntegratedCharge(integrated_charge_linear_form);
 
   es_field_operations.fieldSolve(es_field_state, integrated_charge);
- 
+
   mfem::FunctionCoefficient exact_potential([](const mfem::Vector& x){
     const double x_pin = 0.;
     const double pin_value = cos(2. * M_PI * x_pin);
@@ -420,7 +421,7 @@ TEST(ElectrostaticFieldOperations, CheckCompatibilityEnforcementIsAProjection) {
   IntegratedCharge integrated_charge(es_discretization);
   mfem::Vector integrated_charge_vector = integrated_charge.getIntegratedCharge();
   std::random_device rd;
-  std::mt19937 gen(rd());
+  RandomNumberGenerator gen(rd());
   std::uniform_real_distribution<> dis(1.0, 2.0);
   for (int i = 0; i < integrated_charge_vector.Size(); ++i) {
     integrated_charge_vector[i] = dis(gen);

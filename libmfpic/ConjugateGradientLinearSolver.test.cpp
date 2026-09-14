@@ -6,13 +6,12 @@
 #include <libmfpic/ElectrostaticFieldState.hpp>
 #include <libmfpic/LoadParticles.hpp>
 #include <libmfpic/ParticleOperations.hpp>
+#include <libmfpic/RandomNumberGenerator.hpp>
 #include <libmfpic/ReflectingParticleBoundary.hpp>
 
 #include <mfem/mfem.hpp>
 
 #include <gtest/gtest.h>
-
-#include <random>
 
 namespace {
 
@@ -28,7 +27,7 @@ TEST(ConjugateGradientLinearSolver, SolvingIdentityGivesRHS) {
 
   mfem::Vector rhs_vector(size);
   std::random_device rd;
-  std::mt19937 gen(rd());
+  RandomNumberGenerator gen(rd());
   std::uniform_real_distribution<> dis(1.0, 2.0);
   for (int i = 0; i < size; ++i) {
     rhs_vector[i] = dis(gen);
@@ -51,7 +50,7 @@ double computeResidualNorm(const mfem::SparseMatrix& matrix, const mfem::Vector&
 }
 
 mfem::Vector generateRandomVector(const int size) {
-  std::mt19937 gen;
+  RandomNumberGenerator gen;
   std::uniform_real_distribution<> dis(1.0, 10.0);
 
   mfem::Vector random_vector(size);
@@ -97,7 +96,7 @@ mfem::SparseMatrix generateRandomSPDMatrix(const int size) {
   const int row_size = size;
   mfem::SparseMatrix random_matrix(size, size, row_size);
 
-  std::mt19937 gen;
+  RandomNumberGenerator gen;
   std::uniform_real_distribution<> dis(1.0, 10.0);
   for (int i = 0; i < size; ++i) {
     mfem::Array<int> col_indices(size);
@@ -175,7 +174,7 @@ TEST(ConjugateGradientLinearSolver, InvertElectrostaticMatrix) {
   Species proton_species{.charge = constants::elementary_charge, .mass = constants::proton_mass};
 
   const std::unordered_map<std::string, Species> species_map {{"electron", electron_species}, {"proton", proton_species}};
- 
+
   ParticleOperations particle_operations(
     electrostatic_discretization,
     {},
@@ -188,7 +187,7 @@ TEST(ConjugateGradientLinearSolver, InvertElectrostaticMatrix) {
     .bulk_velocity = mfem::Vector({0.0, 0.0, 0.0}),
     .temperature = 0.0,
   };
-  std::default_random_engine generator;
+  RandomNumberGenerator generator;
   ParticleContainer particle_container;
 
   particle_container.addParticles(loadParticles(

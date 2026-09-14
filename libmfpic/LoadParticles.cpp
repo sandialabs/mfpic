@@ -1,33 +1,11 @@
-#pragma once
-
-#include <libmfpic/Euler.hpp>
-#include <libmfpic/GenerateKappaVelocity.hpp>
-#include <libmfpic/GenerateMaxwellianVelocity.hpp>
-#include <libmfpic/MeshDistribution.hpp>
-#include <libmfpic/MeshUtilities.hpp>
-#include <libmfpic/ParticleContainer.hpp>
-#include <libmfpic/RandomNumberGenerator.hpp>
-#include <libmfpic/SourcesFactory.hpp>
-#include <libmfpic/Species.hpp>
-
-#include <mfem/mfem.hpp>
+#include <libmfpic/LoadParticles.hpp>
 
 namespace mfpic {
 
-/**
- * @brief Load a requested number of particles according to a parametrized distribution.
- *
- * @param[in]     source_parameters          Parameters for the particle distribution.
- * @param[in,out] generator                  Random number generator.
- * @param[in]     mesh                       Mesh in which to create particles.
- *
- * @returns Container of created particles.
- */
 ParticleContainer loadParticles(
   const SourceParameters& source_parameters,
-  Generator& generator,
-  std::shared_ptr<mfem::Mesh> mesh,
-  const int velocity_dims=3
+  RandomNumberGenerator& generator,
+  std::shared_ptr<mfem::Mesh> mesh
 ) {
   ParticleContainer particles;
 
@@ -45,7 +23,6 @@ ParticleContainer loadParticles(
   MeshDistribution position_distribution(mesh, number_density_function);
 
   const Species& species = source_parameters.species;
-  mfem::Vector particle_velocity(velocity_dims);  
   for (int i = 0; i < source_parameters.num_particles; ++i) {
     mfem::Vector position({0.0, 0.0, 0.0});
     const auto [random_mesh_position, element] = position_distribution.generateRandomPointAndElement(generator);
@@ -71,23 +48,18 @@ ParticleContainer loadParticles(
         source_state_parameters.temperature,
         kappa,
         species.mass,
-        generator,
-        velocity_dims
+        generator
       );
-      particle_distribution_function_value = euler::evaluateIsotropicKappaDistribution(primitive_state,velocity,kappa,species,velocity_dims);
+      particle_distribution_function_value = euler::evaluateIsotropicKappaDistribution(primitive_state,velocity,kappa,species);
     }
     else {
       velocity = generateMaxwellianVelocity(
         source_state_parameters.bulk_velocity,
         source_state_parameters.temperature,
         species.mass,
-        generator,
-        velocity_dims
+        generator
       );
-      for (int vel_dim = 0; vel_dim < velocity_dims; ++vel_dim)
-        particle_velocity(vel_dim) = velocity(vel_dim);
-
-      particle_distribution_function_value = euler::evaluateMaxwellian(primitive_state,particle_velocity,species);
+      particle_distribution_function_value = euler::evaluateMaxwellian(primitive_state,velocity,species);
     }
 
     particles.addParticle(Particle{
@@ -99,7 +71,6 @@ ParticleContainer loadParticles(
       .is_alive = true,
       .particle_distribution_function_value = particle_distribution_function_value,
     });
-
   }
 
   return particles;

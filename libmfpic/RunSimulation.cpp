@@ -1,3 +1,4 @@
+#include <libmfpic/BuildCollisionOperationsFromYaml.hpp>
 #include <libmfpic/BuildElectrostaticFieldOperationsFromYaml.hpp>
 #include <libmfpic/BuildOutputParametersFromYaml.hpp>
 #include <libmfpic/BuildParticleBoundariesFromYaml.hpp>
@@ -20,6 +21,7 @@
 #include <libmfpic/MeshDataWriter.hpp>
 #include <libmfpic/MeshFactory.hpp>
 #include <libmfpic/ParticleOperations.hpp>
+#include <libmfpic/RandomNumberGenerator.hpp>
 #include <libmfpic/RunSimulation.hpp>
 #include <libmfpic/SourcesFactory.hpp>
 #include <libmfpic/TextDataWriter.hpp>
@@ -89,10 +91,9 @@ void runSimulation(int argc, char* argv[]) {
   );
 
   particle_operations.setVarianceReductionParameters(variance_reduction_parameters);
-
-  //std::default_random_engine generator;
-  std::random_device rd;
-  std::default_random_engine generator(rd());
+  // std::random_device rd;
+  // std::default_random_engine generator(rd());
+  RandomNumberGenerator generator;
   ParticleContainer particle_container = buildParticlesFromYaml(
     main["Particles"]["Initial Conditions"],
     species_map,
@@ -180,6 +181,10 @@ void runSimulation(int argc, char* argv[]) {
       dumpLowFidelityMoments(low_fidelity_states[i],*ops,low_fidelity_prefix, 0, 0.0);
     }
   }
+  std::vector<std::unique_ptr<CollisionOperations>> collision_operations = buildCollisionOperationsFromYaml(
+    main["Collisions"],
+    species_map
+  );
 
   OutputParameters output_parameters;
   if (main["Output"].IsDefined())
@@ -256,11 +261,13 @@ void runSimulation(int argc, char* argv[]) {
     std::cout << "Time Step: " << i_timestep << "    Time: " << begin_time << std::endl;
 
     time_integrator->advanceTimestep(
+      generator,
       low_fidelity_states,
       low_fidelity_field_states,
       low_fidelity_operations,
       particle_container,
       particle_operations,
+      collision_operations,
       particle_electrostatic_field_state,
       *electrostatic_field_operations,
       timestep_size

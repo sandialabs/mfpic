@@ -164,7 +164,7 @@ $$
 Three different time integrators are available, "Verlet", "Forward Euler", and "SSPERK32".
 The default is "Verlet" and should be the option used almost all of the time.
 "Forward Euler" and "SSPERK32" are only to be used for problems without particles.
-"Forward Euler" and "SSPERK32" have fundamental energy issues when coupling to electrostatic or electromagnetic fields, so these 
+"Forward Euler" and "SSPERK32" have fundamental energy issues when coupling to electrostatic or electromagnetic fields, so these
 integrators should only be used with charged particles for test problems to demonstrate those issues.
 
 ```yaml
@@ -459,7 +459,7 @@ Particles:
 ## Euler Fluids
 
 Fluids that obey the Euler equations can be added under the ``Euler Fluids`` key.
-The options at the top level are 
+The options at the top level are
 - **``Basis Order``**: Specifies the discontinuous Galerkin finite element basis order that will be used for all Euler fluids.
 - **``Use Particle Fields``**: Push the fluid with the particle fields (rather than those from it's own charge distribution).
 
@@ -560,6 +560,60 @@ Euler Fluids:
           Type: Reflecting
         - Side: right
           Type: Absorbing
+```
+
+## Collisions
+Collision models can optionally be added via the ``Collisions`` key.
+``Collisions`` must be a sequence,
+each member of which has one key that defines the type of collision model.
+Model-specific parameters are provided as sub-key-value pairs.
+Arbitrarily many collisions can be specified.
+
+```yaml
+Collisions:
+    - <Collision Type 1>
+        <Collision Type 1 Parameters>
+    - <Collision Type 2>
+        <Collision Type 2 Parameters>
+    ...
+```
+
+Available models and their parameters are described below.
+
+### BGK Relaxation
+The Bhatnagar-Gross-Krook (BGK) operator is a simple collision operator used to approximate relaxation to a local equilibrium distribution as
+$$
+\left( \frac{\partial f}{\partial t} \right)_{\mathrm{BGK}} = - \nu (f - f_0),
+$$
+where $\nu$ is the collision frequency and $f_0$ is the equilibrium distribution.
+Currently, $\nu$ is a user-provided constant
+and $f_0$ is taken to be a drifting Maxwellian that is spatially
+piecewise constant in each cell
+with bulk velocity and temperature equal to the those of
+the extant particles in that cell.
+The BGK operator only applies to macroparticles of the given species.
+
+```yaml
+Collisions:
+    - BGK Relaxation:
+        Species: string
+        Collision Frequency: positive float # [1/s]
+    ...
+```
+
+**``Species``**: The species to which to apply the BGK operator.
+This must be defined in the top-level ``Species`` block.
+
+**``Collision Frequency``**: The collision frequency $\nu$.
+The algorithm is strictly only appropriate when $\nu \Delta T < 1$;
+that is, the timestep must resolve the collision rate.
+
+#### Example
+```yaml
+Collisions:
+    - BGK Relaxation:
+        Species: electron
+        Collision Frequency: 1.0e8 # [1/s]
 ```
 
 ## Output
