@@ -313,7 +313,7 @@ TEST(LoadUniformKappaParticles, ParticleDistributionFunctionsAreKappa) {
   prim(euler::PrimitiveVariables::Z_BULK_VELOCITY) = bulk_velocity(2);
   prim(euler::PrimitiveVariables::TEMPERATURE) = temperature;
   for (const Particle& particle : particles) {
-    const double expected_particle_distribution_value = euler::evaluateIsotropicKappaDistribution(prim, particle.velocity, kappa, species);
+    const double expected_particle_distribution_value = euler::evaluateIsotropicKappaDistribution(prim, particle.velocity, kappa, species,3);
     EXPECT_DOUBLE_EQ(particle.particle_distribution_function_value, expected_particle_distribution_value);
   }
 }

@@ -6,6 +6,7 @@ add_library(libmfpic
   BuildOutputParametersFromYaml.cpp
   BuildParticleBoundariesFromYaml.cpp
   BuildSpeciesMapFromYaml.cpp
+  BuildVarianceReductionParametersFromYaml.cpp
   ConjugateGradientLinearSolver.cpp
   DGAssembly.cpp
   DGEulerAssembly.cpp
@@ -23,6 +24,7 @@ add_library(libmfpic
   Errors.cpp
   Euler.cpp
   EulerFlux.cpp
+  VelocityHistogram.cpp
   ForwardEulerTimeIntegrator.cpp
   GenerateKappaVelocity.cpp
   GenerateMaxwellianVelocity.cpp
@@ -69,6 +71,7 @@ mfpic_unit_test(BuildOutputParametersFromYaml)
 mfpic_unit_test(BuildParticleBoundariesFromYaml)
 mfpic_unit_test(BuildParticlesFromYaml)
 mfpic_unit_test(BuildSpeciesMapFromYaml)
+mfpic_unit_test(BuildVarianceReductionParametersFromYaml)
 mfpic_unit_test(ConjugateGradientLinearSolver)
 mfpic_unit_test(DGEulerAssembly)
 mfpic_unit_test(DGEulerBoundaryConditions)
@@ -103,3 +106,4 @@ mfpic_unit_test(ReflectingParticleBoundary)
 mfpic_unit_test(SourcesFactory)
 mfpic_unit_test(TextDataWriter)
 mfpic_unit_test(TimeSteppingFactory)
+mfpic_unit_test(VelocityHistogram)

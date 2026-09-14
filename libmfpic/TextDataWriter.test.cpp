@@ -70,7 +70,7 @@ TEST(TextDataWriter, constructorAndOutput) {
     low_fidelity_operations.push_back(std::move(dg_euler_operations));
   }
 
-  TextDataWriter text_data_writer(num_low_fidelity_models);
+  TextDataWriter text_data_writer(num_low_fidelity_models,"output.csv");
 
   constexpr int i_timestep = 2;
   constexpr double time = 1.3;
