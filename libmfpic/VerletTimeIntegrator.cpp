@@ -43,21 +43,19 @@ void VerletTimeIntegrator::advanceTimestep(
   if ((variance_reduction_parameters.strategy != VarianceReductionParameters::Strategy::None) && 
       (variance_reduction_parameters.use_variance_reduced_electric_field))
   {
-    IntegratedCharge variance_reduced_integrated_charge = particle_operations.assembleVarianceReducedCharge(particle_container,low_fidelity_states[0],*low_fidelity_operations[0]);
-    field_operations.fieldSolve(particle_field_state, variance_reduced_integrated_charge);
+    particle_charge = particle_operations.assembleVarianceReducedCharge(particle_container,low_fidelity_states[0],*low_fidelity_operations[0]);
   }
   else
   {
     particle_charge.addCharge(particle_operations.assembleCharge(particle_container));
-    field_operations.fieldSolve(particle_field_state, particle_charge);
   }
+  field_operations.fieldSolve(particle_field_state, particle_charge);
 
   for (int i = 0; i < std::ssize(low_fidelity_operations); i++) {
     const ElectrostaticFieldState& field_state = push_lf_with_particle_fields_ ? particle_field_state : low_fidelity_field_states[i];
     const LowFidelityOperations& operations = *low_fidelity_operations[i];
     LowFidelityState& low_fidelity_state = low_fidelity_states[i];
     low_fidelity_state = operations.accelerate(dt/2, low_fidelity_state, field_state);
-
     low_fidelity_state = operations.addVolumetricSource(dt, low_fidelity_state);
   }
 
