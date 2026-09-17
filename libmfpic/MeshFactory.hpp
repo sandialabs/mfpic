@@ -19,8 +19,8 @@ struct MeshParameters {
   std::string mesh_type;
   std::vector<double> lengths;
   std::vector<int> num_elements;
-
   std::vector<int> periodic_dims{};
+  int num_velocity_dims = 3;
 };
 
 /**

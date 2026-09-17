@@ -21,7 +21,8 @@ mfem::Vector generateMaxwellianVelocity(
   const mfem::Vector& bulk_velocity,
   double temperature,
   double mass,
-  RandomNumberGenerator& generator
-);
+  RandomNumberGenerator& generator,
+  const int velocity_dims=3
+); 
 
 } // namespace mfpic

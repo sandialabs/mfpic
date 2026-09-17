@@ -1,7 +1,7 @@
 #pragma once
 
-#include <libmfpic/Discretization.hpp>
-#include <libmfpic/ElectromagneticFieldsEvaluator.hpp>
+#include <libmfpic/BuildVarianceReductionParametersFromYaml.hpp>
+#include <libmfpic/DGEulerOperations.hpp>
 #include <libmfpic/Discretization.hpp>
 #include <libmfpic/ElectromagneticFieldsEvaluator.hpp>
 #include <libmfpic/ElementFaceContainer.hpp>
@@ -15,7 +15,10 @@
 
 #include <unordered_map>
 
+#include <unordered_map>
+
 namespace mfpic {
+
 
 class ParticleOperations {
 public:
@@ -32,7 +35,8 @@ public:
     Discretization &discretization,
     std::vector<std::shared_ptr<ParticleBoundaryFactory>> particle_boundary_factories,
     std::shared_ptr<ParticleBoundaryFactory> default_particle_boundary_factory,
-    std::unordered_map<std::string, Species> species_map
+    std::unordered_map<std::string, Species> species_map,
+    const int velocity_dims = 3
   );
 
   ParticleContainer accelerate(
@@ -86,6 +90,19 @@ public:
   std::unordered_map<Species, mfem::Vector>& getNumberDensity(const ParticleContainer& particles);
 
   /**
+   * @brief Compute the variance reduced number density in each element from the low fidelity state
+   *
+   * @param[in] particles   \ref ParticleContainer
+   *
+   * @return mfem::DenseMatrix of number density for each particle species, (element, species)
+   */
+    std::unordered_map<Species, mfem::Vector>& getVarianceReducedNumberDensity(
+    const ParticleContainer& particles,
+    const LowFidelityState& low_fidelity_state,
+    const DGEulerOperations& low_fidelity_operations
+  );
+
+  /**
    * @brief Compute the bulk velocity in each element
    *
    * @param[in] particles   \ref ParticleContainer
@@ -94,6 +111,20 @@ public:
    * @return Map of particle species to bulk velocity (species, (dimension, element))
    */
   std::unordered_map<Species, mfem::DenseMatrix>& getBulkVelocity(const ParticleContainer& particles, const bool sum_weights = true);
+
+  /**
+   * @brief Compute the bulk velocity in each element
+   *
+   * @param[in] particles   \ref ParticleContainer
+   * @param[in] sum_weights Optional flag that resums the weights. Default is true.
+   *
+   * @return mfem::DenseTensor of bulk velocity for each particle species, (dimension, element, species)
+   */
+  std::unordered_map<Species, mfem::DenseMatrix>& getVarianceReducedBulkVelocity(
+    const ParticleContainer& particles, 
+    const LowFidelityState& low_fidelity_state,
+    const DGEulerOperations& low_fidelity_operations
+  );
 
   /**
    * @brief Compute the temperature in each element
@@ -106,12 +137,45 @@ public:
    */
   std::unordered_map<Species, mfem::Vector>& getTemperature(const ParticleContainer& particles, const bool sum_weights = true, const bool compute_bulk_velocity = true);
 
+  std::unordered_map<Species, mfem::Vector>& getVarianceReducedTemperature(
+    const ParticleContainer& particles, 
+    const LowFidelityState& low_fidelity_state,
+    const DGEulerOperations& low_fidelity_operations
+  );
+
+  void computeMaxNoiseReducingFactorPerElement(
+    const ParticleContainer& particles, 
+    const LowFidelityState& low_fidelity_state,
+    const DGEulerOperations& low_fidelity_operations
+  );
+
   /**
    * @brief Get mfem mesh associated with the discretization
    *
    * @return mfem::Mesh 
    */
   mfem::Mesh& getMesh() const {return *discretization_.getFeSpace().GetMesh();};
+
+  /**
+   * @brief Setter for variance reduction parameters
+   */
+  void setVarianceReductionParameters(const VarianceReductionParameters& parameters) {
+    variance_reduction_parameters_ = parameters;
+  }
+
+  /**
+   * @brief Getter for variance reduction parameters
+   */
+  const VarianceReductionParameters getVarianceReductionParameters() const {
+    return variance_reduction_parameters_;
+  }
+
+  /**
+   * @brief Getter for number of velocity dimensions
+   */
+  int getVelocityDims() const {
+    return velocity_dims_;
+  }
 
 private: 
 
@@ -146,12 +210,29 @@ private:
   /// Particle temperature
   std::unordered_map<Species, mfem::Vector> particle_temperature_;
 
+  /// Variance reduced particle number density
+  std::unordered_map<Species, mfem::Vector> variance_reduced_particle_number_density_;
+
+  /// Variance reduced particle bulk velocity
+  std::unordered_map<Species, mfem::DenseMatrix> variance_reduced_particle_bulk_velocity_;
+
+  /// Variance reduced particle temperature
+  std::unordered_map<Species, mfem::Vector> variance_reduced_particle_temperature_;
+
+  /// Variance reduction parameters
+  VarianceReductionParameters variance_reduction_parameters_;
+
   /// Particle sum of weights
   std::unordered_map<Species, mfem::Vector> sum_of_weights_;
 
   /// Mesh dimension
   const int dim_;
 
+  /// Velocity dimension
+  int velocity_dims_ = 3; 
+
+  /// Maximum noise reducing factors 
+  std::unordered_map<Species, mfem::Vector> max_noise_reducing_factors_;
 };
 
 } // namespace mfpic

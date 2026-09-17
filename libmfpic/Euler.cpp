@@ -158,25 +158,32 @@ double getInternalEnergyDensityFromPrimitiveState(const mfem::Vector& primitive_
 double evaluateMaxwellian(const mfem::Vector& primitive_state,
                           const mfem::Vector& velocity,
                           const Species& species)
-  {
-    const double temperature = primitive_state(euler::PrimitiveVariables::TEMPERATURE);
-    const double sigma = std::sqrt(constants::boltzmann_constant * temperature / species.mass);
+{
+  const double temperature = primitive_state(euler::PrimitiveVariables::TEMPERATURE);
+  const double sigma = std::sqrt(constants::boltzmann_constant * temperature / species.mass);
 
-    if ((sigma <= 0.0) or not std::isfinite(sigma)) {
-      return std::numeric_limits<double>::quiet_NaN();   
-    }
-
-    const double inv_sq_sigma = 1.0 / (sigma * sigma);
-
-    const mfem::Vector bulk_velocity = getBulkVelocityFromPrimitiveState(primitive_state);
-    mfem::Vector difference = velocity;
-    difference -= bulk_velocity;
-    double exponent = inv_sq_sigma * (difference * difference);
-    const double norm = 1.0 / std::pow(std::sqrt(2.0 * M_PI) * sigma, 3);
-    const double probability_density_function = norm * std::exp(-0.5 * exponent);
-
-    return probability_density_function * primitive_state(euler::PrimitiveVariables::NUMBER_DENSITY);
+  if ((sigma <= 0.0) || !std::isfinite(sigma)) {
+    return std::numeric_limits<double>::quiet_NaN();
   }
+
+  const int vdim = velocity.Size(); 
+  const mfem::Vector bulk_velocity = getBulkVelocityFromPrimitiveState(primitive_state);
+
+  mfem::Vector difference = velocity;
+  for (int i=0; i < vdim; ++i )
+    difference(i) -= bulk_velocity(i);
+
+  const double inv_sq_sigma = 1.0 / (sigma * sigma);
+  const double exponent = inv_sq_sigma * (difference * difference);
+
+  const double norm_base = 1.0 / (std::sqrt(2.0 * M_PI) * sigma);
+  const double norm = std::pow(norm_base, static_cast<double>(vdim));
+
+  const double probability_density_function = norm * std::exp(-0.5 * exponent);
+
+  return probability_density_function *
+         primitive_state(euler::PrimitiveVariables::NUMBER_DENSITY);
+}
 
 double evaluateProductOf1DKappaDistributions(
   const mfem::Vector& primitive_state,
@@ -234,50 +241,58 @@ double evaluateProductOf1DKappaDistributions(
 }
 
 double evaluateIsotropicKappaDistribution(
-  const mfem::Vector& primitive_state,
-  const mfem::Vector& velocity,
-  double kappa,
-  const Species& species)
+    const mfem::Vector& primitive_state,
+    const mfem::Vector& velocity,
+    const double kappa,
+    const Species& species)
 {
-  const double temperature =
-    primitive_state(PrimitiveVariables::TEMPERATURE);
+    const double invalid = std::numeric_limits<double>::quiet_NaN();
+    const int velocity_dimensions = velocity.Size(); 
 
-  const double number_density =
-    primitive_state(PrimitiveVariables::NUMBER_DENSITY);
+    if (velocity_dimensions != 1 && velocity_dimensions != 3) {
+        return invalid;
+    }
 
-  if (temperature < 0.0 ||
-      species.mass <= 0.0 ||
-      kappa <= 1.5) {
-    return std::numeric_limits<double>::quiet_NaN();
-  }
+    const double temperature = primitive_state(PrimitiveVariables::TEMPERATURE);
+    const double number_density = primitive_state(PrimitiveVariables::NUMBER_DENSITY);
+    const double mass = species.mass;
 
-  const double nu = 2.0 * kappa - 1.0;
+    if (!std::isfinite(temperature) || temperature <= 0.0 ||
+        !std::isfinite(number_density) || number_density < 0.0 ||
+        !std::isfinite(mass) || mass <= 0.0 ||
+        !std::isfinite(kappa) || kappa <= 1.5) {
+        return invalid;
+    }
 
-  const double w_squared =
-    ((nu - 2.0) / nu) *
-    constants::boltzmann_constant *
-    temperature / species.mass;
+    const mfem::Vector bulk_velocity = getBulkVelocityFromPrimitiveState(primitive_state);
+    double thermal_speed = 0.0;
+    for (int i = 0; i < velocity_dimensions; ++i) {
+        const double fluctuation = velocity(i) - bulk_velocity(i);
+        thermal_speed = std::hypot(thermal_speed, fluctuation);
+    }
 
-  const mfem::Vector bulk_velocity =
-    getBulkVelocityFromPrimitiveState(
-      primitive_state);
+    const double d = static_cast<double>(velocity_dimensions);
+    const double half_d = 0.5 * d;
+    const double alpha = kappa - 0.5;
 
-  mfem::Vector difference = velocity;
-  difference -= bulk_velocity;
+    // a^2 = (2*kappa - 3) * k_B*T/m.
+    const double log_a_squared =
+          std::log(2.0)
+        + std::log(kappa - 1.5)
+        + std::log(constants::boltzmann_constant)
+        + std::log(temperature)
+        - std::log(mass);
+    const double log_pi = std::log(std::acos(-1.0));
+    const double log_normalization = std::lgamma(alpha + half_d) - std::lgamma(alpha) - half_d * (log_pi + log_a_squared);
 
-  const double c_squared =
-    difference * difference;
-
-  const double log_normalization =
-      std::lgamma(0.5 * (nu + 3.0))
-    - std::lgamma(0.5 * nu)
-    - 1.5 * std::log(nu * M_PI)
-    - 1.5 * std::log(w_squared);
-
-  const double log_shape =
-    -0.5 * (nu + 3.0) * std::log1p(c_squared / (nu * w_squared));
-  const double log_pdf = std::log(number_density) + log_normalization + log_shape;
-  return std::exp(log_pdf);
+    // Compute log(1 + |c|^2/a^2) 
+    double log_shape_argument = 0.0;
+    if (thermal_speed > 0.0) {
+        const double log_ratio = 2.0 * std::log(thermal_speed) - log_a_squared;
+        log_shape_argument = log_ratio > 0.0 ? log_ratio + std::log1p(std::exp(-log_ratio)) : std::log1p(std::exp(log_ratio));
+    }
+    const double log_pdf = std::log(number_density) + log_normalization - (alpha + half_d) * log_shape_argument;
+    return std::exp(log_pdf);
 }
 
 }

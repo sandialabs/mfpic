@@ -42,6 +42,7 @@ mfem::Vector generateIsotropicKappaVelocity(
   double temperature,
   double kappa,
   double mass,
-  RandomNumberGenerator& generator);
+  RandomNumberGenerator& generator,
+  const int velocity_dims=3);
 
 } // namespace mfpic
