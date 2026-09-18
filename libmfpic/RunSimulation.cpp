@@ -72,10 +72,6 @@ void runSimulation(int argc, char* argv[]) {
   if (main["Variance Reduction"].IsDefined())
     variance_reduction_parameters = buildVarianceReductionParametersFromYAML(main["Variance Reduction"]);
 
-  std::optional<ElectrostaticFieldState> variance_reduced_particle_electrostatic_field_state;
-  if (variance_reduction_parameters.strategy != VarianceReductionParameters::Strategy::None)
-    variance_reduced_particle_electrostatic_field_state.emplace(electrostatic_discretization);
-
   std::unordered_map<std::string, Species> species_map = buildSpeciesMapFromYaml(main["Species"]);
 
   const auto [particle_boundary_factories, default_particle_boundary_factory] = buildParticleBoundariesFromYaml(
@@ -91,9 +87,9 @@ void runSimulation(int argc, char* argv[]) {
   );
 
   particle_operations.setVarianceReductionParameters(variance_reduction_parameters);
-  // std::random_device rd;
-  // std::default_random_engine generator(rd());
-  RandomNumberGenerator generator;
+  std::random_device rd;
+  //std::default_random_engine generator(rd());
+  RandomNumberGenerator generator(rd());
   ParticleContainer particle_container = buildParticlesFromYaml(
     main["Particles"]["Initial Conditions"],
     species_map,
@@ -166,59 +162,35 @@ void runSimulation(int argc, char* argv[]) {
 
   MeshDataWriter mesh_data_writer(output_parameters.mesh_output_folder_name, *mesh);
 
-  std::optional<MeshDataWriter> variance_reduced_mesh_data_writer;
-  if (variance_reduction_parameters.strategy != VarianceReductionParameters::Strategy::None) 
-    variance_reduced_mesh_data_writer.emplace(output_parameters.mesh_output_folder_name + "_VR", *mesh);
-  {
-    IntegratedCharge integrated_charge = particle_operations.assembleCharge(particle_container);
-    electrostatic_field_operations->fieldSolve(particle_electrostatic_field_state, integrated_charge);
-  }
-
-  {
-    //assume only one low fidelity state
-    if (variance_reduction_parameters.strategy != VarianceReductionParameters::Strategy::None) {
-      IntegratedCharge variance_reduced_integrated_charge = particle_operations.assembleVarianceReducedCharge(particle_container,low_fidelity_states[0],*low_fidelity_operations[0]);
-      electrostatic_field_operations->fieldSolve(*variance_reduced_particle_electrostatic_field_state, variance_reduced_integrated_charge);
-
-      if (variance_reduction_parameters.use_variance_reduced_electric_field)
-      {
-        electrostatic_field_operations->fieldSolve(particle_electrostatic_field_state, variance_reduced_integrated_charge);
-      }
-    }
-  }
-  
   for (int i = 0; i < std::ssize(low_fidelity_field_states); ++i) {
-    IntegratedCharge integrated_charge = low_fidelity_operations[i]->assembleCharge(low_fidelity_states[i]);
-    electrostatic_field_operations->fieldSolve(low_fidelity_field_states[i], integrated_charge);
+    IntegratedCharge low_fidelity_integrated_charge = low_fidelity_operations[i]->assembleCharge(low_fidelity_states[i]);
+    electrostatic_field_operations->fieldSolve(low_fidelity_field_states[i], low_fidelity_integrated_charge);
   }
 
-  mesh_data_writer.output(particle_electrostatic_field_state, low_fidelity_field_states, low_fidelity_states, 0, 0.);
-  if (variance_reduction_parameters.strategy != VarianceReductionParameters::Strategy::None) 
-    variance_reduced_mesh_data_writer->output(*variance_reduced_particle_electrostatic_field_state, low_fidelity_field_states, low_fidelity_states, 0, 0.);
+  IntegratedCharge particle_charge(electrostatic_discretization);
+  if ((variance_reduction_parameters.strategy != VarianceReductionParameters::Strategy::None) &&
+     (variance_reduction_parameters.use_variance_reduced_electric_field))
+  {
+    particle_charge = particle_operations.assembleVarianceReducedCharge(particle_container,low_fidelity_states[0],*low_fidelity_operations[0]);
+  }
+  else
+  {
+    particle_charge = particle_operations.assembleCharge(particle_container);
+  }
+
+  electrostatic_field_operations->fieldSolve(particle_electrostatic_field_state, particle_charge);
 
   const int num_low_fidelity_models = std::ssize(low_fidelity_states);
   TextDataWriter text_data_writer(num_low_fidelity_models,"output");
   text_data_writer.output(
     particle_electrostatic_field_state,
+    particle_charge,
     low_fidelity_field_states,
     *electrostatic_field_operations,
     low_fidelity_states,
     low_fidelity_operations,
     0,
-    0.);
-
-  std::optional<TextDataWriter> variance_reduced_text_data_writer;
-  if (variance_reduction_parameters.strategy != VarianceReductionParameters::Strategy::None) {
-    variance_reduced_text_data_writer.emplace(num_low_fidelity_models,"vr_output");
-    variance_reduced_text_data_writer->output(
-      *variance_reduced_particle_electrostatic_field_state,
-      low_fidelity_field_states,
-      *electrostatic_field_operations,
-      low_fidelity_states,
-      low_fidelity_operations,
-      0,
-      0.);
-  }
+    0.0);
 
   TimeSteppingParameters time_stepping_parameters = buildTimeSteppingParametersFromYAML(main["Time Stepping"]);
   std::unique_ptr<TimeIntegrator> time_integrator = buildTimeIntegrator(
@@ -243,6 +215,7 @@ void runSimulation(int argc, char* argv[]) {
       collision_operations,
       particle_electrostatic_field_state,
       *electrostatic_field_operations,
+      particle_charge,
       timestep_size
     );
 
@@ -269,56 +242,31 @@ void runSimulation(int argc, char* argv[]) {
       const std::string prefix = "particle_moments";
       dumpParticleMoments(particle_operations,particle_container, prefix, i_timestep, end_time);
       if (variance_reduction_parameters.strategy != VarianceReductionParameters::Strategy::None) {
-        for (int i = 0; i < std::ssize(low_fidelity_field_states); ++i) {
-          auto* ops = dynamic_cast<DGEulerOperations*>(low_fidelity_operations[i].get());
-          if (!ops) throw std::runtime_error("Cannot compute variance reduced moments for low_fidelity_operations[i] that is not DGEulerOperations.");
-          const std::string variance_reduced_prefix = "variance_reduced_particle_moments";
-          dumpVarianceReducedParticleMoments(particle_operations,particle_container,low_fidelity_states[i],*ops,variance_reduced_prefix, i_timestep, end_time);
-          const std::string low_fidelity_prefix = "low_fidelity_moments";
-          dumpLowFidelityMoments(low_fidelity_states[i],*ops,low_fidelity_prefix, i_timestep, end_time);
-        }
+        auto* ops = dynamic_cast<DGEulerOperations*>(low_fidelity_operations[0].get());
+        if (!ops) throw std::runtime_error("Cannot compute variance reduced moments for low_fidelity_operations that is not DGEulerOperations.");
+        const std::string variance_reduced_prefix = "variance_reduced_particle_moments";
+        dumpVarianceReducedParticleMoments(particle_operations,particle_container,low_fidelity_states[0],*ops,variance_reduced_prefix, i_timestep, end_time);
+        const std::string low_fidelity_prefix = "low_fidelity_moments";
+        dumpLowFidelityMoments(low_fidelity_states[0],*ops,low_fidelity_prefix, i_timestep, end_time);
       }
 
-      if (variance_reduction_parameters.strategy != VarianceReductionParameters::Strategy::None) {
-        ElectrostaticFieldState full_pic_diagnostic_field_state(electrostatic_discretization);
-        IntegratedCharge integrated_charge = particle_operations.assembleCharge(particle_container);
-        electrostatic_field_operations->fieldSolve(full_pic_diagnostic_field_state, integrated_charge);
-        mesh_data_writer.output(
-          full_pic_diagnostic_field_state,
-          low_fidelity_field_states,
-          low_fidelity_states,
-          i_timestep,
-          end_time);
-
-      IntegratedCharge variance_reduced_integrated_charge = particle_operations.assembleVarianceReducedCharge(particle_container,low_fidelity_states[0],*low_fidelity_operations[0]);
-      electrostatic_field_operations->fieldSolve(*variance_reduced_particle_electrostatic_field_state, variance_reduced_integrated_charge);
-      variance_reduced_mesh_data_writer->output(
-        *variance_reduced_particle_electrostatic_field_state,
+      mesh_data_writer.output(
+        particle_electrostatic_field_state,
+        particle_charge,
         low_fidelity_field_states,
         low_fidelity_states,
         i_timestep,
         end_time);
-      }
 
       text_data_writer.output(
         particle_electrostatic_field_state,
+        particle_charge,
         low_fidelity_field_states,
         *electrostatic_field_operations,
         low_fidelity_states,
         low_fidelity_operations,
         i_timestep,
         end_time);
-
-      if (variance_reduction_parameters.strategy != VarianceReductionParameters::Strategy::None) {
-        variance_reduced_text_data_writer->output(
-          *variance_reduced_particle_electrostatic_field_state,
-          low_fidelity_field_states,
-          *electrostatic_field_operations,
-          low_fidelity_states,
-          low_fidelity_operations,
-          i_timestep,
-          end_time);
-      }
     }
   }
 }

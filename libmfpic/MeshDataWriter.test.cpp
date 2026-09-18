@@ -2,6 +2,7 @@
 #include <libmfpic/DGEulerInitialConditionsFactory.hpp>
 #include <libmfpic/Discretization.hpp>
 #include <libmfpic/ElectrostaticFieldState.hpp>
+#include <libmfpic/IntegratedCharge.hpp>
 #include <libmfpic/LowFidelityState.hpp>
 #include <libmfpic/MeshDataWriter.hpp>
 #include <libmfpic/MeshFactory.hpp>
@@ -33,6 +34,8 @@ TEST(MeshDataWriter, test) {
   constexpr int electrostatic_order = 1;
   Discretization electrostatic_discretization(&mesh, electrostatic_order, FETypes::HGRAD);
   ElectrostaticFieldState electrostatic_field_state(electrostatic_discretization);
+  IntegratedCharge integrated_charge(electrostatic_discretization);
+  integrated_charge.setIntegratedChargeValue(3203.232);
 
   // Nonzero data is being put into ElectrostaticFieldState and LowFidelityState to be manually checked in output but won't
   // be checked specifically in this unit test
@@ -52,8 +55,8 @@ TEST(MeshDataWriter, test) {
   std::vector<LowFidelityState> low_fidelity_states = {buildEulerState(dg_discretization, list_of_parameters)};
   std::vector<ElectrostaticFieldState> low_fidelity_field_states = {electrostatic_field_state};
 
-  mesh_data_writer.output(electrostatic_field_state, low_fidelity_field_states, low_fidelity_states, 0, 0);
-  mesh_data_writer.output(electrostatic_field_state, low_fidelity_field_states, low_fidelity_states, 1, 1.);
+  mesh_data_writer.output(electrostatic_field_state, integrated_charge, low_fidelity_field_states, low_fidelity_states, 0, 0);
+  mesh_data_writer.output(electrostatic_field_state, integrated_charge, low_fidelity_field_states, low_fidelity_states, 1, 1.);
 
   EXPECT_TRUE(std::filesystem::exists(folder_name));
 

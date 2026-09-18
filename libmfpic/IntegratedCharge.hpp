@@ -69,6 +69,13 @@ public:
   */
   double getIntegratedChargeValue(int dof_id);
 
+  /**
+  * @brief Get the total charge in the domain
+  *
+  * @return double - value of the the total charge
+  */
+  double totalCharge() const;
+
 private:
 
   /// vector of size number of electrostatic local dofs, that stores integrated charge

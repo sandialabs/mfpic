@@ -43,6 +43,7 @@ public:
     const std::vector<std::unique_ptr<CollisionOperations>>& collision_operations,
     ElectrostaticFieldState& field_state,
     ElectrostaticFieldOperations& field_operations,
+    IntegratedCharge& integrated_charge,
     double dt) const override;
 
 private:

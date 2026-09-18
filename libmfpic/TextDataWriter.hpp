@@ -8,6 +8,7 @@ namespace mfpic {
 
 class ElectrostaticFieldOperations;
 class ElectrostaticFieldState;
+class IntegratedCharge;
 class LowFidelityOperations;
 class LowFidelityState;
 
@@ -32,6 +33,7 @@ public:
    */
   void output(
     const ElectrostaticFieldState& electrostatic_field_state,
+    const IntegratedCharge& integrated_charge,
     const std::vector<ElectrostaticFieldState>& low_fidelity_field_states,
     const ElectrostaticFieldOperations& electrostatic_field_operations,
     const std::vector<LowFidelityState>& low_fidelity_states,

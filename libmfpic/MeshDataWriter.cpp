@@ -1,4 +1,5 @@
 #include <libmfpic/ElectrostaticFieldState.hpp>
+#include <libmfpic/IntegratedCharge.hpp>
 #include <libmfpic/LowFidelityState.hpp>
 #include <libmfpic/MeshDataWriter.hpp>
 
@@ -8,6 +9,7 @@ MeshDataWriter::MeshDataWriter(const std::string& name, mfem::Mesh& mesh) : para
 
 void MeshDataWriter::output(
   ElectrostaticFieldState& particle_field_state,
+  IntegratedCharge& particle_charge,
   std::vector<ElectrostaticFieldState>& low_fidelity_field_states,
   std::vector<LowFidelityState>& low_fidelity_states,
   const int i_time_step,
@@ -17,9 +19,6 @@ void MeshDataWriter::output(
   paraview_data_collection_.SetTime(time);
 
   const unsigned int num_lf_models = std::ssize(low_fidelity_states);
-
-  std::vector<mfem::GridFunction> charge_grid_functions;
-  charge_grid_functions.reserve(num_lf_models + 1);
 
   std::vector<mfem::GridFunction> potential_grid_functions;
   potential_grid_functions.reserve(num_lf_models + 1);
@@ -32,10 +31,6 @@ void MeshDataWriter::output(
     potential_grid_functions.emplace_back(field_state.getPotential());
     auto & potential_grid_function = potential_grid_functions.back();
     paraview_data_collection_.RegisterField("electrostatic_potential" + suffix, &potential_grid_function);
-
-    charge_grid_functions.emplace_back(field_state.getIntegratedCharge());
-    auto & charge_grid_function = charge_grid_functions.back();
-    paraview_data_collection_.RegisterField("integrated_charge" + suffix, &charge_grid_function);
 
     // TODO: the electric field doesn't appear quite right in ParaView, GetDerivative should be projecting onto an L2 finite element
     //  space not an HGRAD element space, also this is always being output to nodes in Paraview which is also skewing things.
@@ -57,6 +52,12 @@ void MeshDataWriter::output(
 
   register_potential_and_e_field_for_model("", particle_field_state);
 
+  mfem::GridFunction charge_grid_function(
+  particle_field_state.getPotential().FESpace());
+  const mfem::Vector& charge = particle_charge.getIntegratedCharge();
+  charge_grid_function = charge;
+  paraview_data_collection_.RegisterField("integrated_charge", &charge_grid_function);
+
   if (low_fidelity_states.size() > 0) {
     for (unsigned int i_lf_model = 0; i_lf_model < num_lf_models; ++i_lf_model) {
       LowFidelityState& low_fidelity_state = low_fidelity_states[i_lf_model];
@@ -71,7 +72,6 @@ void MeshDataWriter::output(
       register_potential_and_e_field_for_model(suffix, low_fidelity_field_states[i_lf_model]);
     }
   }
-
   paraview_data_collection_.Save();
 }
 

@@ -60,6 +60,7 @@ TextDataWriter::TextDataWriter(const int num_low_fidelity_models,
 
 void TextDataWriter::output(
   const ElectrostaticFieldState& particle_electrostatic_field_state,
+  const IntegratedCharge& particle_charge,
   const std::vector<ElectrostaticFieldState>& low_fidelity_field_states,
   const ElectrostaticFieldOperations& electrostatic_field_operations,
   const std::vector<LowFidelityState>& low_fidelity_states,
@@ -68,7 +69,7 @@ void TextDataWriter::output(
   const double time)
 {
   const double particle_field_energy = electrostatic_field_operations.fieldEnergy(particle_electrostatic_field_state);
-  const double particle_total_charge = electrostatic_field_operations.totalCharge(particle_electrostatic_field_state);
+  const double particle_total_charge = particle_charge.totalCharge();
   writeLineToCSVFile(main_csv_file_, i_time_step, time, particle_field_energy, 0., 0.,particle_total_charge);
 
   for (int i_low_fidelity_model = 0; i_low_fidelity_model < std::ssize(low_fidelity_csv_files_); ++i_low_fidelity_model) {
