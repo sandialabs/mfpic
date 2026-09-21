@@ -239,9 +239,10 @@ TEST(DumpParticles, CSVCorrectForOneSpecies)
   const int steps = 10;
   const double dt = 0.25;
 
-  auto& computed_number_density = particle_operations.getNumberDensity(particles);
-  auto& computed_bulk_velocity  = particle_operations.getBulkVelocity(particles);
-  auto& computed_temperature    = particle_operations.getTemperature(particles);
+  ParticleMoments particle_moments = particle_operations.getParticleMoments(particles);
+  auto& computed_number_density = particle_moments.number_density;
+  auto& computed_bulk_velocity = particle_moments.bulk_velocity;
+  auto& computed_temperature = particle_moments.temperature;
 
   for (int step = 0; step < steps; ++step)
     dumpParticleMoments(particle_operations,particles, prefix, step, dt * step);
@@ -329,9 +330,11 @@ TEST(DumpParticles, CSVCorrectForTwoSpecies)
   const int steps = 10;
   const double dt = 0.25;
 
-  auto& computed_number_density = particle_operations.getNumberDensity(particles);
-  auto& computed_bulk_velocity  = particle_operations.getBulkVelocity(particles);
-  auto& computed_temperature    = particle_operations.getTemperature(particles);
+  ParticleMoments particle_moments = particle_operations.getParticleMoments(particles);
+  auto& computed_number_density = particle_moments.number_density;
+  auto& computed_bulk_velocity = particle_moments.bulk_velocity;
+  auto& computed_temperature = particle_moments.temperature;
+
 
   for (int step = 0; step < steps; ++step)
     dumpParticleMoments(particle_operations,particles, prefix, step, dt * step);

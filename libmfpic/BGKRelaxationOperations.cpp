@@ -17,14 +17,12 @@ void BGKRelaxationOperations::performCollisions(
   ParticleContainer& particles,
   ParticleOperations& particle_operations
 ) const {
-  const std::unordered_map<Species, mfem::Vector>& number_densities = particle_operations.getNumberDensity(particles);
-  std::unordered_map<Species, mfem::DenseMatrix>& bulk_velocities = particle_operations.getBulkVelocity(particles);
-  constexpr bool recompute_lower_order_moments = false;
-  const std::unordered_map<Species, mfem::Vector>& temperatures = particle_operations.getTemperature(
-    particles,
-    recompute_lower_order_moments,
-    recompute_lower_order_moments
-  );
+
+  //TODO: Collisions with variance reduced or standard moments?
+  ParticleMoments particle_moments = particle_operations.getParticleMoments(particles);
+  auto number_densities = particle_moments.number_density;
+  auto bulk_velocities = particle_moments.bulk_velocity;
+  auto temperatures = particle_moments.temperature;
 
   std::uniform_real_distribution<double> uniform_unit_interval_distribution;
   const int velocity_dims = particle_operations.getVelocityDims();

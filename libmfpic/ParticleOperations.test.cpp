@@ -996,7 +996,7 @@ TEST(ParticleOperations, VarianceReducedChargeIsExactForMaxwellianIn3D) {
     charge_discretization,
     empty_particle_boundary_factory_list,
     default_reflecting_particle_boundary_factory,
-    species_map 
+    species_map
   );
 
   VarianceReductionParameters variance_reduction_parameters;
@@ -1123,8 +1123,9 @@ TEST(ParticleOperations, TemperatureIsZeroWithZeroOrOneParticles) {
       default_reflecting_particle_boundary_factory,
       one_species
     );
-    const std::unordered_map<Species, mfem::Vector>& temperature_per_species_per_element =
-      particle_operations.getTemperature(particles);
+
+    ParticleMoments particle_moments = particle_operations.getParticleMoments(particles);
+    auto temperature_per_species_per_element = particle_moments.temperature;
     const double computed_temperature = temperature_per_species_per_element.at(default_species)(0);
 
     EXPECT_DOUBLE_EQ(0.0, computed_temperature);
@@ -1162,7 +1163,9 @@ TEST(ParticleOperations, TemperatureCalculationIsUnbiasedWithVariableParticleWei
       });
     }
 
-    const double computed_temperature = particle_operations.getTemperature(particles).at(default_species)(0);
+    ParticleMoments particle_moments = particle_operations.getParticleMoments(particles);
+    auto temperature_per_species_per_element = particle_moments.temperature;
+    const double computed_temperature = temperature_per_species_per_element.at(default_species)(0);
     average_computed_temperature += computed_temperature / num_repetitions;
   }
 
@@ -1200,10 +1203,15 @@ TEST(ParticleOperations, ParticleMomentsCorrectForMaxwellian) {
     one_species
   );
 
+  ParticleMoments particle_moments = particle_operations.getParticleMoments(particles);
+  auto pic_number_density = particle_moments.number_density;
+  auto pic_bulk_velocity = particle_moments.bulk_velocity;
+  auto pic_temperature = particle_moments.temperature;
+
   mfem::Vector computed_bulk_velocity;
-  particle_operations.getBulkVelocity(particles).at(default_species).GetColumn(0, computed_bulk_velocity);
-  double computed_number_density = particle_operations.getNumberDensity(particles).at(default_species)(0);
-  double computed_temperature = particle_operations.getTemperature(particles).at(default_species)(0);
+  pic_bulk_velocity.at(default_species).GetColumn(0, computed_bulk_velocity);
+  double computed_number_density = pic_number_density.at(default_species)(0);
+  double computed_temperature = pic_temperature.at(default_species)(0);
 
   EXPECT_NEAR(computed_number_density, number_density, 1e-10);
 
@@ -1292,9 +1300,13 @@ TEST(ParticleOperations, ParticleMomentsCorrectForKnownParticles) {
 
   auto check_moments = [&] (MomentsInCell exact, const Species & species, int cell_id) {
 
-    MomentsInCell computed {.number_density = particle_operations.getNumberDensity(particles).at(species)(cell_id),
-                            .bulk_velocity = mfem::Vector(particle_operations.getBulkVelocity(particles).at(species).GetColumn(cell_id),3),
-                            .temperature = particle_operations.getTemperature(particles).at(species)(cell_id) };
+    ParticleMoments particle_moments = particle_operations.getParticleMoments(particles);
+    auto pic_number_density = particle_moments.number_density;
+    auto pic_bulk_velocity = particle_moments.bulk_velocity;
+    auto pic_temperature = particle_moments.temperature;
+    MomentsInCell computed {.number_density = pic_number_density.at(species)(cell_id),
+                            .bulk_velocity = mfem::Vector(pic_bulk_velocity.at(species).GetColumn(cell_id),3),
+                            .temperature = pic_temperature.at(species)(cell_id) };
 
     EXPECT_NEAR(exact.number_density, computed.number_density, 1e-12);
 
@@ -1356,7 +1368,7 @@ TEST(ParticleOperations, VarianceReducedMomentsAreExactForMaxwellianIn3D) {
   ParticleContainer particles = loadParticles(
     ConstantSourceParameters(species, source_state_parameters, num_particles),
     generator,
-    mesh  
+    mesh
   );
 
   ParticleOperations particle_operations(
@@ -1365,16 +1377,17 @@ TEST(ParticleOperations, VarianceReducedMomentsAreExactForMaxwellianIn3D) {
     default_reflecting_particle_boundary_factory,
     species_map
   );
-  VarianceReductionParameters variance_reduction_parameters; 
+  VarianceReductionParameters variance_reduction_parameters;
   variance_reduction_parameters.strategy = VarianceReductionParameters::Strategy::EulerFluid;
   variance_reduction_parameters.limit_variance_reduction = false;
   variance_reduction_parameters.use_variance_reduced_electric_field = false;
   variance_reduction_parameters.specified_lf_moments = false;
   particle_operations.setVarianceReductionParameters(variance_reduction_parameters);
 
-  std::unordered_map<Species, mfem::Vector> variance_reduced_number_density = particle_operations.getVarianceReducedNumberDensity(particles,low_fidelity_state,dg_euler_operations);
-  std::unordered_map<Species, mfem::DenseMatrix> variance_reduced_bulk_velocity = particle_operations.getVarianceReducedBulkVelocity(particles,low_fidelity_state,dg_euler_operations);
-  std::unordered_map<Species, mfem::Vector> variance_reduced_temperature = particle_operations.getVarianceReducedTemperature(particles,low_fidelity_state,dg_euler_operations);
+  ParticleMoments variance_reduced_particle_moments = particle_operations.getVarianceReducedParticleMoments(particles,low_fidelity_state,dg_euler_operations,true);
+  auto variance_reduced_number_density = variance_reduced_particle_moments.number_density;
+  auto variance_reduced_bulk_velocity = variance_reduced_particle_moments.bulk_velocity;
+  auto variance_reduced_temperature = variance_reduced_particle_moments.temperature;
 
   for (int elem_id = 0; elem_id < num_elems; ++elem_id)
   {
@@ -1440,19 +1453,21 @@ TEST(ParticleOperations, VarianceReducedMomentsAndPICMomentsConvergeForKappa) {
   ParticleContainer particles_all = loadParticles(
     ConstantSourceParameters(species, source_state_parameters, num_particles_list[4]),
     gen_for_n,
-    mesh  
+    mesh
   );
 
   for (int num_particles : num_particles_list) {
     ParticleContainer particles = takePrefix(particles_all, num_particles);
 
-    std::unordered_map<Species, mfem::Vector> variance_reduced_number_density = particle_operations.getVarianceReducedNumberDensity(particles,low_fidelity_state,dg_euler_operations);
-    std::unordered_map<Species, mfem::DenseMatrix> variance_reduced_bulk_velocity = particle_operations.getVarianceReducedBulkVelocity(particles,low_fidelity_state,dg_euler_operations);
-    std::unordered_map<Species, mfem::Vector> variance_reduced_temperature = particle_operations.getVarianceReducedTemperature(particles,low_fidelity_state,dg_euler_operations);
+    ParticleMoments variance_reduced_particle_moments = particle_operations.getVarianceReducedParticleMoments(particles,low_fidelity_state,dg_euler_operations,true);
+    auto variance_reduced_number_density = variance_reduced_particle_moments.number_density;
+    auto variance_reduced_bulk_velocity = variance_reduced_particle_moments.bulk_velocity;
+    auto variance_reduced_temperature = variance_reduced_particle_moments.temperature;
 
-    std::unordered_map<Species, mfem::Vector> pic_number_density = particle_operations.getNumberDensity(particles);
-    std::unordered_map<Species, mfem::DenseMatrix> pic_bulk_velocity = particle_operations.getBulkVelocity(particles);
-    std::unordered_map<Species, mfem::Vector> pic_temperature = particle_operations.getTemperature(particles);
+    ParticleMoments particle_moments = particle_operations.getParticleMoments(particles);
+    auto pic_number_density = particle_moments.number_density;
+    auto pic_bulk_velocity = particle_moments.bulk_velocity;
+    auto pic_temperature = particle_moments.temperature;
 
     double max_rel_error_number_density = 0.0;
     double max_rel_error_x_bulk_velocity = 0.0;
@@ -1586,26 +1601,29 @@ TEST(ParticleOperations, VarianceReducedMomentsMatchPICForSpeciesMissingLowFidel
     default_reflecting_particle_boundary_factory,
     two_species);
 
-  const double standard_number_density_b =
-    particle_operations.getNumberDensity(particles).at(species_b)(0);
+  ParticleMoments variance_reduced_particle_moments = particle_operations.getVarianceReducedParticleMoments(particles,low_fidelity_state,dg_euler_operations,true);
+  auto variance_reduced_number_density = variance_reduced_particle_moments.number_density;
+  auto variance_reduced_bulk_velocity = variance_reduced_particle_moments.bulk_velocity;
+  auto variance_reduced_temperature = variance_reduced_particle_moments.temperature;
 
+  ParticleMoments particle_moments = particle_operations.getParticleMoments(particles);
+  auto pic_number_density = particle_moments.number_density;
+  auto pic_bulk_velocity = particle_moments.bulk_velocity;
+  auto pic_temperature = particle_moments.temperature;
+
+  const double standard_number_density_b = pic_number_density.at(species_b)(0);
   mfem::Vector standard_bulk_velocity_b;
-  particle_operations.getBulkVelocity(particles).at(species_b).GetColumn(0, standard_bulk_velocity_b);
+  pic_bulk_velocity.at(species_b).GetColumn(0, standard_bulk_velocity_b);
 
-  const double standard_temperature_b =
-    particle_operations.getTemperature(particles).at(species_b)(0);
+  const double standard_temperature_b = pic_temperature.at(species_b)(0);
 
-  const double variance_reduced_number_density_b =
-    particle_operations.getVarianceReducedNumberDensity(
-      particles, low_fidelity_state, dg_euler_operations).at(species_b)(0);
+  const double variance_reduced_number_density_b = variance_reduced_number_density.at(species_b)(0);
 
   mfem::Vector variance_reduced_bulk_velocity_b;
-  particle_operations.getVarianceReducedBulkVelocity(
-      particles, low_fidelity_state, dg_euler_operations).at(species_b).GetColumn(0, variance_reduced_bulk_velocity_b);
+  variance_reduced_bulk_velocity.at(species_b).GetColumn(0, variance_reduced_bulk_velocity_b);
 
   const double variance_reduced_temperature_b =
-    particle_operations.getVarianceReducedTemperature(
-      particles, low_fidelity_state, dg_euler_operations).at(species_b)(0);
+  variance_reduced_temperature.at(species_b)(0);
 
   EXPECT_NEAR(variance_reduced_number_density_b, standard_number_density_b, 1e-6);
 
