@@ -18,6 +18,7 @@ namespace mfpic {
  * @param[in]     species_map    Map species names to Species structs.
  * @param[in,out] generator      A UniformRandomBitGenerator used to generate some random numbers.
  * @param[in]     mesh           Mesh in which to generate particles.
+ * @param[in]     velocity_dims  Number of velocity dimensions
  */
 template <std::uniform_random_bit_generator Generator>
 ParticleContainer buildParticlesFromYaml(
@@ -25,7 +26,7 @@ ParticleContainer buildParticlesFromYaml(
   const std::unordered_map<std::string, Species>& species_map,
   Generator& generator,
   std::shared_ptr<mfem::Mesh> mesh,
-  int velocity_dims=3
+  int velocity_dims
 ) {
   std::vector<std::unique_ptr<SourceParameters>> list_of_parameters = buildListOfSourceParametersFromYAML(
     sources_node,

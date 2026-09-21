@@ -241,7 +241,8 @@ void runSimulation(int argc, char* argv[]) {
       main["Particles"]["Sources"],
       species_map,
       generator,
-      mesh
+      mesh,
+      mesh_parameters.num_velocity_dims
       );
 
       particle_container.addParticles(source_particles);

@@ -989,7 +989,8 @@ TEST(ParticleOperations, VarianceReducedChargeIsExactForMaxwellianIn3D) {
   ParticleContainer particles = loadParticles(
     ConstantSourceParameters(species, source_state_parameters, num_particles),
     generator,
-    mesh
+    mesh,
+    3
   );
 
   ParticleOperations particle_operations(
@@ -1074,7 +1075,8 @@ TEST(ParticleOperations, VarianceReducedChargeAndPICChargeConvergeForKappa) {
   ParticleContainer particles_all = loadParticles(
     ConstantSourceParameters(species, source_state_parameters, num_particles_list[4]),
     gen_for_n,
-    mesh
+    mesh,
+    3
   );
 
   for (int num_particles : num_particles_list) {
@@ -1193,7 +1195,8 @@ TEST(ParticleOperations, ParticleMomentsCorrectForMaxwellian) {
   ParticleContainer particles = loadParticles(
     ConstantSourceParameters(default_species, source_state_parameters, num_particles),
     generator,
-    mesh
+    mesh,
+    3
   );
 
   ParticleOperations particle_operations(
@@ -1368,7 +1371,8 @@ TEST(ParticleOperations, VarianceReducedMomentsAreExactForMaxwellianIn3D) {
   ParticleContainer particles = loadParticles(
     ConstantSourceParameters(species, source_state_parameters, num_particles),
     generator,
-    mesh
+    mesh,
+    3
   );
 
   ParticleOperations particle_operations(
@@ -1453,7 +1457,8 @@ TEST(ParticleOperations, VarianceReducedMomentsAndPICMomentsConvergeForKappa) {
   ParticleContainer particles_all = loadParticles(
     ConstantSourceParameters(species, source_state_parameters, num_particles_list[4]),
     gen_for_n,
-    mesh
+    mesh,
+    3
   );
 
   for (int num_particles : num_particles_list) {
@@ -1584,12 +1589,12 @@ TEST(ParticleOperations, VarianceReducedMomentsMatchPICForSpeciesMissingLowFidel
   ParticleContainer particles_a = loadParticles(
     ConstantSourceParameters(species_a, source_state_parameters_a, num_particles_a),
     generator,
-    mesh);
+    mesh,3);
 
   ParticleContainer particles_b = loadParticles(
     ConstantSourceParameters(species_b, source_state_parameters_b, num_particles_b),
     generator,
-    mesh);
+    mesh,3);
 
   ParticleContainer particles = particles_a;
   particles.addParticles(particles_b);

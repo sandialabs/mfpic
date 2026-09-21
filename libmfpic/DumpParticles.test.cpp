@@ -221,7 +221,8 @@ TEST(DumpParticles, CSVCorrectForOneSpecies)
   ParticleContainer particles = loadParticles(
     ConstantSourceParameters(default_species, source_state_parameters, num_particles),
     generator,
-    mesh
+    mesh,
+    3
   );
 
   ParticleOperations particle_operations(
@@ -306,13 +307,15 @@ TEST(DumpParticles, CSVCorrectForTwoSpecies)
   ParticleContainer particles = loadParticles(
     ConstantSourceParameters(species_1, source_state_parameters, num_particles),
     generator,
-    mesh
+    mesh,
+    3
   );
 
   particles.addParticles(loadParticles(
     ConstantSourceParameters(species_2, source_state_parameters, num_particles),
     generator,
-    mesh
+    mesh,
+    3
   ));
 
   ParticleOperations particle_operations(
