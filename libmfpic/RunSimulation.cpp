@@ -274,13 +274,13 @@ void runSimulation(int argc, char* argv[]) {
         dumpParticles(particle_container, end_time, output_parameters.particle_dump_filename);
 
       if (output_parameters.output_mesh_data) {
-      mesh_data_writer->output(
-        particle_electrostatic_field_state,
-        particle_charge,
-        low_fidelity_field_states,
-        low_fidelity_states,
-        i_timestep,
-        end_time);
+        mesh_data_writer->output(
+          particle_electrostatic_field_state,
+          particle_charge,
+          low_fidelity_field_states,
+          low_fidelity_states,
+          i_timestep,
+          end_time);
       }
 
       if (output_parameters.output_text_data) {

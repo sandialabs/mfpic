@@ -46,7 +46,7 @@ void VerletTimeIntegrator::advanceTimestep(
   }
   else
   {
-    particle_charge.addCharge(particle_operations.assembleCharge(particle_container));
+    particle_charge = particle_operations.assembleCharge(particle_container);
   }
   field_operations.fieldSolve(particle_field_state, particle_charge);
 
