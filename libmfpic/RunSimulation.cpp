@@ -99,6 +99,7 @@ void runSimulation(int argc, char* argv[]) {
   );
   const std::string prefix = "particle_moments";
   dumpParticleMoments(particle_operations,particle_container, prefix, 0, 0.0);
+  dumpParticles(particle_container, 0.0);
 
   std::vector<LowFidelityState> low_fidelity_states;
   std::vector<std::unique_ptr<LowFidelityOperations>> low_fidelity_operations;
@@ -241,6 +242,7 @@ void runSimulation(int argc, char* argv[]) {
     if (i_timestep % output_parameters.output_stride == 0) {
       const std::string prefix = "particle_moments";
       dumpParticleMoments(particle_operations,particle_container, prefix, i_timestep, end_time);
+      dumpParticles(particle_container, end_time, output_parameters.particle_dump_filename);
       if (variance_reduction_parameters.strategy != VarianceReductionParameters::Strategy::None) {
         auto* ops = dynamic_cast<DGEulerOperations*>(low_fidelity_operations[0].get());
         if (!ops) throw std::runtime_error("Cannot compute variance reduced moments for low_fidelity_operations that is not DGEulerOperations.");
