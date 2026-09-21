@@ -92,9 +92,9 @@ void runSimulation(int argc, char* argv[]) {
   );
 
   particle_operations.setVarianceReductionParameters(variance_reduction_parameters);
-  std::random_device rd;
+  //std::random_device rd;
   //std::default_random_engine generator(rd());
-  RandomNumberGenerator generator(rd());
+  RandomNumberGenerator generator;
   ParticleContainer particle_container = buildParticlesFromYaml(
     main["Particles"]["Initial Conditions"],
     species_map,
@@ -164,10 +164,6 @@ void runSimulation(int argc, char* argv[]) {
     species_map
   );
 
-  std::optional<MeshDataWriter> mesh_data_writer;
-  if (output_parameters.output_mesh_data)
-    mesh_data_writer.emplace(output_parameters.mesh_output_folder_name, *mesh);
-
   for (int i = 0; i < std::ssize(low_fidelity_field_states); ++i) {
     IntegratedCharge low_fidelity_integrated_charge = low_fidelity_operations[i]->assembleCharge(low_fidelity_states[i]);
     electrostatic_field_operations->fieldSolve(low_fidelity_field_states[i], low_fidelity_integrated_charge);
@@ -185,6 +181,18 @@ void runSimulation(int argc, char* argv[]) {
   }
 
   electrostatic_field_operations->fieldSolve(particle_electrostatic_field_state, particle_charge);
+
+  std::optional<MeshDataWriter> mesh_data_writer;
+  if (output_parameters.output_mesh_data) {
+    mesh_data_writer.emplace(output_parameters.mesh_output_folder_name, *mesh);
+    mesh_data_writer->output(
+      particle_electrostatic_field_state,
+      particle_charge,
+      low_fidelity_field_states,
+      low_fidelity_states,
+      0,
+      0.0);
+  }
 
   const int num_low_fidelity_models = std::ssize(low_fidelity_states);
   std::optional<TextDataWriter> text_data_writer;
