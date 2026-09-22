@@ -25,7 +25,7 @@ void dumpParticles(const ParticleContainer& particles, double simulation_time, c
 
   std::vector<double> x, y, z, vx, vy, vz, weight, particle_distribution_function_value;
   std::vector<int> element;
-  std::vector<std::string> species_name; 
+  std::vector<std::string> species_name;
   for (const Particle& particle : particles) {
     if (particle.is_alive) {
       x.push_back(particle.position[0]);
@@ -37,7 +37,7 @@ void dumpParticles(const ParticleContainer& particles, double simulation_time, c
       weight.push_back(particle.weight);
       element.push_back(particle.element);
       particle_distribution_function_value.push_back(particle.particle_distribution_function_value);
-      species_name.push_back(particle.species.name);  
+      species_name.push_back(particle.species.name);
     }
   }
 
@@ -112,11 +112,12 @@ void dumpParticleMoments(
   const ParticleContainer& particles,
   const std::string& file_prefix,
   const int step,
-  const double time) 
+  const double time)
 {
-  std::unordered_map<Species, mfem::Vector> number_density     = particle_operations.getNumberDensity(particles);
-  std::unordered_map<Species, mfem::DenseMatrix> bulk_velocity = particle_operations.getBulkVelocity(particles,true);
-  std::unordered_map<Species, mfem::Vector> temperature        = particle_operations.getTemperature(particles,false,false);
+  ParticleMoments particle_moments = particle_operations.getParticleMoments(particles);
+  auto number_density = particle_moments.number_density;
+  auto bulk_velocity = particle_moments.bulk_velocity;
+  auto temperature = particle_moments.temperature;
 
   mfem::Mesh& mesh = particle_operations.getMesh();
   const int nelem = mesh.GetNE();
@@ -128,7 +129,7 @@ void dumpParticleMoments(
     if (step > 0)
       out.open(filename, std::ios::out | std::ios::app);
     else
-      out.open(filename, std::ios::out | std::ios::trunc);  
+      out.open(filename, std::ios::out | std::ios::trunc);
     if (!out) throw std::runtime_error("Failed to open CSV file: " + filename);
 
     out.setf(std::ios::scientific);
@@ -143,7 +144,115 @@ void dumpParticleMoments(
       mfem::Vector element_point(3);
       element_point = 0.0;
       const int dim = mesh.SpaceDimension();
-      mfem::Vector element_point_view(element_point.GetData(), dim);   
+      mfem::Vector element_point_view(element_point.GetData(), dim);
+      mesh.GetElementCenter(e, element_point_view);
+
+      const mfem::Vector bulk_velocity_in_element(bulk_velocity.at(species).GetColumn(e), 3);
+
+      out << step << ","
+          << time << ","
+          << e << ","
+          << element_point(0) << "," << element_point(1) << "," << element_point(2) << ","
+          << number_density.at(species)(e) << ","
+          << temperature.at(species)(e) << ","
+          << bulk_velocity_in_element(0) << "," << bulk_velocity_in_element(1) << "," << bulk_velocity_in_element(2) << "\n";
+    }
+  }
+}
+
+void dumpVarianceReducedParticleMoments(
+  ParticleOperations& particle_operations,
+  const ParticleContainer& particles,
+  const LowFidelityState& low_fidelity_state,
+  const DGEulerOperations& low_fidelity_operations,
+  const std::string& file_prefix,
+  const int step,
+  const double time)
+{
+  ParticleMoments variance_reduced_particle_moments = particle_operations.getVarianceReducedParticleMoments(particles,low_fidelity_state,low_fidelity_operations,false);
+  auto variance_reduced_number_density = variance_reduced_particle_moments.number_density;
+  auto variance_reduced_bulk_velocity = variance_reduced_particle_moments.bulk_velocity;
+  auto variance_reduced_temperature = variance_reduced_particle_moments.temperature;
+
+  mfem::Mesh& mesh = particle_operations.getMesh();
+  const int nelem = mesh.GetNE();
+
+  for (const auto & [species, _] : variance_reduced_number_density) {
+    std::string filename = file_prefix + "_" + species.name + ".csv";
+
+    std::ofstream out;
+    if (step > 0)
+      out.open(filename, std::ios::out | std::ios::app);
+    else
+      out.open(filename, std::ios::out | std::ios::trunc);
+    if (!out) throw std::runtime_error("Failed to open CSV file: " + filename);
+
+    out.setf(std::ios::scientific);
+    out << std::setprecision(17);
+
+    const bool need_header = fileIsEmpty(filename);
+    if (need_header) {
+      out << "step,time,elem,x,y,z,number_density,temperature,bulk_velocity_0,bulk_velocity_1,bulk_velocity_2\n";
+    }
+
+    for (int e = 0; e < nelem; ++e) {
+      mfem::Vector element_point(3);
+      element_point = 0.0;
+      const int dim = mesh.SpaceDimension();
+      mfem::Vector element_point_view(element_point.GetData(), dim);
+      mesh.GetElementCenter(e, element_point_view);
+
+      const mfem::Vector bulk_velocity_in_element(variance_reduced_bulk_velocity.at(species).GetColumn(e), 3);
+
+      out << step << ","
+          << time << ","
+          << e << ","
+          << element_point(0) << "," << element_point(1) << "," << element_point(2) << ","
+          << variance_reduced_number_density.at(species)(e) << ","
+          << variance_reduced_temperature.at(species)(e) << ","
+          << bulk_velocity_in_element(0) << "," << bulk_velocity_in_element(1) << "," << bulk_velocity_in_element(2)
+          << "\n";
+    }
+  }
+}
+
+void dumpLowFidelityMoments(
+  const LowFidelityState& low_fidelity_state,
+  const DGEulerOperations& low_fidelity_operations,
+  const std::string& file_prefix,
+  const int step,
+  const double time)
+{
+  std::unordered_map<Species, mfem::Vector> number_density = low_fidelity_operations.getCellAveragedNumberDensity(low_fidelity_state);
+  std::unordered_map<Species, mfem::DenseMatrix> bulk_velocity = low_fidelity_operations.getCellAveragedBulkVelocity(low_fidelity_state);
+  std::unordered_map<Species, mfem::Vector> temperature = low_fidelity_operations.getCellAveragedTemperature(low_fidelity_state);
+
+  mfem::Mesh& mesh = low_fidelity_operations.getMesh();
+  const int nelem = mesh.GetNE();
+
+  for (const auto & [species, _] : number_density) {
+    std::string filename = file_prefix + "_" + species.name + ".csv";
+
+    std::ofstream out;
+    if (step > 0)
+      out.open(filename, std::ios::out | std::ios::app);
+    else
+      out.open(filename, std::ios::out | std::ios::trunc);
+    if (!out) throw std::runtime_error("Failed to open CSV file: " + filename);
+
+    out.setf(std::ios::scientific);
+    out << std::setprecision(17);
+
+    const bool need_header = fileIsEmpty(filename);
+    if (need_header) {
+      out << "step,time,elem,x,y,z,number_density,temperature,bulk_velocity_0,bulk_velocity_1,bulk_velocity_2\n";
+    }
+
+    for (int e = 0; e < nelem; ++e) {
+      mfem::Vector element_point(3);
+      element_point = 0.0;
+      const int dim = mesh.SpaceDimension();
+      mfem::Vector element_point_view(element_point.GetData(), dim);
       mesh.GetElementCenter(e, element_point_view);
 
       const mfem::Vector bulk_velocity_in_element(bulk_velocity.at(species).GetColumn(e), 3);

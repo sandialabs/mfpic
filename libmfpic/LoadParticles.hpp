@@ -20,13 +20,15 @@ namespace mfpic {
  * @param[in]     source_parameters          Parameters for the particle distribution.
  * @param[in,out] generator                  Random number generator.
  * @param[in]     mesh                       Mesh in which to create particles.
+ * @param[in]     velocity_dims              Number of velocity dimensions
  *
  * @returns Container of created particles.
  */
 ParticleContainer loadParticles(
   const SourceParameters& source_parameters,
   RandomNumberGenerator& generator,
-  std::shared_ptr<mfem::Mesh> mesh
+  std::shared_ptr<mfem::Mesh> mesh,
+  const int velocity_dims
 );
 
 } // namespace mfpic

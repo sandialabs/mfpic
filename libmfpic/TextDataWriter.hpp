@@ -8,6 +8,7 @@ namespace mfpic {
 
 class ElectrostaticFieldOperations;
 class ElectrostaticFieldState;
+class IntegratedCharge;
 class LowFidelityOperations;
 class LowFidelityState;
 
@@ -16,7 +17,10 @@ public:
   /**
    * @brief Construct a new Text Data Writer object
    */
-  TextDataWriter(const int num_low_fidelity_models);
+  TextDataWriter(
+    const int num_low_fidelity_models,
+    const std::string &base_filename
+  );
 
   /**
    * @brief Output data to the text files
@@ -29,6 +33,7 @@ public:
    */
   void output(
     const ElectrostaticFieldState& electrostatic_field_state,
+    const IntegratedCharge& integrated_charge,
     const std::vector<ElectrostaticFieldState>& low_fidelity_field_states,
     const ElectrostaticFieldOperations& electrostatic_field_operations,
     const std::vector<LowFidelityState>& low_fidelity_states,

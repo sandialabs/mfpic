@@ -15,6 +15,7 @@
 #include <gtest/gtest.h>
 
 #include <filesystem>
+#include <mfem/fem/fe/fe_base.hpp>
 #include <ranges>
 
 namespace {
@@ -41,6 +42,7 @@ TEST(TextDataWriter, constructorAndOutput) {
   auto pinning = std::make_unique<Pinning>();
   ElectrostaticFieldOperations electrostatic_field_operations(electrostatic_discretization, std::move(pinning));
   ElectrostaticFieldState particle_electrostatic_field_state(electrostatic_discretization);
+  IntegratedCharge particle_charge(electrostatic_discretization);
 
   constexpr int num_species = 1;
   const std::vector<Species> species_list(num_species);
@@ -70,12 +72,13 @@ TEST(TextDataWriter, constructorAndOutput) {
     low_fidelity_operations.push_back(std::move(dg_euler_operations));
   }
 
-  TextDataWriter text_data_writer(num_low_fidelity_models);
+  TextDataWriter text_data_writer(num_low_fidelity_models,"output.csv");
 
   constexpr int i_timestep = 2;
   constexpr double time = 1.3;
   text_data_writer.output(
     particle_electrostatic_field_state,
+    particle_charge,
     low_fidelity_field_states,
     electrostatic_field_operations,
     low_fidelity_states,

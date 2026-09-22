@@ -1,3 +1,4 @@
+#include <libmfpic/BuildVarianceReductionParametersFromYaml.hpp>
 #include <libmfpic/CollisionOperations.hpp>
 #include <libmfpic/ElectrostaticFieldOperations.hpp>
 #include <libmfpic/ElectromagneticFieldsEvaluator.hpp>
@@ -19,10 +20,9 @@ void VerletTimeIntegrator::advanceTimestep(
   const std::vector<std::unique_ptr<CollisionOperations>>& collision_operations,
   ElectrostaticFieldState& particle_field_state,
   ElectrostaticFieldOperations& field_operations,
+  IntegratedCharge& particle_charge,
   double dt) const
 {
-  IntegratedCharge particle_charge(discretization_);
-
   for (int i = 0; i < std::ssize(low_fidelity_operations); i++) {
     const ElectrostaticFieldState& field_state = push_lf_with_particle_fields_ ? particle_field_state : low_fidelity_field_states[i];
     IntegratedCharge low_fidelity_charge(discretization_);
@@ -37,8 +37,17 @@ void VerletTimeIntegrator::advanceTimestep(
   particle_container = particle_operations.accelerate(dt/2, particle_container, particle_field_state);
   particle_container = particle_operations.move(dt, particle_container);
   particle_container.cleanOutDeadParticles();
-  particle_charge.addCharge(particle_operations.assembleCharge(particle_container));
 
+  const VarianceReductionParameters variance_reduction_parameters = particle_operations.getVarianceReductionParameters();
+  if ((variance_reduction_parameters.strategy != VarianceReductionParameters::Strategy::None) &&
+      (variance_reduction_parameters.use_variance_reduced_electric_field))
+  {
+    particle_charge = particle_operations.assembleVarianceReducedCharge(particle_container,low_fidelity_states[0],*low_fidelity_operations[0]);
+  }
+  else
+  {
+    particle_charge = particle_operations.assembleCharge(particle_container);
+  }
   field_operations.fieldSolve(particle_field_state, particle_charge);
 
   for (int i = 0; i < std::ssize(low_fidelity_operations); i++) {
@@ -46,7 +55,6 @@ void VerletTimeIntegrator::advanceTimestep(
     const LowFidelityOperations& operations = *low_fidelity_operations[i];
     LowFidelityState& low_fidelity_state = low_fidelity_states[i];
     low_fidelity_state = operations.accelerate(dt/2, low_fidelity_state, field_state);
-
     low_fidelity_state = operations.addVolumetricSource(dt, low_fidelity_state);
   }
 

@@ -536,7 +536,8 @@ TEST(DGEulerOperations, evaluateParticleDistributionFunctionCorrectIn1D) {
   const mfem::Vector position({0.5,0.0,0.0});
   const mfem::Vector particle_position(position.GetData(), 1); 
   const mfem::Vector velocity({bulk_velocity(0),0.0,0.0});
-  double particle_distribution_value = dg_euler_operations.evaluateParticleDistributionFunction(low_fidelity_state,particle_position,velocity,0,electron_species);
+  const int low_fidelity_species_index = low_fidelity_state.getSpeciesIndex(electron_species);
+  double particle_distribution_value = dg_euler_operations.evaluateParticleDistributionFunction(low_fidelity_state,particle_position,velocity,0,low_fidelity_species_index);
 
   mfem::Vector prim = euler::constructPrimitiveState(number_density, bulk_velocity, temperature);
   const double sigma = std::sqrt(constants::boltzmann_constant * temperature / electron_species.mass);
@@ -659,5 +660,49 @@ TEST(DGEulerOperations, computeTotalKineticEnergy_CorrectNonZeroKineticEnergyCom
   EXPECT_DOUBLE_EQ(expected_total_kinetic_energy, total_kinetic_energy);
 }
 
+TEST(DGEulerOperations, LowFidelityMomentsAreCorrectForMaxwellianIn3D) {
+  Species species{.charge = -constants::elementary_charge, .mass = constants::electron_mass};
+  constexpr double number_density = 1e22;
+  constexpr double temperature = 300;
+  mfem::Vector bulk_velocity({293.0,581.0,902.0});
+
+  const int num_elems = 5;
+  constexpr int dg_order = 0;
+  constexpr int num_equations = 5;
+  constexpr mfem::Element::Type element_type = mfem::Element::HEXAHEDRON;
+  std::shared_ptr<mfem::Mesh> mesh = std::make_shared<mfem::Mesh>(mfem::Mesh::MakeCartesian3D(
+    num_elems,
+    num_elems,
+    num_elems,
+    element_type
+  ));
+
+  Discretization dg_discretization(mesh.get(), dg_order, FETypes::DG, num_equations);
+
+  constexpr int charge_order = 1;
+  Discretization charge_discretization(mesh.get(), charge_order, FETypes::HGRAD);
+
+  mfem::FiniteElementSpace finite_element_space = dg_discretization.getFeSpace();
+  std::shared_ptr<DGEulerAssembly> operator_ptr = std::make_shared<DGEulerAssembly>(finite_element_space, species);
+  std::vector<std::shared_ptr<DGEulerAssembly>> dg_operators({operator_ptr});
+  DGEulerOperations dg_euler_operations(charge_discretization, dg_operators);
+
+  std::vector<std::unique_ptr<SourceParameters>> list_of_parameters;
+  list_of_parameters.push_back(std::make_unique<ConstantSourceParameters>(species, number_density, temperature,bulk_velocity));
+  LowFidelityState low_fidelity_state = buildEulerState(dg_discretization, list_of_parameters);
+
+  std::unordered_map<Species, mfem::Vector> computed_number_density = dg_euler_operations.getCellAveragedNumberDensity(low_fidelity_state);
+  std::unordered_map<Species, mfem::DenseMatrix> computed_bulk_velocity = dg_euler_operations.getCellAveragedBulkVelocity(low_fidelity_state);
+  std::unordered_map<Species, mfem::Vector> computed_temperature = dg_euler_operations.getCellAveragedTemperature(low_fidelity_state);
+
+  for (int elem_id = 0; elem_id < num_elems; ++elem_id)
+  {
+    EXPECT_DOUBLE_EQ(computed_number_density.at(species)(elem_id),number_density);
+    EXPECT_DOUBLE_EQ(computed_bulk_velocity.at(species)(0,elem_id),bulk_velocity(0));
+    EXPECT_DOUBLE_EQ(computed_bulk_velocity.at(species)(1,elem_id),bulk_velocity(1));
+    EXPECT_DOUBLE_EQ(computed_bulk_velocity.at(species)(2,elem_id),bulk_velocity(2));
+    EXPECT_DOUBLE_EQ(computed_temperature.at(species)(elem_id),temperature);
+  }
+}
 
 } // namespace

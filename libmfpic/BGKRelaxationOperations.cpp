@@ -17,16 +17,15 @@ void BGKRelaxationOperations::performCollisions(
   ParticleContainer& particles,
   ParticleOperations& particle_operations
 ) const {
-  const std::unordered_map<Species, mfem::Vector>& number_densities = particle_operations.getNumberDensity(particles);
-  std::unordered_map<Species, mfem::DenseMatrix>& bulk_velocities = particle_operations.getBulkVelocity(particles);
-  constexpr bool recompute_lower_order_moments = false;
-  const std::unordered_map<Species, mfem::Vector>& temperatures = particle_operations.getTemperature(
-    particles,
-    recompute_lower_order_moments,
-    recompute_lower_order_moments
-  );
+
+  //TODO: Collisions with variance reduced or standard moments?
+  ParticleMoments particle_moments = particle_operations.getParticleMoments(particles);
+  auto number_densities = particle_moments.number_density;
+  auto bulk_velocities = particle_moments.bulk_velocity;
+  auto temperatures = particle_moments.temperature;
 
   std::uniform_real_distribution<double> uniform_unit_interval_distribution;
+  const int velocity_dims = particle_operations.getVelocityDims();
 
   for (Particle& particle : particles) {
     if (not (particle.is_alive and particle.species == species_to_relax_)) {
@@ -38,7 +37,7 @@ void BGKRelaxationOperations::performCollisions(
       const int element = particle.element;
       const mfem::Vector bulk_velocity(bulk_velocities.at(species_to_relax_).GetColumn(element), 3);
       const double temperature = temperatures.at(species_to_relax_)[element];
-      particle.velocity = generateMaxwellianVelocity(bulk_velocity, temperature, species_to_relax_.mass, generator);
+      particle.velocity = generateMaxwellianVelocity(bulk_velocity, temperature, species_to_relax_.mass, generator,velocity_dims);
 
       const mfem::Vector primitive_state {
         number_densities.at(species_to_relax_)(element),
@@ -47,7 +46,8 @@ void BGKRelaxationOperations::performCollisions(
         bulk_velocity(2),
         temperature};
 
-      particle.particle_distribution_function_value = euler::evaluateMaxwellian(primitive_state, particle.velocity, species_to_relax_);
+      const mfem::Vector particle_velocity(particle.velocity.GetData(), velocity_dims);
+      particle.particle_distribution_function_value = euler::evaluateMaxwellian(primitive_state, particle_velocity, species_to_relax_);
     }
   }
 }

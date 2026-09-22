@@ -193,11 +193,11 @@ TEST(ConjugateGradientLinearSolver, InvertElectrostaticMatrix) {
   particle_container.addParticles(loadParticles(
     ConstantSourceParameters(electron_species, particle_source_state_parameters, num_particles),
     generator,
-    mesh));
+    mesh,3));
   particle_container.addParticles(loadParticles(
     ConstantSourceParameters(proton_species, particle_source_state_parameters, num_particles),
     generator,
-    mesh));
+    mesh,3));
 
   IntegratedCharge integrated_charge = particle_operations.assembleCharge(particle_container);
   mfem::Vector integrated_charge_vector = integrated_charge.getIntegratedCharge();

@@ -32,7 +32,8 @@ mfem::Vector generateIsotropicKappaVelocity(
   double temperature,
   double kappa,
   double mass,
-  RandomNumberGenerator& generator)
+  RandomNumberGenerator& generator,
+  const int velocity_dims)
 {
   assert(bulk_velocity.Size() == 3);
   assert(temperature >= 0.0);
@@ -57,11 +58,12 @@ mfem::Vector generateIsotropicKappaVelocity(
     2.0);
   const double chi_squared = gamma_distribution(generator);
   const double scale = std::sqrt(nu / chi_squared);
-  for (int dimension = 0; dimension < 3; ++dimension) {
+  for (int dimension = 0; dimension < velocity_dims; ++dimension) {
     velocity(dimension) +=
       w * scale * normal_distribution(generator);
   }
   return velocity;
 }
+
 
 } // namespace mfpic

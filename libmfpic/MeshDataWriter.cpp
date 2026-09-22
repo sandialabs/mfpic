@@ -1,4 +1,5 @@
 #include <libmfpic/ElectrostaticFieldState.hpp>
+#include <libmfpic/IntegratedCharge.hpp>
 #include <libmfpic/LowFidelityState.hpp>
 #include <libmfpic/MeshDataWriter.hpp>
 
@@ -8,6 +9,7 @@ MeshDataWriter::MeshDataWriter(const std::string& name, mfem::Mesh& mesh) : para
 
 void MeshDataWriter::output(
   ElectrostaticFieldState& particle_field_state,
+  IntegratedCharge& particle_charge,
   std::vector<ElectrostaticFieldState>& low_fidelity_field_states,
   std::vector<LowFidelityState>& low_fidelity_states,
   const int i_time_step,
@@ -50,6 +52,12 @@ void MeshDataWriter::output(
 
   register_potential_and_e_field_for_model("", particle_field_state);
 
+  mfem::GridFunction charge_grid_function(
+  particle_field_state.getPotential().FESpace());
+  const mfem::Vector& charge = particle_charge.getIntegratedCharge();
+  charge_grid_function = charge;
+  paraview_data_collection_.RegisterField("integrated_charge", &charge_grid_function);
+
   if (low_fidelity_states.size() > 0) {
     for (unsigned int i_lf_model = 0; i_lf_model < num_lf_models; ++i_lf_model) {
       LowFidelityState& low_fidelity_state = low_fidelity_states[i_lf_model];
@@ -64,7 +72,6 @@ void MeshDataWriter::output(
       register_potential_and_e_field_for_model(suffix, low_fidelity_field_states[i_lf_model]);
     }
   }
-
   paraview_data_collection_.Save();
 }
 

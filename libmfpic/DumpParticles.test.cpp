@@ -141,7 +141,7 @@ TEST(DumpParticles, ReadParticlesMatchDumpedParticles) {
       .element = element,
       .species = default_species,
       .weight = weight,
-      .particle_distribution_function_value = particle_distribution_function_value
+      .particle_distribution_function_value = particle_distribution_function_value,
     });
   }
 
@@ -221,7 +221,8 @@ TEST(DumpParticles, CSVCorrectForOneSpecies)
   ParticleContainer particles = loadParticles(
     ConstantSourceParameters(default_species, source_state_parameters, num_particles),
     generator,
-    mesh
+    mesh,
+    3
   );
 
   ParticleOperations particle_operations(
@@ -239,9 +240,10 @@ TEST(DumpParticles, CSVCorrectForOneSpecies)
   const int steps = 10;
   const double dt = 0.25;
 
-  auto& computed_number_density = particle_operations.getNumberDensity(particles);
-  auto& computed_bulk_velocity  = particle_operations.getBulkVelocity(particles);
-  auto& computed_temperature    = particle_operations.getTemperature(particles);
+  ParticleMoments particle_moments = particle_operations.getParticleMoments(particles);
+  auto& computed_number_density = particle_moments.number_density;
+  auto& computed_bulk_velocity = particle_moments.bulk_velocity;
+  auto& computed_temperature = particle_moments.temperature;
 
   for (int step = 0; step < steps; ++step)
     dumpParticleMoments(particle_operations,particles, prefix, step, dt * step);
@@ -305,13 +307,15 @@ TEST(DumpParticles, CSVCorrectForTwoSpecies)
   ParticleContainer particles = loadParticles(
     ConstantSourceParameters(species_1, source_state_parameters, num_particles),
     generator,
-    mesh
+    mesh,
+    3
   );
 
   particles.addParticles(loadParticles(
     ConstantSourceParameters(species_2, source_state_parameters, num_particles),
     generator,
-    mesh
+    mesh,
+    3
   ));
 
   ParticleOperations particle_operations(
@@ -329,9 +333,11 @@ TEST(DumpParticles, CSVCorrectForTwoSpecies)
   const int steps = 10;
   const double dt = 0.25;
 
-  auto& computed_number_density = particle_operations.getNumberDensity(particles);
-  auto& computed_bulk_velocity  = particle_operations.getBulkVelocity(particles);
-  auto& computed_temperature    = particle_operations.getTemperature(particles);
+  ParticleMoments particle_moments = particle_operations.getParticleMoments(particles);
+  auto& computed_number_density = particle_moments.number_density;
+  auto& computed_bulk_velocity = particle_moments.bulk_velocity;
+  auto& computed_temperature = particle_moments.temperature;
+
 
   for (int step = 0; step < steps; ++step)
     dumpParticleMoments(particle_operations,particles, prefix, step, dt * step);

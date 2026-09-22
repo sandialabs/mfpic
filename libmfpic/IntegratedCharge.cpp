@@ -34,4 +34,8 @@ double IntegratedCharge::getIntegratedChargeValue(int dof_id) {
   return integrated_charge_(dof_id);
 }
 
+double IntegratedCharge::totalCharge() const {
+  return integrated_charge_.Sum();
+}
+
 } // namespace mfpic
