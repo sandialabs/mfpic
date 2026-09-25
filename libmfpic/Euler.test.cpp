@@ -269,6 +269,45 @@ TEST(KappaDistribution1DProduct, IntegratesToOnein3D)
   EXPECT_NEAR(integral, 1.0, 1e-5);
 }
 
+TEST(IsotropicKappaDistribution, IntegratesToOneWithTemperatureVarianceIn2D)
+{
+  const double kappa = 6.0;
+  constexpr double number_density = 1.0;
+  const mfem::Vector bulk_velocity{5.4, 4.7, 8.3};
+  constexpr double temperature = 305.1;
+  const Species species{.mass = constants::electron_mass};
+  mfem::Vector prim(5);
+  prim(euler::PrimitiveVariables::NUMBER_DENSITY) = number_density;
+  prim(euler::PrimitiveVariables::X_BULK_VELOCITY) = bulk_velocity(0);
+  prim(euler::PrimitiveVariables::Y_BULK_VELOCITY) = bulk_velocity(1);
+  prim(euler::PrimitiveVariables::Z_BULK_VELOCITY) = bulk_velocity(2);
+  prim(euler::PrimitiveVariables::TEMPERATURE) = temperature;
+
+  const double thermal_speed_squared = constants::boltzmann_constant * temperature / species.mass;
+  const double L = 40.0 * std::sqrt(thermal_speed_squared);
+  const int N = 400;
+  const double dv = 2.0 * L / (N - 1);
+  double integral = 0.0;
+  double second_moment = 0.0;
+  mfem::Vector v(2);
+  for (int i = 0; i < N; ++i) {
+    const double cx = -L + i * dv;
+    v(0) = bulk_velocity(0) + cx;
+    for (int j = 0; j < N; ++j) {
+      const double cy = -L + j * dv;
+      v(1) = bulk_velocity(1) + cy;
+      const double value = euler::evaluateIsotropicKappaDistribution(prim, v, kappa, species);
+      integral += value;
+      second_moment += value * (cx * cx + cy * cy);
+    }
+  }
+  integral *= (dv * dv);
+  second_moment *= (dv * dv);
+  EXPECT_NEAR(integral, 1.0, 1e-5);
+  // Each thermal component has variance k_B T / m, consistent with T = m <|c|^2> / (d k_B).
+  EXPECT_NEAR(second_moment / (2.0 * thermal_speed_squared), 1.0, 1e-3);
+}
+
 TEST(IsotropicKappaDistribution, IntegratesToOnein3D)
 {
   const double kappa = 6.0;

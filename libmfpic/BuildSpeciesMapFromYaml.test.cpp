@@ -81,6 +81,20 @@ electron:
   }
 }
 
+TEST(BuildSpeciesMapFromYaml, SpecificHeatRatioDefaultMatchesVelocityDimensions) {
+  const std::string yaml = R"(
+electron:
+  Charge: 1.0
+  Mass: 2.0
+)";
+
+  YAML::Node node = YAML::Load(yaml);
+  for (const auto& [velocity_dims, expected_specific_heat_ratio] : {std::pair{1, 3.0}, std::pair{2, 2.0}, std::pair{3, 5. / 3.}}) {
+    std::unordered_map<std::string, Species> species_map = buildSpeciesMapFromYaml(node, velocity_dims);
+    EXPECT_DOUBLE_EQ(species_map.at("electron").specific_heat_ratio, expected_specific_heat_ratio);
+  }
+}
+
 TEST(BuildSpeciesMapFromYaml, SpecificHeatRatiosIsPickedUpWhenSpecified) {
   constexpr double specific_heat_ratio = 1.4;
   const std::string yaml = R"(

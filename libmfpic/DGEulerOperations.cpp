@@ -437,7 +437,7 @@ std::unordered_map<Species,mfem::Vector> DGEulerOperations::integralForVarianceR
       temperature_integral.at(current_species) = 0.0;
       const mfem::GridFunction& current_species_grid_function = current_species_state.getGridFunction();
       mfem::DenseMatrix fluid_state_at_integration_point_locations, integration_point_locations_in_physical_frame;
-      const double m_over_3kb = current_species.mass / (velocity_dims * constants::boltzmann_constant);
+      const double m_over_dkb = current_species.mass / (velocity_dims * constants::boltzmann_constant);
       for (int element=0; element<finite_element_space.GetNE(); element++)
       {
         const mfem::IntegrationRule &integration_rule = mfem::IntRules.Get(
@@ -460,11 +460,13 @@ std::unordered_map<Species,mfem::Vector> DGEulerOperations::integralForVarianceR
           fluid_state_at_integration_point_locations.GetColumn(ipoint, fluid_state);
           mfem::Vector primitive_state = euler::convertFromConservativeToPrimitive(fluid_state, current_species);
           const double weight = integration_point.weight * element_transformation->Weight();
-          const double bulk_velocity_mag_squared
-            = primitive_state(euler::PrimitiveVariables::X_BULK_VELOCITY) *primitive_state(euler::PrimitiveVariables::X_BULK_VELOCITY)
-            + primitive_state(euler::PrimitiveVariables::Y_BULK_VELOCITY) *primitive_state(euler::PrimitiveVariables::Y_BULK_VELOCITY)
-            + primitive_state(euler::PrimitiveVariables::Z_BULK_VELOCITY) *primitive_state(euler::PrimitiveVariables::Z_BULK_VELOCITY);
-          temperature_integral.at(current_species)(element) += weight * primitive_state(euler::PrimitiveVariables::NUMBER_DENSITY) * (primitive_state(euler::PrimitiveVariables::TEMPERATURE) + m_over_3kb * bulk_velocity_mag_squared);
+          // Match the particle side, which only sums over the first velocity_dims components.
+          double bulk_velocity_mag_squared = 0.0;
+          for (int vel_dim = 0; vel_dim < velocity_dims; ++vel_dim) {
+            const double bulk_velocity_component = primitive_state(euler::PrimitiveVariables::X_BULK_VELOCITY + vel_dim);
+            bulk_velocity_mag_squared += bulk_velocity_component * bulk_velocity_component;
+          }
+          temperature_integral.at(current_species)(element) += weight * primitive_state(euler::PrimitiveVariables::NUMBER_DENSITY) * (primitive_state(euler::PrimitiveVariables::TEMPERATURE) + m_over_dkb * bulk_velocity_mag_squared);
         }
       }
     }
