@@ -100,6 +100,7 @@ Mesh:
     Lengths: list of doubles #[m]
     Number of Elements: list of integers
     Periodic Dimensions: list of strings
+    Number of Velocity Dimensions: integer (default = 3)
 ```
 
 **``Type``**: The element type of the mesh, the available options are `line`, `quad`, `tri`, `hex`, and `tet`.
@@ -114,6 +115,12 @@ Mesh:
 
 **``Periodic Dimensions``**: A list of strings describing the dimensions that should be made periodic.
     The valid strings are `x`, `y`, and `z`.
+
+**``Number of Velocity Dimensions``**: The number of velocity components $d$ (1, 2, or 3) that carry thermal spread.
+    Particle velocities are always stored as 3-vectors, but only the first $d$ components are sampled thermally; the remaining
+    components hold the bulk velocity only. Particle temperatures are computed as $T = m \langle |c|^2 \rangle / (d k_B)$ over
+    those $d$ components, and the default species `Specific Heat Ratio` is $(d + 2) / d$ so the Euler fluids stay consistent.
+    Currently only read for inline meshes.
 
 
 #### Example
@@ -200,7 +207,7 @@ Species:
         Mass: double #[kg]
         Charge: double #[C]
         Charge Over Mass: double (optional) #[C/kg]
-        Specific Heat Ratio: double (default = 5/3)
+        Specific Heat Ratio: double (default = (d + 2) / d)
 ```
 
 **``Mass``**: Mass of each physical particle of the given species. Must be positive.
@@ -211,7 +218,10 @@ Species:
 If left unset, this is computed automatically from the given `Charge` and `Mass`.
 
 **``Specific Heat Ratio``**: Specific heat ratio of the species.
-Defaults to $5/3$, which is the specific heat ratio of a monatomic gas.
+Defaults to $(d + 2) / d$, the specific heat ratio of a monatomic gas with $d$ translational degrees of freedom, where $d$ is
+the `Number of Velocity Dimensions` of the mesh: $5/3$ for $d = 3$, $2$ for $d = 2$, and $3$ for $d = 1$.
+This keeps the Euler fluid consistent with the particle temperature $T = m \langle |c|^2 \rangle / (d k_B)$.
+A value that does not match $(d + 2) / d$ is used as given, but a warning is printed.
 
 #### Example
 ```yaml

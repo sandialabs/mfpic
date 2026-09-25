@@ -3,11 +3,13 @@
 
 #include <yaml-cpp/yaml.h>
 
+#include <cmath>
+#include <iostream>
 #include <utility>
 
 namespace mfpic {
 
-std::unordered_map<std::string, Species> buildSpeciesMapFromYaml(const YAML::Node& species_nodes) {
+std::unordered_map<std::string, Species> buildSpeciesMapFromYaml(const YAML::Node& species_nodes, const int velocity_dims) {
   std::unordered_map<std::string, Species> species_map;
   if (species_nodes.IsMap()) {
     for (YAML::const_iterator it = species_nodes.begin(); it != species_nodes.end(); it++) {
@@ -22,10 +24,17 @@ std::unordered_map<std::string, Species> buildSpeciesMapFromYaml(const YAML::Nod
         charge_over_mass = charge_over_mass_node.as<double>();
       }
 
-      double specific_heat_ratio = 5. / 3.;
+      // Monatomic gas with velocity_dims translational degrees of freedom: gamma = (d + 2) / d.
+      const double consistent_specific_heat_ratio = (velocity_dims + 2.0) / velocity_dims;
+      double specific_heat_ratio = consistent_specific_heat_ratio;
       const YAML::Node& specific_heat_ratio_node = species_node["Specific Heat Ratio"];
       if (specific_heat_ratio_node) {
         specific_heat_ratio = specific_heat_ratio_node.as<double>();
+        if (std::abs(specific_heat_ratio - consistent_specific_heat_ratio) > 1e-12 * consistent_specific_heat_ratio) {
+          std::cerr << "Warning: Specific Heat Ratio " << specific_heat_ratio << " for species '" << species_name
+                    << "' does not match (d + 2) / d = " << consistent_specific_heat_ratio << " for "
+                    << velocity_dims << " velocity dimension(s)." << std::endl;
+        }
       }
 
       Species species{
