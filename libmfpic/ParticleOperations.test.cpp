@@ -1225,6 +1225,51 @@ TEST(ParticleOperations, ParticleMomentsCorrectForMaxwellian) {
   EXPECT_NEAR(computed_temperature, temperature, 5e-3*temperature);
 }
 
+TEST(ParticleOperations, TemperatureCorrectForMaxwellianWithAnyNumberOfVelocityDimensions) {
+  const int num_elems = 1;
+  std::shared_ptr<mfem::Mesh> mesh = std::make_shared<mfem::Mesh>(mfem::Mesh::MakeCartesian1D(num_elems, .234));
+  constexpr int order = 1;
+  Discretization discretization(mesh.get(),order);
+
+  const Species electron{.charge = -constants::elementary_charge, .mass = constants::electron_mass, .name = "electron"};
+  const std::unordered_map<std::string, Species> electron_species_map{{"electron", electron}};
+
+  // Bulk velocity is nonzero in every component so components without thermal spread must be excluded.
+  const mfem::Vector nominal_bulk_velocity({1.0e5, -2.0e5, 5.0e4});
+  constexpr double temperature = 11600.0;
+  constexpr double number_density = 1.0e18;
+  const SourceStateParameters source_state_parameters{
+    .number_density = number_density,
+    .bulk_velocity = nominal_bulk_velocity,
+    .temperature = temperature,
+  };
+  constexpr int num_particles = 200000;
+
+  for (int velocity_dims = 1; velocity_dims <= 3; ++velocity_dims) {
+    RandomNumberGenerator generator;
+    ParticleContainer particles = loadParticles(
+      ConstantSourceParameters(electron, source_state_parameters, num_particles),
+      generator,
+      mesh,
+      velocity_dims
+    );
+
+    ParticleOperations particle_operations(
+      discretization,
+      empty_particle_boundary_factory_list,
+      default_reflecting_particle_boundary_factory,
+      electron_species_map,
+      velocity_dims
+    );
+
+    ParticleMoments particle_moments = particle_operations.getParticleMoments(particles);
+    const double computed_temperature = particle_moments.temperature.at(electron)(0);
+
+    // Relative standard error of the temperature estimate is sqrt(2 / (velocity_dims * num_particles)) <= 0.32%.
+    EXPECT_NEAR(computed_temperature, temperature, 1e-2 * temperature) << "velocity_dims = " << velocity_dims;
+  }
+}
+
 TEST(ParticleOperations, ParticleMomentsCorrectForKnownParticles) {
 
   const int num_elems_in_one_direction = 2;

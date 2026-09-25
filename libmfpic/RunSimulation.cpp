@@ -12,6 +12,7 @@
 #include <libmfpic/DirichletBoundaryConditions.hpp>
 #include <libmfpic/DirichletBoundaryConditionsFactory.hpp>
 #include <libmfpic/Discretization.hpp>
+#include <libmfpic/Errors.hpp>
 #include <libmfpic/DumpParticles.hpp>
 #include <libmfpic/ElectrostaticFieldOperations.hpp>
 #include <libmfpic/ElectrostaticFieldState.hpp>
@@ -77,7 +78,7 @@ void runSimulation(int argc, char* argv[]) {
   if (main["Variance Reduction"].IsDefined())
     variance_reduction_parameters = buildVarianceReductionParametersFromYAML(main["Variance Reduction"]);
 
-  std::unordered_map<std::string, Species> species_map = buildSpeciesMapFromYaml(main["Species"]);
+  std::unordered_map<std::string, Species> species_map = buildSpeciesMapFromYaml(main["Species"], mesh_parameters.num_velocity_dims);
 
   const auto [particle_boundary_factories, default_particle_boundary_factory] = buildParticleBoundariesFromYaml(
     main["Particles"],
@@ -106,7 +107,7 @@ void runSimulation(int argc, char* argv[]) {
   if (output_parameters.output_particle_moments)
     dumpParticleMoments(particle_operations,particle_container, prefix, 0, 0.0);
   if (output_parameters.output_particles)
-    dumpParticles(particle_container, 0.0);
+    dumpParticles(particle_container, 0.0, output_parameters.particle_dump_filename);
 
   std::vector<LowFidelityState> low_fidelity_states;
   std::vector<std::unique_ptr<LowFidelityOperations>> low_fidelity_operations;
@@ -147,6 +148,12 @@ void runSimulation(int argc, char* argv[]) {
       dg_euler_sources);
     low_fidelity_operations.push_back(std::move(dg_euler_operations));
     low_fidelity_field_states.emplace_back(electrostatic_discretization);
+  }
+
+  if (variance_reduction_parameters.strategy != VarianceReductionParameters::Strategy::None && low_fidelity_operations.empty()) {
+    errorWithUserMessage(
+      "Variance Reduction requires a low-fidelity model to use as a control variate, "
+      "but no Euler Fluids Initial Conditions were given.");
   }
 
   if (variance_reduction_parameters.strategy != VarianceReductionParameters::Strategy::None && output_parameters.output_particle_moments) {

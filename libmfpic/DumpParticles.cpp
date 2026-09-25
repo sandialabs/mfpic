@@ -9,18 +9,20 @@
 #include <libmfpic/ParticleOperations.hpp>
 
 #include <unordered_map>
+#include <unordered_set>
 
 namespace mfpic {
 
-static bool file_is_created = false;
+// Files created by this process; the first dump to a given filename truncates it, later dumps append.
+static std::unordered_set<std::string> created_filenames;
 
 void dumpParticles(const ParticleContainer& particles, double simulation_time, const std::string filename) {
   hid_t file;
-  if (file_is_created) {
+  if (created_filenames.contains(filename)) {
     file = H5Fopen(filename.c_str(), H5F_ACC_RDWR, H5P_DEFAULT);
   } else {
     file = H5Fcreate(filename.c_str(), H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
-    file_is_created = true;
+    created_filenames.insert(filename);
   }
 
   std::vector<double> x, y, z, vx, vy, vz, weight, particle_distribution_function_value;

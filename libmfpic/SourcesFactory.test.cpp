@@ -196,6 +196,27 @@ TEST(SourcesFactory, GaussianSourceParametersEulerVectorCoefficient) {
   }
 }
 
+TEST(SourcesFactory, GaussianSourceParametersUseDistanceFromCenterIn2D) {
+  const mfem::Vector center{0.5, 0.25};
+  constexpr double standard_deviation = 0.1;
+
+  SourceStateParameters offsets{.number_density = 1e18, .bulk_velocity=mfem::Vector({0., 0., 0.})};
+  SourceStateParameters heights{.number_density = 1e19, .bulk_velocity=mfem::Vector({0., 0., 0.})};
+
+  GaussianSourceParameters parameters(
+    electron_species, center, standard_deviation, offsets, heights, 0.05, 0.001);
+
+  const std::vector<mfem::Vector> points{
+    mfem::Vector({0.5, 0.25}), mfem::Vector({0.6, 0.25}), mfem::Vector({0.5, 0.35}), mfem::Vector({0.6, 0.1})};
+  for (const mfem::Vector& x : points) {
+    const double dx = x[0] - center[0];
+    const double dy = x[1] - center[1];
+    const double exponential = exp(-0.5 * (dx * dx + dy * dy) / (standard_deviation * standard_deviation));
+    const double expected_number_density = heights.number_density * exponential + offsets.number_density;
+    EXPECT_DOUBLE_EQ(parameters.sourceStateParametersAtPoint(x).number_density, expected_number_density);
+  }
+}
+
 mfem::Vector evaluatePeriodicPerturbationAtPoint(
   const mfem::Vector x,
   const mfem::Vector& wavevector,

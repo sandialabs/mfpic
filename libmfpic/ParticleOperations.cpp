@@ -555,9 +555,10 @@ std::unordered_map<Species, mfem::Vector>& ParticleOperations::getTemperature(co
     const double sum_of_weights_in_element = sum_of_weights_.at(species)(elem_id);
     if (sum_of_weights_in_element <= 0.0) continue;
 
-    const mfem::Vector bulk_velocity_in_element(particle_moments_.bulk_velocity.at(species).GetColumn(elem_id), 3);
-    mfem::Vector fluctuation_velocity = particle.velocity;
-    fluctuation_velocity -= bulk_velocity_in_element;
+    // Only the first velocity_dims_ components carry thermal spread; the rest hold bulk velocity only.
+    const mfem::Vector bulk_velocity_in_element(particle_moments_.bulk_velocity.at(species).GetColumn(elem_id), velocity_dims_);
+    mfem::Vector fluctuation_velocity(velocity_dims_);
+    subtract(mfem::Vector(particle.velocity.GetData(), velocity_dims_), bulk_velocity_in_element, fluctuation_velocity);
     const double norm_squared = fluctuation_velocity * fluctuation_velocity;
 
     const double sum_of_squared_weights_in_element = sum_of_squared_weights.at(species)(elem_id);
@@ -570,7 +571,7 @@ std::unordered_map<Species, mfem::Vector>& ParticleOperations::getTemperature(co
       const double bias_corrected_weight = effective_num_particles / (effective_num_particles - 1.0) * particle.weight;
       particle_moments_.temperature.at(species)(elem_id) +=
         norm_squared * bias_corrected_weight * particle.species.mass /
-        (3.0 * constants::boltzmann_constant * sum_of_weights_in_element);
+        (velocity_dims_ * constants::boltzmann_constant * sum_of_weights_in_element);
     }
   }
 

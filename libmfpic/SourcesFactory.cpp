@@ -86,7 +86,7 @@ GaussianSourceParameters::GaussianSourceParameters(
 SourceStateParameters GaussianSourceParameters::sourceStateParametersAtPoint(const mfem::Vector& x) const {
   mfem::Vector shifted_x(x.Size());
   for (int i_dim = 0; i_dim < x.Size(); ++i_dim) {
-    shifted_x = x[i_dim] - center[i_dim];
+    shifted_x[i_dim] = x[i_dim] - center[i_dim];
   }
   const double exponential = exp(-0.5 * (shifted_x * shifted_x) / (standard_deviation * standard_deviation));
 
