@@ -367,10 +367,8 @@ Details for the (macro)particle physics are defined under the `Particles` key.
 An optional integer seed for the random number generator used by the particle-in-cell (PIC) code
 is given with the `Seed` key.
 This seed controls **all** PIC randomness — the initial particle load, per-timestep particle sources,
-and collisions — so that runs are reproducible. It does not affect the (deterministic) Euler fluid solve.
-If omitted, a fixed default seed is used, so the run is still deterministic.
-Setting the same `Seed` across otherwise-different input decks (for example, with and without a
-variance-reduced electric field) produces the same particle load, which is useful when comparing cases.
+and collisions — so that runs are reproducible.
+If omitted, a fixed default seed is used, so the run is deterministic.
 ```yaml
 Particles:
     Seed: integer
