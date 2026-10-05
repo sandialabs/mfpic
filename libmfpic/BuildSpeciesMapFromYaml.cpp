@@ -24,7 +24,6 @@ std::unordered_map<std::string, Species> buildSpeciesMapFromYaml(const YAML::Nod
         charge_over_mass = charge_over_mass_node.as<double>();
       }
 
-      // Monatomic gas with velocity_dims translational degrees of freedom: gamma = (d + 2) / d.
       const double consistent_specific_heat_ratio = (velocity_dims + 2.0) / velocity_dims;
       double specific_heat_ratio = consistent_specific_heat_ratio;
       const YAML::Node& specific_heat_ratio_node = species_node["Specific Heat Ratio"];

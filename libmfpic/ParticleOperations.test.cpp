@@ -1265,7 +1265,6 @@ TEST(ParticleOperations, TemperatureCorrectForMaxwellianWithAnyNumberOfVelocityD
     ParticleMoments particle_moments = particle_operations.getParticleMoments(particles);
     const double computed_temperature = particle_moments.temperature.at(electron)(0);
 
-    // Relative standard error of the temperature estimate is sqrt(2 / (velocity_dims * num_particles)) <= 0.32%.
     EXPECT_NEAR(computed_temperature, temperature, 1e-2 * temperature) << "velocity_dims = " << velocity_dims;
   }
 }

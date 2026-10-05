@@ -555,7 +555,6 @@ std::unordered_map<Species, mfem::Vector>& ParticleOperations::getTemperature(co
     const double sum_of_weights_in_element = sum_of_weights_.at(species)(elem_id);
     if (sum_of_weights_in_element <= 0.0) continue;
 
-    // Only the first velocity_dims_ components carry thermal spread; the rest hold bulk velocity only.
     const mfem::Vector bulk_velocity_in_element(particle_moments_.bulk_velocity.at(species).GetColumn(elem_id), velocity_dims_);
     mfem::Vector fluctuation_velocity(velocity_dims_);
     subtract(mfem::Vector(particle.velocity.GetData(), velocity_dims_), bulk_velocity_in_element, fluctuation_velocity);

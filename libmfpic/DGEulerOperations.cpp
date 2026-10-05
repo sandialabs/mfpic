@@ -366,9 +366,9 @@ std::unordered_map<Species,mfem::Vector> DGEulerOperations::integralForVarianceR
         mfem::Vector position(integration_point_locations_in_physical_frame.NumRows());
         mfem::Vector fluid_state(dg_assemblers_[ispecies]->getNumberOfEquations());
 
-        for (int ipoint = 0; ipoint < integration_rule.GetNPoints(); ++ipoint) 
+        for (int ipoint = 0; ipoint < integration_rule.GetNPoints(); ++ipoint)
         {
-          const mfem::IntegrationPoint &integration_point = integration_rule.IntPoint(ipoint); 
+          const mfem::IntegrationPoint &integration_point = integration_rule.IntPoint(ipoint);
           element_transformation->SetIntPoint(&integration_point);
           integration_point_locations_in_physical_frame.GetColumn(ipoint, position);
           fluid_state_at_integration_point_locations.GetColumn(ipoint, fluid_state);
@@ -408,9 +408,9 @@ std::unordered_map<Species,mfem::Vector> DGEulerOperations::integralForVarianceR
         mfem::Vector position(integration_point_locations_in_physical_frame.NumRows());
         mfem::Vector fluid_state(dg_assemblers_[ispecies]->getNumberOfEquations());
 
-        for (int ipoint = 0; ipoint < integration_rule.GetNPoints(); ++ipoint) 
+        for (int ipoint = 0; ipoint < integration_rule.GetNPoints(); ++ipoint)
         {
-          const mfem::IntegrationPoint &integration_point = integration_rule.IntPoint(ipoint); 
+          const mfem::IntegrationPoint &integration_point = integration_rule.IntPoint(ipoint);
           element_transformation->SetIntPoint(&integration_point);
           integration_point_locations_in_physical_frame.GetColumn(ipoint, position);
           fluid_state_at_integration_point_locations.GetColumn(ipoint, fluid_state);
@@ -452,15 +452,14 @@ std::unordered_map<Species,mfem::Vector> DGEulerOperations::integralForVarianceR
         mfem::Vector position(integration_point_locations_in_physical_frame.NumRows());
         mfem::Vector fluid_state(dg_assemblers_[ispecies]->getNumberOfEquations());
 
-        for (int ipoint = 0; ipoint < integration_rule.GetNPoints(); ++ipoint) 
+        for (int ipoint = 0; ipoint < integration_rule.GetNPoints(); ++ipoint)
         {
-          const mfem::IntegrationPoint &integration_point = integration_rule.IntPoint(ipoint); 
+          const mfem::IntegrationPoint &integration_point = integration_rule.IntPoint(ipoint);
           element_transformation->SetIntPoint(&integration_point);
           integration_point_locations_in_physical_frame.GetColumn(ipoint, position);
           fluid_state_at_integration_point_locations.GetColumn(ipoint, fluid_state);
           mfem::Vector primitive_state = euler::convertFromConservativeToPrimitive(fluid_state, current_species);
           const double weight = integration_point.weight * element_transformation->Weight();
-          // Match the particle side, which only sums over the first velocity_dims components.
           double bulk_velocity_mag_squared = 0.0;
           for (int vel_dim = 0; vel_dim < velocity_dims; ++vel_dim) {
             const double bulk_velocity_component = primitive_state(euler::PrimitiveVariables::X_BULK_VELOCITY + vel_dim);
@@ -503,9 +502,9 @@ std::unordered_map<Species,mfem::Vector> DGEulerOperations::getCellAveragedNumbe
       mfem::Vector fluid_state(dg_assemblers_[ispecies]->getNumberOfEquations());
       const double element_volume = mesh.GetElementVolume(element);
 
-      for (int ipoint = 0; ipoint < integration_rule.GetNPoints(); ++ipoint) 
+      for (int ipoint = 0; ipoint < integration_rule.GetNPoints(); ++ipoint)
       {
-        const mfem::IntegrationPoint &integration_point = integration_rule.IntPoint(ipoint); 
+        const mfem::IntegrationPoint &integration_point = integration_rule.IntPoint(ipoint);
         element_transformation->SetIntPoint(&integration_point);
         integration_point_locations_in_physical_frame.GetColumn(ipoint, position);
         fluid_state_at_integration_point_locations.GetColumn(ipoint, fluid_state);
@@ -547,9 +546,9 @@ std::unordered_map<Species,mfem::DenseMatrix> DGEulerOperations::getCellAveraged
       mfem::Vector fluid_state(dg_assemblers_[ispecies]->getNumberOfEquations());
       const double element_volume = mesh.GetElementVolume(element);
 
-      for (int ipoint = 0; ipoint < integration_rule.GetNPoints(); ++ipoint) 
+      for (int ipoint = 0; ipoint < integration_rule.GetNPoints(); ++ipoint)
       {
-        const mfem::IntegrationPoint &integration_point = integration_rule.IntPoint(ipoint); 
+        const mfem::IntegrationPoint &integration_point = integration_rule.IntPoint(ipoint);
         element_transformation->SetIntPoint(&integration_point);
         integration_point_locations_in_physical_frame.GetColumn(ipoint, position);
         fluid_state_at_integration_point_locations.GetColumn(ipoint, fluid_state);
@@ -594,9 +593,9 @@ std::unordered_map<Species,mfem::Vector> DGEulerOperations::getCellAveragedTempe
       mfem::Vector fluid_state(dg_assemblers_[ispecies]->getNumberOfEquations());
       const double element_volume = mesh.GetElementVolume(element);
 
-      for (int ipoint = 0; ipoint < integration_rule.GetNPoints(); ++ipoint) 
+      for (int ipoint = 0; ipoint < integration_rule.GetNPoints(); ++ipoint)
       {
-        const mfem::IntegrationPoint &integration_point = integration_rule.IntPoint(ipoint); 
+        const mfem::IntegrationPoint &integration_point = integration_rule.IntPoint(ipoint);
         element_transformation->SetIntPoint(&integration_point);
         integration_point_locations_in_physical_frame.GetColumn(ipoint, position);
         fluid_state_at_integration_point_locations.GetColumn(ipoint, fluid_state);

@@ -13,7 +13,6 @@
 
 namespace mfpic {
 
-// Files created by this process; the first dump to a given filename truncates it, later dumps append.
 static std::unordered_set<std::string> created_filenames;
 
 void dumpParticles(const ParticleContainer& particles, double simulation_time, const std::string filename) {
