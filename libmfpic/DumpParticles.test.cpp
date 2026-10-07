@@ -20,8 +20,8 @@ using namespace mfpic;
 
 constexpr char filename[] = "particles.h5part";
 
-std::pair<double, ParticleContainer> readTimeValueAndParticlesFromStep(int step) {
-  hid_t file = H5Fopen(filename, H5F_ACC_RDONLY, H5P_DEFAULT);
+std::pair<double, ParticleContainer> readTimeValueAndParticlesFromStep(int step, const std::string& file_name = filename) {
+  hid_t file = H5Fopen(file_name.c_str(), H5F_ACC_RDONLY, H5P_DEFAULT);
 
   const std::string step_name = "Step#" + std::to_string(step);
   hid_t step_group = H5Gopen(file, step_name.c_str(), H5P_DEFAULT);
@@ -164,6 +164,32 @@ TEST(DumpParticles, ReadParticlesMatchDumpedParticles) {
   }
 }
 
+TEST(DumpParticles, EveryDumpGoesToTheRequestedFile) {
+  const std::string first_filename = "first_particles.h5part";
+  const std::string second_filename = "second_particles.h5part";
+  const Species species{.charge = 1.0, .mass = 1.0, .name = "electron"};
+  ParticleContainer particles_to_dump;
+  particles_to_dump.addParticle(Particle{
+    .position = mfem::Vector({1.0, 2.0, 3.0}),
+    .velocity = mfem::Vector({4.0, 5.0, 6.0}),
+    .species = species,
+    .weight = 1.0,
+  });
+
+  // Creating one file must not make later dumps to a different, not-yet-created file fail.
+  dumpParticles(particles_to_dump, 0.0, first_filename);
+  constexpr int num_timesteps = 2;
+  constexpr double dt = 1.0e-12;
+  for (int i = 0; i < num_timesteps; i++) {
+    dumpParticles(particles_to_dump, dt * i, second_filename);
+  }
+
+  for (int i = 0; i < num_timesteps; i++) {
+    auto [simulation_time, particles_from_step] = readTimeValueAndParticlesFromStep(i, second_filename);
+    EXPECT_EQ(1, particles_from_step.numParticles());
+    EXPECT_DOUBLE_EQ(dt * i, simulation_time);
+  }
+}
 
 static void removeIfExists(const std::string& path)
 {

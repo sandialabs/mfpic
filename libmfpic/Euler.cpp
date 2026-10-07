@@ -219,9 +219,6 @@ double evaluateProductOf1DKappaDistributions(
 
   const mfem::Vector bulk_velocity = getBulkVelocityFromPrimitiveState(primitive_state);
 
-  mfem::Vector difference = velocity;
-  difference -= bulk_velocity;
-
   const double scale_squared = scale * scale;
   const double log_norm_1d =
       std::lgamma(0.5 * (nu + 1.0))
@@ -230,8 +227,8 @@ double evaluateProductOf1DKappaDistributions(
     - std::log(scale);
 
   double log_pdf = std::log(number_density);
-  for (int d = 0; d < 3; ++d) {
-    const double x = difference(d);
+  for (int d = 0; d < velocity.Size(); ++d) {
+    const double x = velocity(d) - bulk_velocity(d);
     const double log_shape =
       -0.5 * (nu + 1.0) * std::log1p((x * x) / (nu * scale_squared));
 
@@ -249,7 +246,7 @@ double evaluateIsotropicKappaDistribution(
     const double invalid = std::numeric_limits<double>::quiet_NaN();
     const int velocity_dimensions = velocity.Size(); 
 
-    if (velocity_dimensions != 1 && velocity_dimensions != 3) {
+    if (velocity_dimensions < 1 || velocity_dimensions > 3) {
         return invalid;
     }
 
