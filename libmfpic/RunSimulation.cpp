@@ -92,9 +92,12 @@ void runSimulation(int argc, char* argv[]) {
   );
 
   particle_operations.setVarianceReductionParameters(variance_reduction_parameters);
-  //std::random_device rd;
-  //std::default_random_engine generator(rd());
   RandomNumberGenerator generator;
+  if (main["Particles"]["Seed"]) {
+    const auto seed = main["Particles"]["Seed"].as<unsigned int>();
+    generator.seed(seed);
+    std::cout << "Particle RNG seed: " << seed << std::endl;
+  }
   ParticleContainer particle_container = buildParticlesFromYaml(
     main["Particles"]["Initial Conditions"],
     species_map,
