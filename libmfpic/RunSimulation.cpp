@@ -156,7 +156,7 @@ void runSimulation(int argc, char* argv[]) {
   if (variance_reduction_parameters.strategy != VarianceReductionParameters::Strategy::None && low_fidelity_operations.empty()) {
     errorWithUserMessage(
       "Variance Reduction requires a low-fidelity model to use as a control variate, "
-      "but no Euler Fluids Initial Conditions were given.");
+      "but no Euler Fluids were given.");
   }
 
   if (variance_reduction_parameters.strategy != VarianceReductionParameters::Strategy::None && output_parameters.output_particle_moments) {
