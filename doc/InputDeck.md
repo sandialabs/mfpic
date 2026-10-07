@@ -117,11 +117,11 @@ Mesh:
     The valid strings are `x`, `y`, and `z`.
 
 **``Number of Velocity Dimensions``**: The number of velocity components $d$ (1, 2, or 3) that carry thermal spread.
-    Particle velocities are always stored as 3-vectors, but only the first $d$ components are sampled thermally; the remaining
-    components hold the bulk velocity only. Particle temperatures are computed as $T = m \langle |c|^2 \rangle / (d k_B)$ over
-    those $d$ components, and the default species `Specific Heat Ratio` is $(d + 2) / d$ so the Euler fluids stay consistent.
+    Particle velocities are always stored as 3-vectors, but only the first $d$ components contain velocity fluctuations
+    about the bulk velocity. Note that the particle temperatures are computed over those $d$ components as
+    $T = m \langle |v - u|^2 \rangle / (d k_B)$, where $v$ is the particle velocities and $u$ is the bulk velocity,
+    and the default species `Specific Heat Ratio` is $(d + 2) / d$ so the Euler fluids stay consistent.
     Currently only read for inline meshes.
-
 
 #### Example
 ```yaml
