@@ -118,9 +118,7 @@ Mesh:
 
 **``Number of Velocity Dimensions``**: The number of velocity components $d$ (1, 2, or 3) that carry thermal spread.
     Particle velocities are always stored as 3-vectors, but only the first $d$ components contain velocity fluctuations
-    about the bulk velocity. Note that the particle temperatures are computed over those $d$ components as
-    $T = m \langle |v - u|^2 \rangle / (d k_B)$, where $v$ is the particle velocities and $u$ is the bulk velocity,
-    and the default species `Specific Heat Ratio` is $(d + 2) / d$ so the Euler fluids stay consistent.
+    about the bulk velocity.
     Currently only read for inline meshes.
 
 #### Example
@@ -220,7 +218,8 @@ If left unset, this is computed automatically from the given `Charge` and `Mass`
 **``Specific Heat Ratio``**: Specific heat ratio of the species.
 Defaults to $(d + 2) / d$, the specific heat ratio of a monatomic gas with $d$ translational degrees of freedom, where $d$ is
 the `Number of Velocity Dimensions` of the mesh: $5/3$ for $d = 3$, $2$ for $d = 2$, and $3$ for $d = 1$.
-This keeps the Euler fluid consistent with the particle temperature $T = m \langle |c|^2 \rangle / (d k_B)$.
+This keeps the Euler fluid consistent with the particle temperature, which is computed as $T = m \langle |v - u|^2 \rangle / (d k_B)$,
+where $v$ is the particle velocities and $u$ is the bulk velocity.
 A value that does not match $(d + 2) / d$ is used as given, but a warning is printed.
 
 #### Example
