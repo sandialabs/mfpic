@@ -48,6 +48,7 @@ refinement_levels = [2, 4]
 knudsen_number = .01
 collision_frequency = 1. / knudsen_number # TODO does this work with non-dimensionalization?
 
+particles_per_cell = 100
 
 def format_mesh_folder_name(refinement_level):
     return f"MeshOutput{refinement_level:02}"
@@ -79,6 +80,7 @@ Particles:
   Default Boundary Condition: Reflecting
   Initial Conditions:
     - Species: [neutral_electron]
+      Number of Macroparticles per Species: {particles_per_cell * num_elements}
       Sod:
         Discontinuity Location: {discontinuity_location}
         Left State:
