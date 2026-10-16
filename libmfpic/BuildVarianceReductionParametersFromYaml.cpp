@@ -25,9 +25,12 @@ VarianceReductionParameters buildVarianceReductionParametersFromYAML(const YAML:
       parameters.reference_bulk_velocity[i] = reference_bulk_velocity[i];
     }
     parameters.reference_temperature = specified_moments_node["Reference Temperature"].as<double>();
+    if (specified_moments_node["Species"]) {
+      parameters.specified_lf_species = specified_moments_node["Species"].as<std::vector<std::string>>();
+    }
   }
 
-  parameters.limit_variance_reduction = node["Apply Cell Limiting"].as<bool>(true);
+  parameters.limit_variance_reduction = node["Apply Cell Limiting"].as<bool>(false);
 
   parameters.use_variance_reduced_electric_field = node["Use VR E Field"].as<bool>(false);
 

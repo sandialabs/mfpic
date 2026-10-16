@@ -1682,4 +1682,167 @@ TEST(ParticleOperations, VarianceReducedMomentsMatchPICForSpeciesMissingLowFidel
   EXPECT_NEAR(variance_reduced_temperature_b, standard_temperature_b,1e-6);
 }
 
+struct OneDimensionalMaxwellianVarianceReductionSetup {
+  static constexpr int num_elems = 8;
+  static constexpr int velocity_dims = 1;
+  static constexpr double number_density = 1e18;
+  static constexpr double temperature = 11604.5;
+  const Species species{.charge = -constants::elementary_charge, .mass = constants::electron_mass, .name = "electron"};
+  const mfem::Vector bulk_velocity{2.0e5, 0.0, 0.0};
+  std::shared_ptr<mfem::Mesh> mesh = std::make_shared<mfem::Mesh>(mfem::Mesh::MakeCartesian1D(num_elems, 1e-3));
+  Discretization charge_discretization{mesh.get(), 1, FETypes::HGRAD};
+  ParticleContainer particles;
+  ParticleOperations particle_operations{
+    charge_discretization,
+    empty_particle_boundary_factory_list,
+    default_reflecting_particle_boundary_factory,
+    {{"electron", species}},
+    velocity_dims};
+
+  OneDimensionalMaxwellianVarianceReductionSetup() {
+    RandomNumberGenerator generator(2468);
+    const SourceStateParameters source_state_parameters{
+      .number_density = number_density,
+      .bulk_velocity = bulk_velocity,
+      .temperature = temperature,
+    };
+    particles = loadParticles(
+      ConstantSourceParameters(species, source_state_parameters, 4000),
+      generator,
+      mesh,
+      velocity_dims);
+  }
+
+  void useSpecifiedMoments(const double reference_number_density, const bool limit_variance_reduction = false) {
+    VarianceReductionParameters variance_reduction_parameters;
+    variance_reduction_parameters.strategy = VarianceReductionParameters::Strategy::EulerFluid;
+    variance_reduction_parameters.specified_lf_moments = true;
+    variance_reduction_parameters.reference_number_density = reference_number_density;
+    variance_reduction_parameters.reference_bulk_velocity = {bulk_velocity(0), bulk_velocity(1), bulk_velocity(2)};
+    variance_reduction_parameters.reference_temperature = temperature;
+    variance_reduction_parameters.limit_variance_reduction = limit_variance_reduction;
+    particle_operations.setVarianceReductionParameters(variance_reduction_parameters);
+  }
+
+  mfem::Vector uniformCharge(const double charge_density) {
+    mfem::ConstantCoefficient charge_density_coefficient(charge_density);
+    mfem::LinearForm charge(&charge_discretization.getFeSpace());
+    charge.AddDomainIntegrator(new mfem::DomainLFIntegrator(charge_density_coefficient));
+    charge.Assemble();
+    return charge;
+  }
+};
+
+TEST(ParticleOperations, VarianceReducedChargeWithSpecifiedMomentsIsExactWithoutLowFidelityModel) {
+  OneDimensionalMaxwellianVarianceReductionSetup setup;
+  setup.useSpecifiedMoments(setup.number_density);
+
+  const IntegratedCharge variance_reduced_charge = setup.particle_operations.assembleVarianceReducedCharge(setup.particles);
+  const mfem::Vector expected_charge = setup.uniformCharge(setup.species.charge * setup.number_density);
+
+  for (int dof = 0; dof < expected_charge.Size(); ++dof) {
+    EXPECT_NEAR(variance_reduced_charge.getIntegratedCharge()(dof), expected_charge(dof), 1e-12 * std::abs(expected_charge(dof)));
+  }
+}
+
+TEST(ParticleOperations, VarianceReducedMomentsWithSpecifiedMomentsIgnoreLowFidelityModel) {
+  OneDimensionalMaxwellianVarianceReductionSetup setup;
+  setup.useSpecifiedMoments(setup.number_density);
+
+  // A fluid that disagrees with the particles; the specified moments must be used instead.
+  Discretization dg_discretization(setup.mesh.get(), 0, FETypes::DG, 5);
+  std::shared_ptr<DGEulerAssembly> operator_ptr = std::make_shared<DGEulerAssembly>(dg_discretization.getFeSpace(), setup.species);
+  std::vector<std::shared_ptr<DGEulerAssembly>> dg_operators({operator_ptr});
+  DGEulerOperations dg_euler_operations(setup.charge_discretization, dg_operators);
+  std::vector<std::unique_ptr<SourceParameters>> list_of_parameters;
+  list_of_parameters.push_back(std::make_unique<ConstantSourceParameters>(
+    setup.species, 0.5 * setup.number_density, 2.0 * setup.temperature, mfem::Vector({0.0, 0.0, 0.0})));
+  LowFidelityState low_fidelity_state = buildEulerState(dg_discretization, list_of_parameters);
+
+  const ParticleMoments with_fluid = setup.particle_operations.getVarianceReducedParticleMoments(
+    setup.particles, low_fidelity_state, dg_euler_operations, true);
+  const ParticleMoments without_fluid = setup.particle_operations.getVarianceReducedParticleMoments(setup.particles, true);
+
+  for (const ParticleMoments& moments : {with_fluid, without_fluid}) {
+    for (int elem_id = 0; elem_id < setup.num_elems; ++elem_id) {
+      EXPECT_NEAR(moments.number_density.at(setup.species)(elem_id), setup.number_density, 1e-12 * setup.number_density);
+      EXPECT_NEAR(moments.bulk_velocity.at(setup.species)(0, elem_id), setup.bulk_velocity(0), 1e-9 * setup.bulk_velocity(0));
+      EXPECT_NEAR(moments.temperature.at(setup.species)(elem_id), setup.temperature, 1e-9 * setup.temperature);
+    }
+  }
+}
+
+TEST(ParticleOperations, VarianceReducedBulkVelocityWithSpecifiedMomentsWeightsReferenceVelocityByDensity) {
+  OneDimensionalMaxwellianVarianceReductionSetup setup;
+  // f_LF = 2 f at every particle, so each particle's noise reducing factor is exactly -1
+  const double reference_number_density = 2.0 * setup.number_density;
+  setup.useSpecifiedMoments(reference_number_density);
+
+  const ParticleMoments variance_reduced = setup.particle_operations.getVarianceReducedParticleMoments(setup.particles, true);
+  const ParticleMoments pic = setup.particle_operations.getParticleMoments(setup.particles);
+
+  for (int elem_id = 0; elem_id < setup.num_elems; ++elem_id) {
+    const double pic_number_density = pic.number_density.at(setup.species)(elem_id);
+    const double pic_velocity = pic.bulk_velocity.at(setup.species)(0, elem_id);
+    const double expected_number_density = reference_number_density - pic_number_density;
+    const double expected_velocity =
+      (reference_number_density * setup.bulk_velocity(0) - pic_number_density * pic_velocity) / expected_number_density;
+
+    EXPECT_NEAR(variance_reduced.number_density.at(setup.species)(elem_id), expected_number_density, 1e-10 * setup.number_density);
+    EXPECT_NEAR(variance_reduced.bulk_velocity.at(setup.species)(0, elem_id), expected_velocity, 1e-8 * std::abs(expected_velocity));
+  }
+}
+
+TEST(ParticleOperations, VarianceReducedChargeRespectsCellLimiting) {
+  OneDimensionalMaxwellianVarianceReductionSetup setup;
+  // f_LF = 3 f at every particle, so each particle's noise reducing factor is exactly -2
+  const double reference_number_density = 3.0 * setup.number_density;
+  const mfem::Vector pic_charge = setup.particle_operations.assembleCharge(setup.particles).getIntegratedCharge();
+  const mfem::Vector control_variate_charge = setup.uniformCharge(setup.species.charge * reference_number_density);
+
+  setup.useSpecifiedMoments(reference_number_density, true);
+  const mfem::Vector limited_charge = setup.particle_operations.assembleVarianceReducedCharge(setup.particles).getIntegratedCharge();
+
+  setup.useSpecifiedMoments(reference_number_density, false);
+  const mfem::Vector unlimited_charge = setup.particle_operations.assembleVarianceReducedCharge(setup.particles).getIntegratedCharge();
+
+  for (int dof = 0; dof < pic_charge.Size(); ++dof) {
+    const double scale = std::abs(control_variate_charge(dof));
+    EXPECT_NEAR(limited_charge(dof), pic_charge(dof), 1e-12 * scale);
+    EXPECT_NEAR(unlimited_charge(dof), -2.0 * pic_charge(dof) + control_variate_charge(dof), 1e-12 * scale);
+  }
+}
+
+TEST(ParticleOperations, VarianceReducedMomentsRespectCellLimiting) {
+  OneDimensionalMaxwellianVarianceReductionSetup setup;
+  setup.useSpecifiedMoments(3.0 * setup.number_density, true);
+
+  const ParticleMoments variance_reduced = setup.particle_operations.getVarianceReducedParticleMoments(setup.particles, true);
+  const ParticleMoments pic = setup.particle_operations.getParticleMoments(setup.particles);
+
+  for (int elem_id = 0; elem_id < setup.num_elems; ++elem_id) {
+    EXPECT_DOUBLE_EQ(variance_reduced.number_density.at(setup.species)(elem_id), pic.number_density.at(setup.species)(elem_id));
+    EXPECT_DOUBLE_EQ(variance_reduced.bulk_velocity.at(setup.species)(0, elem_id), pic.bulk_velocity.at(setup.species)(0, elem_id));
+    EXPECT_DOUBLE_EQ(variance_reduced.temperature.at(setup.species)(elem_id), pic.temperature.at(setup.species)(elem_id));
+  }
+}
+
+TEST(ParticleOperations, SpecifiedMomentsOnlyApplyToListedSpecies) {
+  OneDimensionalMaxwellianVarianceReductionSetup setup;
+  VarianceReductionParameters variance_reduction_parameters;
+  variance_reduction_parameters.strategy = VarianceReductionParameters::Strategy::EulerFluid;
+  variance_reduction_parameters.specified_lf_moments = true;
+  variance_reduction_parameters.specified_lf_species = {"some_other_species"};
+  variance_reduction_parameters.reference_number_density = 3.0 * setup.number_density;
+  variance_reduction_parameters.reference_temperature = setup.temperature;
+  setup.particle_operations.setVarianceReductionParameters(variance_reduction_parameters);
+
+  const mfem::Vector pic_charge = setup.particle_operations.assembleCharge(setup.particles).getIntegratedCharge();
+  const mfem::Vector variance_reduced_charge = setup.particle_operations.assembleVarianceReducedCharge(setup.particles).getIntegratedCharge();
+
+  for (int dof = 0; dof < pic_charge.Size(); ++dof) {
+    EXPECT_DOUBLE_EQ(variance_reduced_charge(dof), pic_charge(dof));
+  }
+}
+
 } // namespace

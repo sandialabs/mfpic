@@ -29,6 +29,32 @@ Apply Cell Limiting: false
   EXPECT_EQ(params.reference_bulk_velocity[1],620.1988);
   EXPECT_EQ(params.reference_bulk_velocity[2],28.190);
   EXPECT_EQ(params.reference_temperature,53290.201);
+  EXPECT_EQ(params.specified_lf_moments,true);
+  EXPECT_TRUE(params.specified_lf_species.empty());
+}
+
+TEST(BuildVarianceReductionParametersFromYaml, SpecifiedLFMomentsSpeciesAreParsed) {
+  const std::string yaml = R"(
+Specified LF Moments:
+  Reference Number Density: 1.0
+  Reference Bulk Velocity: [0.0, 0.0, 0.0]
+  Reference Temperature: 1.0
+  Species: [electron, proton]
+  )";
+  const YAML::Node node = YAML::Load(yaml);
+
+  auto params = buildVarianceReductionParametersFromYAML(node);
+
+  EXPECT_EQ(params.specified_lf_species, (std::vector<std::string>{"electron", "proton"}));
+}
+
+TEST(BuildVarianceReductionParametersFromYaml, CellLimitingIsOffByDefault) {
+  const YAML::Node node = YAML::Load("Strategy: Euler Fluid");
+
+  auto params = buildVarianceReductionParametersFromYAML(node);
+
+  EXPECT_EQ(params.limit_variance_reduction, false);
+  EXPECT_EQ(params.specified_lf_moments, false);
 }
 
 }

@@ -636,6 +636,51 @@ Collisions:
         Collision Frequency: 1.0e8 # [1/s]
 ```
 
+## Variance Reduction
+Particle charge and moments can optionally be computed with a control variate $f_{LF}$,
+$$
+\langle \phi \rangle = \sum_i w_i \phi(x_i, v_i) \left(1 - \frac{f_{LF}(x_i, v_i)}{f_i}\right) + \int \phi f_{LF} \, dv,
+$$
+where $f_i$ is the phase-space density carried by particle $i$.
+By default $f_{LF}$ is the Maxwellian of the first ``Euler Fluids`` state of the particle's species;
+particle species without one are not variance reduced.
+
+```yaml
+Variance Reduction:
+    Strategy: string # (default = Euler Fluid)
+    Use VR E Field: boolean # (default = false)
+    Apply Cell Limiting: boolean # (default = false)
+    Specified LF Moments: # (optional)
+        Reference Number Density: float # [1/m^3]
+        Reference Bulk Velocity: [float, float, float] # [m/s]
+        Reference Temperature: float # [K]
+        Species: [string, ...] # (optional, default = all species)
+```
+
+**``Strategy``**: `Euler Fluid` or `none`.
+
+**``Use VR E Field``**: Solve for the particle electric field from the variance reduced charge.
+
+**``Apply Cell Limiting``**: For each species, turn off variance reduction in any element containing a particle with
+$|1 - f_{LF}/f_i| \ge 1$.
+This applies to both the charge and the moments.
+For the charge, a degree of freedom is variance reduced only if every element it touches is.
+
+**``Specified LF Moments``**: Use a spatially uniform Maxwellian with the given moments as $f_{LF}$, in place of the Euler fluids,
+for the species listed under ``Species`` (all species if omitted).
+Any Euler fluids are then ignored by variance reduction, and none are required.
+
+#### Example
+```yaml
+Variance Reduction:
+    Use VR E Field: true
+    Specified LF Moments:
+        Reference Number Density: 1.0e18
+        Reference Bulk Velocity: [0.0, 0.0, 0.0]
+        Reference Temperature: 116045.0
+        Species: [electron]
+```
+
 ## Output
 
 Output can be controlled under the ``Output`` key.
