@@ -77,13 +77,28 @@ public:
   /**
   * @brief Assemble charges from the particles into the charge density using a variance reduced formulation
   *
+  * The low-fidelity model is the control variate unless Specified LF Moments are set, in which case
+  * it is ignored and a Maxwellian at the reference moments is used instead.
+  *
   * @param current_particles - ParticleContainer of particles
+  * @param low_fidelity_state - \ref LowFidelityState
+  * @param low_fidelity_operations - \ref LowFidelityOperations
   * @return IntegratedCharge - integrated charge state
   */
   IntegratedCharge assembleVarianceReducedCharge(
     const ParticleContainer& current_particles,
     const LowFidelityState& low_fidelity_state,
     const LowFidelityOperations& low_fidelity_operations
+  ) const;
+
+  /**
+  * @brief Assemble variance reduced charge without a low-fidelity model; requires Specified LF Moments
+  *
+  * @param current_particles - ParticleContainer of particles
+  * @return IntegratedCharge - integrated charge state
+  */
+  IntegratedCharge assembleVarianceReducedCharge(
+    const ParticleContainer& current_particles
   ) const;
 
   /**
@@ -111,6 +126,19 @@ public:
     const ParticleContainer& particles,
     const LowFidelityState& low_fidelity_state,
     const DGEulerOperations& low_fidelity_operations,
+    const bool compute_standard_pic_moments=false
+  );
+
+  /**
+   * @brief Compute the variance reduced particle moments without a low-fidelity model; requires Specified LF Moments
+   *
+   * @param[in] particles   \ref ParticleContainer
+   * @param[in] compute_standard_pic_moments Flag to (re)compute the standard PIC moments
+   *
+   * @return Struct of variance reduced particle number density, bulk velocity, and temperature (species, (element))
+   */
+  ParticleMoments& getVarianceReducedParticleMoments(
+    const ParticleContainer& particles,
     const bool compute_standard_pic_moments=false
   );
 
@@ -144,6 +172,74 @@ public:
 
 private:
 
+  /// Control variate integrals over each element, used by the variance reduced moments
+  struct ControlVariateMomentIntegrals {
+    /// Integral of n, (species, (element))
+    std::unordered_map<Species, mfem::Vector> number_density;
+    /// Integral of n u, (species, (dimension, element))
+    std::unordered_map<Species, mfem::DenseMatrix> momentum;
+    /// Integral of n (T + m |u|^2 / (d k_B)), (species, (element))
+    std::unordered_map<Species, mfem::Vector> temperature;
+  };
+
+  IntegratedCharge assembleVarianceReducedCharge_(
+    const ParticleContainer& current_particles,
+    const LowFidelityState* low_fidelity_state,
+    const LowFidelityOperations* low_fidelity_operations
+  ) const;
+
+  ParticleMoments& getVarianceReducedParticleMoments_(
+    const ParticleContainer& particles,
+    const LowFidelityState* low_fidelity_state,
+    const DGEulerOperations* low_fidelity_operations,
+    const bool compute_standard_pic_moments
+  );
+
+  /**
+   * @brief Whether a species has a control variate: listed in Specified LF Moments, or present in the low-fidelity state
+   */
+  bool hasControlVariate_(
+    const Species& species,
+    const LowFidelityState* low_fidelity_state
+  ) const;
+
+  /**
+   * @brief Evaluate the control variate phase-space density at a particle
+   */
+  double evaluateControlVariate_(
+    const Particle& particle,
+    const LowFidelityState* low_fidelity_state,
+    const LowFidelityOperations* low_fidelity_operations
+  ) const;
+
+  /**
+   * @brief Flag the elements in which each species uses variance reduction
+   *
+   * An element is flagged when the species has a control variate and, with Apply Cell Limiting,
+   * every particle of that species in the element has |1 - f_LF / f| < 1.
+   *
+   * @return Map of particle species to flags, (species, (element))
+   */
+  std::unordered_map<Species, std::vector<char>> computeVarianceReductionElements_(
+    const ParticleContainer& particles,
+    const LowFidelityState* low_fidelity_state,
+    const LowFidelityOperations* low_fidelity_operations
+  ) const;
+
+  ControlVariateMomentIntegrals computeControlVariateMomentIntegrals_(
+    const LowFidelityState* low_fidelity_state,
+    const DGEulerOperations* low_fidelity_operations
+  ) const;
+
+  /**
+   * @brief Integrated charge of the control variate for one species, per global DOF
+   */
+  mfem::Vector assembleControlVariateCharge_(
+    const Species& species,
+    const LowFidelityState* low_fidelity_state,
+    const LowFidelityOperations* low_fidelity_operations
+  ) const;
+
   void sumParticleWeights_(
     const ParticleContainer& particles
   ) ;
@@ -168,8 +264,8 @@ private:
    */
     std::unordered_map<Species, mfem::Vector>& getVarianceReducedNumberDensity(
     const ParticleContainer& particles,
-    const LowFidelityState& low_fidelity_state,
-    const DGEulerOperations& low_fidelity_operations
+    const LowFidelityState* low_fidelity_state,
+    const LowFidelityOperations* low_fidelity_operations
   );
 
   /**
@@ -193,8 +289,8 @@ private:
    */
   std::unordered_map<Species, mfem::DenseMatrix>& getVarianceReducedBulkVelocity(
     const ParticleContainer& particles,
-    const LowFidelityState& low_fidelity_state,
-    const DGEulerOperations& low_fidelity_operations
+    const LowFidelityState* low_fidelity_state,
+    const LowFidelityOperations* low_fidelity_operations
   );
 
   /**
@@ -219,14 +315,8 @@ private:
    */
   std::unordered_map<Species, mfem::Vector>& getVarianceReducedTemperature(
     const ParticleContainer& particles,
-    const LowFidelityState& low_fidelity_state,
-    const DGEulerOperations& low_fidelity_operations
-  );
-
-  void computeMaxNoiseReducingFactorPerElement(
-    const ParticleContainer& particles,
-    const LowFidelityState& low_fidelity_state,
-    const DGEulerOperations& low_fidelity_operations
+    const LowFidelityState* low_fidelity_state,
+    const LowFidelityOperations* low_fidelity_operations
   );
 
 
@@ -266,8 +356,11 @@ private:
   /// Velocity dimension
   int velocity_dims_ = 3;
 
-  /// Maximum noise reducing factors
-  std::unordered_map<Species, mfem::Vector> max_noise_reducing_factors_;
+  /// Elements in which each species uses variance reduction, set by getVarianceReducedParticleMoments
+  std::unordered_map<Species, std::vector<char>> variance_reduction_elements_;
+
+  /// Control variate moment integrals, set by getVarianceReducedParticleMoments
+  ControlVariateMomentIntegrals control_variate_moment_integrals_;
 };
 
 } // namespace mfpic
