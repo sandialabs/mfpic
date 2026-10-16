@@ -164,13 +164,15 @@ void dumpParticleMoments(
 void dumpVarianceReducedParticleMoments(
   ParticleOperations& particle_operations,
   const ParticleContainer& particles,
-  const LowFidelityState& low_fidelity_state,
-  const DGEulerOperations& low_fidelity_operations,
+  const LowFidelityState* low_fidelity_state,
+  const DGEulerOperations* low_fidelity_operations,
   const std::string& file_prefix,
   const int step,
   const double time)
 {
-  ParticleMoments variance_reduced_particle_moments = particle_operations.getVarianceReducedParticleMoments(particles,low_fidelity_state,low_fidelity_operations,false);
+  ParticleMoments variance_reduced_particle_moments = (low_fidelity_state && low_fidelity_operations)
+    ? particle_operations.getVarianceReducedParticleMoments(particles,*low_fidelity_state,*low_fidelity_operations,false)
+    : particle_operations.getVarianceReducedParticleMoments(particles,false);
   auto variance_reduced_number_density = variance_reduced_particle_moments.number_density;
   auto variance_reduced_bulk_velocity = variance_reduced_particle_moments.bulk_velocity;
   auto variance_reduced_temperature = variance_reduced_particle_moments.temperature;
