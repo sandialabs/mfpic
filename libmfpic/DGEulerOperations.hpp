@@ -70,7 +70,7 @@ public:
 
   /**
    * @brief compute the rhs that would update a state with both fluxes and field source terms simultaneously
-   * 
+   *
    * @param state - State to be fluxed and accelerated
    * @param field_evaluator - fields that will accelerate state
    * @return LowFidelityState - rhs that can be used to update the state
@@ -84,7 +84,7 @@ public:
    * @brief Update the state due to volumetric sources
    *
    * @param dt Timestep
-   * @param state State including dofs and species list 
+   * @param state State including dofs and species list
    */
 
   virtual LowFidelityState addVolumetricSource(
@@ -157,40 +157,33 @@ public:
     const int element,
     const int i_species) const override;
 
-  /**
-   * @brief Get mfem mesh associated with the discretization
-   *
-   * @return mfem::Mesh 
-   */
-  mfem::Mesh& getMesh() const {return *charge_discretization_.getFeSpace().GetMesh();};
-
-  std::unordered_map<Species,mfem::Vector> integralForVarianceReducedNumberDensity(
-    mfem::FiniteElementSpace finite_element_space, 
+  virtual std::unordered_map<Species,mfem::Vector> integralForVarianceReducedNumberDensity(
+    mfem::FiniteElementSpace finite_element_space,
     const LowFidelityState& current_state
-  ) const;
+  ) const override;
 
-  std::unordered_map<Species, mfem::DenseMatrix> integralForVarianceReducedBulkVelocity(
-    mfem::FiniteElementSpace finite_element_space, 
+  virtual std::unordered_map<Species, mfem::DenseMatrix> integralForVarianceReducedBulkVelocity(
+    mfem::FiniteElementSpace finite_element_space,
     const LowFidelityState& current_state
-  ) const;
+  ) const override;
 
-  std::unordered_map<Species,mfem::Vector> integralForVarianceReducedTemperature(
-    mfem::FiniteElementSpace finite_element_space, 
+  virtual std::unordered_map<Species,mfem::Vector> integralForVarianceReducedTemperature(
+    mfem::FiniteElementSpace finite_element_space,
     const LowFidelityState& current_state,
     const int velocity_dims
-  ) const;
+  ) const override;
 
-  std::unordered_map<Species,mfem::Vector> getCellAveragedNumberDensity(
+  virtual std::unordered_map<Species,mfem::Vector> getCellAveragedNumberDensity(
     const LowFidelityState& current_state
-  ) const;
+  ) const override;
 
-  std::unordered_map<Species,mfem::DenseMatrix> getCellAveragedBulkVelocity(
+  virtual std::unordered_map<Species,mfem::DenseMatrix> getCellAveragedBulkVelocity(
     const LowFidelityState& current_state
-  ) const;
+  ) const override;
 
-  std::unordered_map<Species,mfem::Vector> getCellAveragedTemperature(
+  virtual std::unordered_map<Species,mfem::Vector> getCellAveragedTemperature(
     const LowFidelityState& current_state
-  ) const;
+  ) const override;
 
 private:
   Discretization & charge_discretization_;
