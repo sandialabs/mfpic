@@ -17,9 +17,47 @@ void BGKRelaxationOperations::performCollisions(
   ParticleContainer& particles,
   ParticleOperations& particle_operations
 ) const {
-
-  //TODO: Collisions with variance reduced or standard moments?
   ParticleMoments particle_moments = particle_operations.getParticleMoments(particles);
+  performCollisions_(
+    dt,
+    generator,
+    particle_moments,
+    particles,
+    particle_operations
+  );
+}
+
+void BGKRelaxationOperations::performCollisions(
+  double dt,
+  RandomNumberGenerator& generator,
+  ParticleContainer& particles,
+  ParticleOperations& particle_operations,
+  const LowFidelityState& low_fidelity_state,
+  const DGEulerOperations& low_fidelity_operations
+) const {
+  constexpr bool recompute_standard_pic_moments = true;
+  ParticleMoments particle_moments = particle_operations.getVarianceReducedParticleMoments(
+    particles,
+    low_fidelity_state,
+    low_fidelity_operations,
+    recompute_standard_pic_moments
+  );
+  performCollisions_(
+    dt,
+    generator,
+    particle_moments,
+    particles,
+    particle_operations
+  );
+}
+
+void BGKRelaxationOperations::performCollisions_(
+  double dt,
+  RandomNumberGenerator& generator,
+  const ParticleMoments& particle_moments,
+  ParticleContainer& particles,
+  const ParticleOperations& particle_operations
+) const {
   auto number_densities = particle_moments.number_density;
   auto bulk_velocities = particle_moments.bulk_velocity;
   auto temperatures = particle_moments.temperature;

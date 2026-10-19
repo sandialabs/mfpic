@@ -4,7 +4,10 @@
 
 namespace mfpic {
 
+class DGEulerOperations;
+class LowFidelityState;
 class ParticleContainer;
+class ParticleMoments;
 class ParticleOperations;
 
 /// Virtual class for performing collisions.
@@ -23,6 +26,15 @@ public:
     RandomNumberGenerator& generator,
     ParticleContainer& particles,
     ParticleOperations& particle_operations
+  ) const = 0;
+
+  virtual void performCollisions(
+    double dt,
+    RandomNumberGenerator& generator,
+    ParticleContainer& particles,
+    ParticleOperations& particle_operations,
+    const LowFidelityState& low_fidelity_state,
+    const DGEulerOperations& low_fidelity_operations
   ) const = 0;
 
   virtual ~CollisionOperations() = default;

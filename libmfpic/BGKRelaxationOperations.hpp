@@ -40,7 +40,24 @@ public:
     ParticleOperations& particle_operations
   ) const override;
 
+  virtual void performCollisions(
+    double dt,
+    RandomNumberGenerator& generator,
+    ParticleContainer& particles,
+    ParticleOperations& particle_operations,
+    const LowFidelityState& low_fidelity_state,
+    const DGEulerOperations& low_fidelity_operations
+  ) const override;
+
 private:
+  void performCollisions_(
+    double dt,
+    RandomNumberGenerator& generator,
+    const ParticleMoments& particle_moments,
+    ParticleContainer& particles,
+    const ParticleOperations& particle_operations
+  ) const;
+
   /// Collision frequency \f$ \nu \f$.
   const double collision_frequency_;
 
