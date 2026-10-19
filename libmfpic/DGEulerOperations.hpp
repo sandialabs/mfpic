@@ -173,14 +173,35 @@ public:
     const int velocity_dims
   ) const override;
 
+  /**
+   * @brief Compute the cell-averaged number density for each species managed by a given low fidelity state.
+   *
+   * @param[in] current_state Low fidelity state for which to compute number density.
+   *
+   * @return Vector containing the cell averages for each species managed by @a current_state.
+   */
   virtual std::unordered_map<Species,mfem::Vector> getCellAveragedNumberDensity(
     const LowFidelityState& current_state
   ) const override;
 
+  /**
+   * @brief Compute the cell-averaged bulk velocity for each species managed by a given low fidelity state.
+   *
+   * @param[in] current_state Low fidelity state for which to compute bulk velocity.
+   *
+   * @return Vector containing the cell averages for each species managed by @a current_state.
+   */
   virtual std::unordered_map<Species,mfem::DenseMatrix> getCellAveragedBulkVelocity(
     const LowFidelityState& current_state
   ) const override;
 
+  /**
+   * @brief Compute the cell-averaged temperature for each species managed by a given low fidelity state.
+   *
+   * @param[in] current_state Low fidelity state for which to compute temperature.
+   *
+   * @return Vector containing the cell averages for each species managed by @a current_state.
+   */
   virtual std::unordered_map<Species,mfem::Vector> getCellAveragedTemperature(
     const LowFidelityState& current_state
   ) const override;
