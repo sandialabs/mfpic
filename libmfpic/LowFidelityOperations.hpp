@@ -41,7 +41,7 @@ public:
 
   virtual IntegratedCharge assembleChargePerSpecies(
     const LowFidelityState& state,
-    const int ispecies 
+    const int ispecies
   ) const = 0;
 
   virtual double evaluateParticleDistributionFunction(
@@ -50,6 +50,34 @@ public:
     const mfem::Vector velocity,
     const int element,
     const int i_species) const = 0;
+
+  virtual std::unordered_map<Species, mfem::Vector> integralForVarianceReducedNumberDensity(
+    mfem::FiniteElementSpace finite_element_space,
+    const LowFidelityState& current_state
+  ) const = 0;
+
+  virtual std::unordered_map<Species, mfem::DenseMatrix> integralForVarianceReducedBulkVelocity(
+    mfem::FiniteElementSpace finite_element_space,
+    const LowFidelityState& current_state
+  ) const = 0;
+
+  virtual std::unordered_map<Species, mfem::Vector> integralForVarianceReducedTemperature(
+    mfem::FiniteElementSpace finite_element_space,
+    const LowFidelityState& current_state,
+    const int velocity_dims
+  ) const = 0;
+
+  virtual std::unordered_map<Species, mfem::Vector> getCellAveragedNumberDensity(
+    const LowFidelityState& current_state
+  ) const = 0;
+
+  virtual std::unordered_map<Species, mfem::DenseMatrix> getCellAveragedBulkVelocity(
+    const LowFidelityState& current_state
+  ) const = 0;
+
+  virtual std::unordered_map<Species, mfem::Vector> getCellAveragedTemperature(
+    const LowFidelityState& current_state
+  ) const = 0;
 
   virtual double estimateCFL(const double & dt, const double & smallest_cell_lengthscale) const = 0;
 
