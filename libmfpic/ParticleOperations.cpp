@@ -1,5 +1,4 @@
 #include <libmfpic/BuildVarianceReductionParametersFromYaml.hpp>
-#include <libmfpic/DGEulerOperations.hpp>
 #include <libmfpic/Constants.hpp>
 #include <libmfpic/IntegratedCharge.hpp>
 #include <libmfpic/LowFidelityOperations.hpp>
@@ -309,7 +308,7 @@ ParticleMoments& ParticleOperations::getParticleMoments(const ParticleContainer&
 ParticleMoments& ParticleOperations::getVarianceReducedParticleMoments(
   const ParticleContainer& particles,
   const LowFidelityState& low_fidelity_state,
-  const DGEulerOperations& low_fidelity_operations,
+  const LowFidelityOperations& low_fidelity_operations,
   const bool compute_standard_pic_moments
 ) {
   if (compute_standard_pic_moments)
@@ -348,7 +347,7 @@ std::unordered_map<Species, mfem::Vector>& ParticleOperations::getNumberDensity(
 std::unordered_map<Species, mfem::Vector>& ParticleOperations::getVarianceReducedNumberDensity(
   const ParticleContainer& particles,
   const LowFidelityState& low_fidelity_state,
-  const DGEulerOperations& low_fidelity_operations
+  const LowFidelityOperations& low_fidelity_operations
 ) {
 
   for (auto & species_and_number_density : variance_reduced_particle_moments_.number_density)
@@ -444,7 +443,7 @@ std::unordered_map<Species, mfem::DenseMatrix>& ParticleOperations::getBulkVeloc
 std::unordered_map<Species, mfem::DenseMatrix>& ParticleOperations::getVarianceReducedBulkVelocity(
   const ParticleContainer& particles,
   const LowFidelityState& low_fidelity_state,
-  const DGEulerOperations& low_fidelity_operations
+  const LowFidelityOperations& low_fidelity_operations
 ) {
 
   for (auto & species_and_bulk_velocity : variance_reduced_particle_moments_.bulk_velocity)
@@ -581,7 +580,7 @@ std::unordered_map<Species, mfem::Vector>&
 ParticleOperations::getVarianceReducedTemperature(
   const ParticleContainer& particles,
   const LowFidelityState& low_fidelity_state,
-  const DGEulerOperations& low_fidelity_operations
+  const LowFidelityOperations& low_fidelity_operations
 ) {
   mfem::FiniteElementSpace finite_element_space = discretization_.getFeSpace();
   mfem::Mesh& mesh = *finite_element_space.GetMesh();
@@ -860,7 +859,7 @@ void ParticleOperations::sumParticleWeights_(
 void ParticleOperations::computeMaxNoiseReducingFactorPerElement(
   const ParticleContainer& particles,
   const LowFidelityState& low_fidelity_state,
-  const DGEulerOperations& low_fidelity_operations
+  const LowFidelityOperations& low_fidelity_operations
 ) {
 
   for (auto & species_and_number_density : max_noise_reducing_factors_)
