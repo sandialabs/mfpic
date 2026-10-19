@@ -189,7 +189,7 @@ public:
    *
    * @param[in] current_state Low fidelity state for which to compute bulk velocity.
    *
-   * @return Vector containing the cell averages for each species managed by @a current_state.
+   * @return DenseMatrix containing the cell averages for each species managed by @a current_state.
    */
   virtual std::unordered_map<Species,mfem::DenseMatrix> getCellAveragedBulkVelocity(
     const LowFidelityState& current_state
