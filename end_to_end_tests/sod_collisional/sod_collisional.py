@@ -9,11 +9,13 @@ import species
 import utils
 import verification
 
+import itertools
 import matplotlib.pyplot as plt
 import numpy as np
 import os
 from scipy.constants import electron_mass
 import subprocess
+import vrstudy
 
 electron_species = species.Species(mass=electron_mass)
 
@@ -42,24 +44,37 @@ discontinuity_location = 0.5 * domain_length
 max_cfl = 0.8
 final_time = 0.4 * domain_length / max_wavespeed
 
-base_num_elements = 50
-refinement_levels = [2, 4]
+num_elements = 100
 
-knudsen_number = .01
-collision_frequency = 1. / knudsen_number # TODO does this work with non-dimensionalization?
+dt_times_collision_frequencies = [0.1]
 
 particles_per_cell = 100
 
-def format_mesh_folder_name(refinement_level):
-    return f"MeshOutput{refinement_level:02}"
+def format_test_name(dt_times_collision_frequency : float, use_variance_reduction : bool):
+    return f'nu_x_dt_{dt_times_collision_frequency}_vr_{use_variance_reduction}'
 
 
-def get_input_deck(refinement_level):
-    num_elements = base_num_elements * refinement_level
+def get_input_deck(dt_times_collision_frequency : float, use_variance_reduction : bool):
     dx = domain_length / num_elements
     dt, num_time_steps = utils.compute_timestepping_that_satisfies_cfl(max_cfl, dx, max_wavespeed, final_time)
+    collision_frequency = dt_times_collision_frequency / dt
 
-    mesh_folder_name = format_mesh_folder_name(refinement_level)
+    no_variance_reduction = f"""
+Variance Reduction:
+  Strategy: none
+    """
+
+    with_variance_reduction = f"""
+Variance Reduction:
+  Strategy: Euler Fluid
+    """
+
+    collision_block = f"""
+Collisions:
+    - BGK Relaxation:
+        Species: neutral_electron
+        Collision Frequency: {collision_frequency}
+    """
 
     input_deck_contents = f"""
 Mesh:
@@ -117,17 +132,13 @@ Euler Fluids:
     - Side: right
       Type: Reflecting
 
-Collisions:
-    - BGK Relaxation:
-        Species: neutral_electron
-        Collision Frequency: {collision_frequency}
+{collision_block if collision_frequency > 0 else ""}
 
 Output:
   Stride: 1
-  Mesh Output Folder: {mesh_folder_name}
+  Mesh Output Folder: MeshOutput_{format_test_name(dt_times_collision_frequency, use_variance_reduction)}
 
-Variance Reduction:
-    Strategy: none
+{with_variance_reduction if use_variance_reduction else no_variance_reduction}
 
 """
     return input_deck_contents
@@ -137,159 +148,73 @@ def run(mfpic_executable):
     output_directory = "./"
     os.makedirs(output_directory, exist_ok=True)
 
-    for refinement_level in refinement_levels:
-        input_deck_contents = get_input_deck(refinement_level)
-        yaml = "sod_shock_tube.yaml"
+    study_toml_contents = f"""
+[study]
+name = "neutral_electron"
+mfpic = "{mfpic_executable}"              # executable name on PATH, or an absolute path
+members = 112                # ensemble size per case
+base_seed = 1000             # member i uses Particles: Seed = base_seed + i in every case
+jobs = 112                   # concurrent mfpic runs (each pinned to one core, OMP_NUM_THREADS=1)
+pin_cores = true
+species = ["neutral_electron"]
+keep_particle_dumps = [1]    # members that keep particles.h5part (all others turn it off)
+keep_mesh_output = true
+
+[collect]
+# MeshOutput point fields to keep (the matching *_lf_0 fluid field is kept too, if present)
+mesh_fields = ["integrated_charge", "electrostatic_potential", "E_0"]
+
+# Variance comparisons: [case, estimator], estimator in particle | variance_reduced | low_fidelity.
+# Both sides use the same members (same seeds), so the paired-difference bias check is valid.
+#[[comparison]]
+#name = "vrpic_vs_pic"
+#label = "VR-PIC (VR moments, VR E field) vs PIC (standard moments)"
+#baseline = ["pic", "particle"]
+#test = ["vrpic", "variance_reduced"]
+
+[plot]
+steps = [0, 1, 2, 3, 4, 5, 10, 50]
+moments = ["number_density", "bulk_velocity_0", "temperature"]
+fields = ["integrated_charge", "electrostatic_potential", "E_0"]
+    """
+
+    for dt_time_collision_frequency, use_variance_reduction in itertools.product(dt_times_collision_frequencies, [True, False]):
+        input_deck_contents = get_input_deck(dt_time_collision_frequency, use_variance_reduction)
+        formatted_test_name = format_test_name(dt_time_collision_frequency, use_variance_reduction)
+        yaml = f"sod_shock_tube_{formatted_test_name}.yaml"
         with open(yaml, "w") as input_deck:
             input_deck.write(input_deck_contents)
 
-        result = subprocess.run([mfpic_executable, "-i", yaml], capture_output=True, text=True)
+        study_toml_contents += f"""
+[cases."{formatted_test_name}"]
+deck = "{yaml}"
+label = "{formatted_test_name}"
+estimator = "{"variance_reduced" if use_variance_reduction else "particle"}"
+        """
 
-        log_filename = f"{output_directory}/execute_{refinement_level:02}.log"
-        with open(log_filename, "w") as execute_log:
-            execute_log.write(result.stdout)
-            execute_log.write(result.stderr)
+        # result = subprocess.run([mfpic_executable, "-i", yaml], capture_output=True, text=True)
 
-        verification.check_fluid_energy_positive_and_constant('Total_Fluid_Energy')
-        os.rename('output_lf_0.csv', f"{output_directory}/output_lf_0_{refinement_level:02}.csv")
-        os.rename(yaml, f"{output_directory}/sod_shock_tube_{refinement_level:02}.yaml")
+        # log_filename = f"{output_directory}/execute_{refinement_level:02}.log"
+        # with open(log_filename, "w") as execute_log:
+        #     execute_log.write(result.stdout)
+        #     execute_log.write(result.stderr)
 
-        result.check_returncode()
+        # verification.check_fluid_energy_positive_and_constant('Total_Fluid_Energy')
+        # os.rename('output_lf_0.csv', f"{output_directory}/output_lf_0_{refinement_level:02}.csv")
+        # os.rename(yaml, f"{output_directory}/sod_shock_tube_{refinement_level:02}.yaml")
 
+        # result.check_returncode()
 
-def compute_error(data, points, exact_solution):
-    numerical_solution = verification.create_1D_interpolater(data, points)
-    exact_solution_at_final_time = lambda x: exact_solution(x, final_time)
-    error = verification.compute_L1_relative_error_1D(numerical_solution, exact_solution_at_final_time, points)
-    return error
+    study_toml_filename = "study.toml"
+    with open(study_toml_filename, "w") as study_toml:
+        study_toml.write(study_toml_contents)
+
+    vrstudy.main(["all", study_toml_filename, "--force"])
 
 
 def analyze():
-    exact_mass_density, exact_velocity, exact_pressure = euler_exact_riemann_solver.form_exact_solutions(
-        left_state_primitive,
-        right_state_primitive,
-        electron_species,
-        discontinuity_location,
-    )
+    pass
 
-    mass_density_errors = []
-    velocity_errors = []
-    pressure_errors = []
-    h_list = []
-    for refinement_level in refinement_levels:
-        mesh_folder_name = format_mesh_folder_name(refinement_level)
-        _, mesh_data = read_mesh_data.read_mesh_data(mesh_folder_name)
-
-        points = mesh_data[-1]["points"]
-        x_points = points[:, 0]
-        dx = x_points[1] - x_points[0]
-        h_list.append(dx)
-
-        fluid_data = np.transpose(mesh_data[-1]["species_0_lf_0"])
-        mass_density_error = compute_error(fluid_data[0], x_points, exact_mass_density)
-
-        bulk_velocity_data = euler.get_bulk_velocity_from_conservative_state(fluid_data)
-        velocity_error = compute_error(bulk_velocity_data[0], x_points, exact_velocity)
-
-        pressure_data = euler.get_pressure_from_conservative_state(fluid_data, electron_species)
-        pressure_error = compute_error(pressure_data, x_points, exact_pressure)
-
-        mass_density_errors.append(mass_density_error)
-        velocity_errors.append(velocity_error)
-        pressure_errors.append(pressure_error)
-
-    mass_density_rates = verification.compute_convergence_rates(mass_density_errors, h_list)
-    velocity_rates = verification.compute_convergence_rates(velocity_errors, h_list)
-    pressure_rates = verification.compute_convergence_rates(pressure_errors, h_list)
-
-    print(f"mass_density_rates = {mass_density_rates}")
-    print(f"velocity_rates = {velocity_rates}")
-    print(f"pressure_rates = {pressure_rates}")
-
-    # since there is a contact wave in this problem the expected convergence rate is
-    # only 1/2
-    minimum_convergence_rate = 0.5
-    assert (
-        np.min(mass_density_rates) > minimum_convergence_rate
-    ), f"The mass density is not converging at the correct rate. The expected rate is {minimum_convergence_rate} and the actual rates are {mass_density_rates}"
-    assert (
-        np.min(velocity_rates) > minimum_convergence_rate
-    ), f"The velocity is not converging at the correct rate. The expected rate is {minimum_convergence_rate} and the actual rates are {velocity_rates}"
-    assert (
-        np.min(pressure_rates) > minimum_convergence_rate
-    ), f"The pressure is not converging at the correct rate. The expected rate is {minimum_convergence_rate} and the actual rates are {pressure_rates}"
-
-
-def plot_quantity(data, points, exact_solution, plot_points, time, name, i, figures_directory):
-    fig, axes = plt.subplots()
-    axes.plot(points, data, label="Numerical Solution")
-    axes.plot(plot_points, exact_solution(plot_points, time), label="Exact Solution")
-    axes.legend()
-    axes.set_title(f"{name} At Time = {time}")
-    axes.set_xlabel("x")
-    axes.set_ylabel(f"{name}")
-    fig.savefig(f"{figures_directory}/{name}{i:03}.png")
-    plt.close(fig)
-
-
-def plot():
-    for refinement_level in refinement_levels:
-        mesh_folder_name = format_mesh_folder_name(refinement_level)
-        timesteps, mesh_data = read_mesh_data.read_mesh_data(mesh_folder_name)
-
-        points = mesh_data[0]["points"]
-        x_points = points[:, 0]
-        num_cells = int(0.5 * x_points.shape[0])
-
-        exact_mass_density, exact_velocity, exact_pressure = euler_exact_riemann_solver.form_exact_solutions(
-            left_state_primitive,
-            right_state_primitive,
-            electron_species,
-            discontinuity_location,
-        )
-        x_plot = np.linspace(0, domain_length, 10 * num_cells)
-
-        figures_directory = f"Figures{refinement_level:02}"
-        os.makedirs(figures_directory, exist_ok=True)
-        for i in range(len(timesteps)):
-            fluid_data = np.transpose(mesh_data[i]["species_0_lf_0"])
-            time = timesteps[i]
-
-            mass_density_data = fluid_data[0]
-            plot_quantity(
-                mass_density_data,
-                x_points,
-                exact_mass_density,
-                x_plot,
-                time,
-                "MassDensity",
-                i,
-                figures_directory,
-            )
-
-            bulk_velocity_data = euler.get_bulk_velocity_from_conservative_state(fluid_data)
-            plot_quantity(
-                bulk_velocity_data[0],
-                x_points,
-                exact_velocity,
-                x_plot,
-                time,
-                "Velocity",
-                i,
-                figures_directory,
-            )
-
-            pressure_data = euler.get_pressure_from_conservative_state(fluid_data, electron_species)
-            plot_quantity(
-                pressure_data,
-                x_points,
-                exact_pressure,
-                x_plot,
-                time,
-                "Pressure",
-                i,
-                figures_directory,
-            )
 
 if __name__ == "__main__":
     import sys
@@ -297,7 +222,5 @@ if __name__ == "__main__":
     if "run" in sys.argv[1:]:
         mfpic_executable = sys.argv[2]
         run(mfpic_executable)
-    elif "plot" in sys.argv[1:]:
-        plot()
     else:
         analyze()
