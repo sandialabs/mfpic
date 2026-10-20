@@ -46,7 +46,7 @@ public:
     ParticleContainer& particles,
     ParticleOperations& particle_operations,
     const LowFidelityState& low_fidelity_state,
-    const DGEulerOperations& low_fidelity_operations
+    const LowFidelityOperations& low_fidelity_operations
   ) const override;
 
 private:

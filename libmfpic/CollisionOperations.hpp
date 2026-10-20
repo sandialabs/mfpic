@@ -4,7 +4,7 @@
 
 namespace mfpic {
 
-class DGEulerOperations;
+class LowFidelityOperations;
 class LowFidelityState;
 class ParticleContainer;
 class ParticleMoments;
@@ -34,7 +34,7 @@ public:
     ParticleContainer& particles,
     ParticleOperations& particle_operations,
     const LowFidelityState& low_fidelity_state,
-    const DGEulerOperations& low_fidelity_operations
+    const LowFidelityOperations& low_fidelity_operations
   ) const = 0;
 
   virtual ~CollisionOperations() = default;

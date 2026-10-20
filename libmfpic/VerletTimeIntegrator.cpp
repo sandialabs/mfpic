@@ -63,7 +63,7 @@ void VerletTimeIntegrator::advanceTimestep(
   particle_container = particle_operations.accelerate(dt/2, particle_container, particle_field_state);
 
   for (const std::unique_ptr<CollisionOperations>& collision_operator : collision_operations) {
-    collision_operator->performCollisions(dt, generator, particle_container, particle_operations, low_fidelity_states[0], dynamic_cast<DGEulerOperations&>(*low_fidelity_operations[0]));
+    collision_operator->performCollisions(dt, generator, particle_container, particle_operations, low_fidelity_states[0], *low_fidelity_operations[0]);
     // collision_operator->performCollisions(dt, generator, particle_container, particle_operations);
   }
 }

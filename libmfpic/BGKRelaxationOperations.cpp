@@ -33,7 +33,7 @@ void BGKRelaxationOperations::performCollisions(
   ParticleContainer& particles,
   ParticleOperations& particle_operations,
   const LowFidelityState& low_fidelity_state,
-  const DGEulerOperations& low_fidelity_operations
+  const LowFidelityOperations& low_fidelity_operations
 ) const {
   constexpr bool recompute_standard_pic_moments = true;
   ParticleMoments particle_moments = particle_operations.getVarianceReducedParticleMoments(
