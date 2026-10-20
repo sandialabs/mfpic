@@ -16,12 +16,16 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     permissions:
-      actions: write
+      contents: read
+      packages: write
 
     env:
       SPACK_DISABLE_LOCAL_CONFIG: true
       SPACK_USER_CACHE_PATH: spack_cache
       SPACK_VERSION: v1.1.1
+      SPACK_BUILDCACHE: oci://ghcr.io/${{ github.repository_owner }}/mfpic-spack-buildcache
+      GITHUB_USER: ${{ github.actor }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     strategy:
       fail-fast: false
@@ -32,15 +36,7 @@ jobs:
         compiler: [gcc, llvm]
 
     steps:
-    - name: Restore spack cache
-      id: restore-spack-cache
-      uses: actions/cache/restore@v4
-      with:
-        path: spack
-        key: ${{env.SPACK_VERSION}}-${{matrix.os}}-${{matrix.build_type}}-${{matrix.compiler}}
-
     - name: Check out spack
-      if: ${{ steps.restore-spack-cache.outputs.cache-hit != 'true' }}
       uses: actions/checkout@v4
       with:
         repository: spack/spack
@@ -52,13 +48,21 @@ jobs:
       with:
         path: mfpic
 
-    - name: Build and test
+    - name: Configure spack
       run: |
         sudo apt install llvm libomp-dev
         . spack/share/spack/setup-env.sh
+        spack config --scope site add "config:install_tree:padded_length:128"
+        spack mirror add --scope site --unsigned \
+          --oci-username-variable GITHUB_USER \
+          --oci-password-variable GITHUB_TOKEN \
+          mfpic-buildcache ${{env.SPACK_BUILDCACHE}}
         spack bootstrap now
         spack compiler find
-        spack env rm -y mfpic-dev || true
+
+    - name: Install dependencies
+      run: |
+        . spack/share/spack/setup-env.sh
         spack env create mfpic-dev
         spack env activate mfpic-dev
         spack repo add mfpic/spack_repo/mfpic
@@ -67,18 +71,15 @@ jobs:
         spack develop --no-clone --path $PWD/mfpic --build-directory $PWD/build mfpic
         spack concretize -f --test=root
         spack install --test=root --only=dependencies
+
+    - name: Push dependencies to build cache
+      if: ${{ github.ref_name == 'main' }}
+      run: |
+        . spack/share/spack/setup-env.sh
+        spack -e mfpic-dev buildcache push --update-index --only=dependencies mfpic-buildcache
+
+    - name: Build and test
+      run: |
+        . spack/share/spack/setup-env.sh
+        spack env activate mfpic-dev
         spack install --test=root --verbose --until=build
-
-    - name: Delete spack cache if on main branch so that we can update it
-      if: ${{ github.ref_name == 'main' }}
-      env:
-        GH_TOKEN: ${{ github.token }}
-        GH_REPO: ${{ github.repository }}
-      run: gh cache delete "${{env.SPACK_VERSION}}-${{matrix.os}}-${{matrix.build_type}}-${{matrix.compiler}}" || true
-
-    - name: Save spack cache if on main branch
-      if: ${{ github.ref_name == 'main' }}
-      uses: actions/cache/save@v4
-      with:
-        path: spack
-        key: ${{env.SPACK_VERSION}}-${{matrix.os}}-${{matrix.build_type}}-${{matrix.compiler}}
