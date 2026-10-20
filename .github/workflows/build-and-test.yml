@@ -72,9 +72,8 @@ jobs:
         spack concretize -f --test=root
         spack install --test=root --only=dependencies
 
-    # TODO: after testing, restrict this to main with
-    #   if: ${{ github.ref_name == 'main' }}
     - name: Push dependencies to build cache
+      if: ${{ github.ref_name == 'main' }}
       run: |
         . spack/share/spack/setup-env.sh
         spack -e mfpic-dev buildcache push --update-index --only=dependencies mfpic-buildcache
