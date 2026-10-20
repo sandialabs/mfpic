@@ -52,7 +52,6 @@ jobs:
       run: |
         sudo apt install llvm libomp-dev
         . spack/share/spack/setup-env.sh
-        # Pad install prefixes so binaries from the build cache can be relocated.
         spack config --scope site add "config:install_tree:padded_length:128"
         spack mirror add --scope site --unsigned \
           --oci-username-variable GITHUB_USER \
