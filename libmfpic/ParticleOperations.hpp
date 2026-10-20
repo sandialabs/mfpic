@@ -1,7 +1,6 @@
 #pragma once
 
 #include <libmfpic/BuildVarianceReductionParametersFromYaml.hpp>
-#include <libmfpic/DGEulerOperations.hpp>
 #include <libmfpic/Discretization.hpp>
 #include <libmfpic/ElectromagneticFieldsEvaluator.hpp>
 #include <libmfpic/ElementFaceContainer.hpp>
@@ -110,7 +109,7 @@ public:
   ParticleMoments& getVarianceReducedParticleMoments(
     const ParticleContainer& particles,
     const LowFidelityState& low_fidelity_state,
-    const DGEulerOperations& low_fidelity_operations,
+    const LowFidelityOperations& low_fidelity_operations,
     const bool compute_standard_pic_moments=false
   );
 
@@ -169,7 +168,7 @@ private:
     std::unordered_map<Species, mfem::Vector>& getVarianceReducedNumberDensity(
     const ParticleContainer& particles,
     const LowFidelityState& low_fidelity_state,
-    const DGEulerOperations& low_fidelity_operations
+    const LowFidelityOperations& low_fidelity_operations
   );
 
   /**
@@ -194,7 +193,7 @@ private:
   std::unordered_map<Species, mfem::DenseMatrix>& getVarianceReducedBulkVelocity(
     const ParticleContainer& particles,
     const LowFidelityState& low_fidelity_state,
-    const DGEulerOperations& low_fidelity_operations
+    const LowFidelityOperations& low_fidelity_operations
   );
 
   /**
@@ -220,13 +219,13 @@ private:
   std::unordered_map<Species, mfem::Vector>& getVarianceReducedTemperature(
     const ParticleContainer& particles,
     const LowFidelityState& low_fidelity_state,
-    const DGEulerOperations& low_fidelity_operations
+    const LowFidelityOperations& low_fidelity_operations
   );
 
   void computeMaxNoiseReducingFactorPerElement(
     const ParticleContainer& particles,
     const LowFidelityState& low_fidelity_state,
-    const DGEulerOperations& low_fidelity_operations
+    const LowFidelityOperations& low_fidelity_operations
   );
 
 

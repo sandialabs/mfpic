@@ -161,12 +161,17 @@ void runSimulation(int argc, char* argv[]) {
 
   if (variance_reduction_parameters.strategy != VarianceReductionParameters::Strategy::None && output_parameters.output_particle_moments) {
     for (int i = 0; i < std::ssize(low_fidelity_field_states); ++i) {
-      auto* ops = dynamic_cast<DGEulerOperations*>(low_fidelity_operations[i].get());
-      if (!ops) throw std::runtime_error("Cannot compute variance reduced moments for low_fidelity_operations[i] that is not DGEulerOperations.");
       const std::string variance_reduced_prefix = "variance_reduced_particle_moments";
-      dumpVarianceReducedParticleMoments(particle_operations,particle_container,low_fidelity_states[i],*ops,variance_reduced_prefix, 0, 0.0);
+      dumpVarianceReducedParticleMoments(
+        particle_operations,
+        particle_container,
+        low_fidelity_states[i],
+        *low_fidelity_operations[i],
+        variance_reduced_prefix,
+        0,
+        0.0);
       const std::string low_fidelity_prefix = "low_fidelity_moments";
-      dumpLowFidelityMoments(low_fidelity_states[i],*ops,low_fidelity_prefix, 0, 0.0);
+      dumpLowFidelityMoments(low_fidelity_states[i], *low_fidelity_operations[i], *mesh, low_fidelity_prefix, 0, 0.0);
     }
   }
   std::vector<std::unique_ptr<CollisionOperations>> collision_operations = buildCollisionOperationsFromYaml(
@@ -271,12 +276,23 @@ void runSimulation(int argc, char* argv[]) {
         const std::string prefix = "particle_moments";
         dumpParticleMoments(particle_operations,particle_container, prefix, i_timestep, end_time);
         if (variance_reduction_parameters.strategy != VarianceReductionParameters::Strategy::None) {
-          auto* ops = dynamic_cast<DGEulerOperations*>(low_fidelity_operations[0].get());
-          if (!ops) throw std::runtime_error("Cannot compute variance reduced moments for low_fidelity_operations that is not DGEulerOperations.");
           const std::string variance_reduced_prefix = "variance_reduced_particle_moments";
-          dumpVarianceReducedParticleMoments(particle_operations,particle_container,low_fidelity_states[0],*ops,variance_reduced_prefix, i_timestep, end_time);
+          dumpVarianceReducedParticleMoments(
+            particle_operations,
+            particle_container,
+            low_fidelity_states[0],
+            *low_fidelity_operations[0],
+            variance_reduced_prefix,
+            i_timestep,
+            end_time);
           const std::string low_fidelity_prefix = "low_fidelity_moments";
-          dumpLowFidelityMoments(low_fidelity_states[0],*ops,low_fidelity_prefix, i_timestep, end_time);
+          dumpLowFidelityMoments(
+            low_fidelity_states[0],
+            *low_fidelity_operations[0],
+            *mesh,
+            low_fidelity_prefix,
+            i_timestep,
+            end_time);
         }
       }
 

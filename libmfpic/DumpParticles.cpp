@@ -165,7 +165,7 @@ void dumpVarianceReducedParticleMoments(
   ParticleOperations& particle_operations,
   const ParticleContainer& particles,
   const LowFidelityState& low_fidelity_state,
-  const DGEulerOperations& low_fidelity_operations,
+  const LowFidelityOperations& low_fidelity_operations,
   const std::string& file_prefix,
   const int step,
   const double time)
@@ -219,7 +219,8 @@ void dumpVarianceReducedParticleMoments(
 
 void dumpLowFidelityMoments(
   const LowFidelityState& low_fidelity_state,
-  const DGEulerOperations& low_fidelity_operations,
+  const LowFidelityOperations& low_fidelity_operations,
+  mfem::Mesh& mesh,
   const std::string& file_prefix,
   const int step,
   const double time)
@@ -228,7 +229,6 @@ void dumpLowFidelityMoments(
   std::unordered_map<Species, mfem::DenseMatrix> bulk_velocity = low_fidelity_operations.getCellAveragedBulkVelocity(low_fidelity_state);
   std::unordered_map<Species, mfem::Vector> temperature = low_fidelity_operations.getCellAveragedTemperature(low_fidelity_state);
 
-  mfem::Mesh& mesh = low_fidelity_operations.getMesh();
   const int nelem = mesh.GetNE();
 
   for (const auto & [species, _] : number_density) {
