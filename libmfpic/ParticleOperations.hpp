@@ -77,8 +77,8 @@ public:
   /**
   * @brief Assemble charges from the particles into the charge density using a variance reduced formulation
   *
-  * The low-fidelity model is the control variate unless Specified LF Moments are set, in which case
-  * it is ignored and a Maxwellian at the reference moments is used instead.
+  * The low-fidelity model is the control variate for Strategy: Euler Fluid. For Strategy: Uniform
+  * Maxwellian it is ignored and a Maxwellian at the reference moments is used instead.
   *
   * @param current_particles - ParticleContainer of particles
   * @param low_fidelity_state - \ref LowFidelityState
@@ -92,7 +92,7 @@ public:
   ) const;
 
   /**
-  * @brief Assemble variance reduced charge without a low-fidelity model; requires Specified LF Moments
+  * @brief Assemble variance reduced charge without a low-fidelity model; requires Strategy: Uniform Maxwellian
   *
   * @param current_particles - ParticleContainer of particles
   * @return IntegratedCharge - integrated charge state
@@ -130,7 +130,7 @@ public:
   );
 
   /**
-   * @brief Compute the variance reduced particle moments without a low-fidelity model; requires Specified LF Moments
+   * @brief Compute the variance reduced particle moments without a low-fidelity model; requires Strategy: Uniform Maxwellian
    *
    * @param[in] particles   \ref ParticleContainer
    * @param[in] compute_standard_pic_moments Flag to (re)compute the standard PIC moments
@@ -196,7 +196,8 @@ private:
   );
 
   /**
-   * @brief Whether a species has a control variate: listed in Specified LF Moments, or present in the low-fidelity state
+   * @brief Whether a species has a control variate: listed in Uniform Maxwellian Moments (Strategy: Uniform
+   * Maxwellian), or present in the low-fidelity state (Strategy: Euler Fluid)
    */
   bool hasControlVariate_(
     const Species& species,

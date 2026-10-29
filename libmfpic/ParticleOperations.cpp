@@ -727,9 +727,10 @@ bool ParticleOperations::hasControlVariate_(
   const Species& species,
   const LowFidelityState* low_fidelity_state
 ) const {
-  if (variance_reduction_parameters_.specified_lf_moments) {
-    const std::vector<std::string>& specified_species = variance_reduction_parameters_.specified_lf_species;
-    return specified_species.empty() || std::ranges::find(specified_species, species.name) != specified_species.end();
+  if (variance_reduction_parameters_.strategy == VarianceReductionParameters::Strategy::UniformMaxwellian)
+  {
+    const std::vector<std::string>& reference_species = variance_reduction_parameters_.reference_species;
+    return reference_species.empty() || std::ranges::find(reference_species, species.name) != reference_species.end();
   }
   return low_fidelity_state != nullptr && low_fidelity_state->getSpeciesIndex(species) >= 0;
 }
@@ -741,7 +742,8 @@ double ParticleOperations::evaluateControlVariate_(
 ) const {
   const mfem::Vector particle_velocity(particle.velocity.GetData(), velocity_dims_);
 
-  if (variance_reduction_parameters_.specified_lf_moments) {
+  if (variance_reduction_parameters_.strategy == VarianceReductionParameters::Strategy::UniformMaxwellian)
+  {
     const mfem::Vector reference_primitive_state{
       variance_reduction_parameters_.reference_number_density,
       variance_reduction_parameters_.reference_bulk_velocity[0],
@@ -752,7 +754,7 @@ double ParticleOperations::evaluateControlVariate_(
   }
 
   if (low_fidelity_state == nullptr || low_fidelity_operations == nullptr) {
-    errorWithDeveloperMessage("Variance reduction without a low-fidelity model requires Specified LF Moments.");
+    errorWithDeveloperMessage("Variance reduction without a low-fidelity model requires Strategy: Uniform Maxwellian.");
   }
   const mfem::Vector particle_position(particle.position.GetData(), dim_);
   return low_fidelity_operations->evaluateParticleDistributionFunction(
@@ -803,7 +805,8 @@ ParticleOperations::ControlVariateMomentIntegrals ParticleOperations::computeCon
   const int number_of_elements = finite_element_space.GetNE();
 
   ControlVariateMomentIntegrals integrals;
-  if (!variance_reduction_parameters_.specified_lf_moments) {
+  if (!(variance_reduction_parameters_.strategy == VarianceReductionParameters::Strategy::UniformMaxwellian))
+  {
     if (low_fidelity_state == nullptr || low_fidelity_operations == nullptr)
       return integrals;
     integrals.number_density =
@@ -846,7 +849,8 @@ mfem::Vector ParticleOperations::assembleControlVariateCharge_(
   const LowFidelityState* low_fidelity_state,
   const LowFidelityOperations* low_fidelity_operations
 ) const {
-  if (variance_reduction_parameters_.specified_lf_moments) {
+  if (variance_reduction_parameters_.strategy == VarianceReductionParameters::Strategy::UniformMaxwellian)
+  {
     mfem::ConstantCoefficient charge_density(species.charge * variance_reduction_parameters_.reference_number_density);
     mfem::LinearForm control_variate_charge(&discretization_.getFeSpace());
     control_variate_charge.AddDomainIntegrator(new mfem::DomainLFIntegrator(charge_density));
