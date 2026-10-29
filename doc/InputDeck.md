@@ -642,22 +642,27 @@ $$
 \langle \phi \rangle = \sum_i w_i \phi(x_i, v_i) \left(1 - \frac{f_{LF}(x_i, v_i)}{f_i}\right) + \int \phi f_{LF} \, dv,
 $$
 where $f_i$ is the phase-space density carried by particle $i$.
-By default $f_{LF}$ is the Maxwellian of the first ``Euler Fluids`` state of the particle's species;
-particle species without one are not variance reduced.
+The ``Strategy`` selects $f_{LF}$.
 
 ```yaml
 Variance Reduction:
     Strategy: string # (default = Euler Fluid)
     Use VR E Field: boolean # (default = false)
     Apply Cell Limiting: boolean # (default = false)
-    Specified LF Moments: # (optional)
-        Reference Number Density: float # [1/m^3]
-        Reference Bulk Velocity: [float, float, float] # [m/s]
-        Reference Temperature: float # [K]
+    Uniform Maxwellian Moments: # (required for, and only allowed with, Strategy: Uniform Maxwellian)
+        Number Density: float # [1/m^3]
+        Bulk Velocity: [float, float, float] # [m/s]
+        Temperature: float # [K]
         Species: [string, ...] # (optional, default = all species)
 ```
 
-**``Strategy``**: `Euler Fluid` or `none`.
+**``Strategy``**: One of
+- `Euler Fluid`: $f_{LF}$ is the Maxwellian of the first ``Euler Fluids`` state of the particle's species.
+  Particle species without one are not variance reduced. Requires ``Euler Fluids``.
+- `Uniform Maxwellian`: $f_{LF}$ is a spatially uniform Maxwellian with the moments in ``Uniform Maxwellian Moments``,
+  for the species listed there. Any ``Euler Fluids`` are still evolved and output, but are not used by variance reduction,
+  and none are required.
+- `none`: no variance reduction.
 
 **``Use VR E Field``**: Solve for the particle electric field from the variance reduced charge.
 
@@ -666,18 +671,20 @@ $|1 - f_{LF}/f_i| \ge 1$.
 This applies to both the charge and the moments.
 For the charge, a degree of freedom is variance reduced only if every element it touches is.
 
-**``Specified LF Moments``**: Use a spatially uniform Maxwellian with the given moments as $f_{LF}$, in place of the Euler fluids,
-for the species listed under ``Species`` (all species if omitted).
-Any Euler fluids are then ignored by variance reduction, and none are required.
+**``Uniform Maxwellian Moments``**: The number density, bulk velocity and temperature of the uniform Maxwellian.
+``Bulk Velocity`` must have 3 components, as for the initial conditions; with ``Number of Velocity Dimensions`` $d < 3$,
+components beyond $d$ should match the particles' (cold) drift in those directions.
+``Species`` lists the species that use it; species not listed are not variance reduced.
 
 #### Example
 ```yaml
 Variance Reduction:
+    Strategy: Uniform Maxwellian
     Use VR E Field: true
-    Specified LF Moments:
-        Reference Number Density: 1.0e18
-        Reference Bulk Velocity: [0.0, 0.0, 0.0]
-        Reference Temperature: 116045.0
+    Uniform Maxwellian Moments:
+        Number Density: 1.0e18
+        Bulk Velocity: [0.0, 0.0, 0.0]
+        Temperature: 116045.0
         Species: [electron]
 ```
 

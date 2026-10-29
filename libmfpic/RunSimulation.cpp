@@ -153,11 +153,11 @@ void runSimulation(int argc, char* argv[]) {
     low_fidelity_field_states.emplace_back(electrostatic_discretization);
   }
 
-  if (variance_reduction_parameters.strategy != VarianceReductionParameters::Strategy::None &&
-      low_fidelity_operations.empty() && !variance_reduction_parameters.specified_lf_moments) {
+  if (variance_reduction_parameters.strategy == VarianceReductionParameters::Strategy::EulerFluid &&
+      low_fidelity_operations.empty()) {
     errorWithUserMessage(
-      "Variance Reduction requires a low-fidelity model or Specified LF Moments to use as a control variate, "
-      "but neither was given.");
+      "Variance Reduction Strategy: Euler Fluid uses the Euler fluids as the control variate, but no Euler Fluids "
+      "were given. Use Strategy: Uniform Maxwellian for a fluid-free control variate.");
   }
 
   auto dump_variance_reduced_moments = [&](const int step, const double time) {

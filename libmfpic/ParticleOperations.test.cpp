@@ -1429,7 +1429,6 @@ TEST(ParticleOperations, VarianceReducedMomentsAreExactForMaxwellianIn3D) {
   variance_reduction_parameters.strategy = VarianceReductionParameters::Strategy::EulerFluid;
   variance_reduction_parameters.limit_variance_reduction = false;
   variance_reduction_parameters.use_variance_reduced_electric_field = false;
-  variance_reduction_parameters.specified_lf_moments = false;
   particle_operations.setVarianceReductionParameters(variance_reduction_parameters);
 
   ParticleMoments variance_reduced_particle_moments = particle_operations.getVarianceReducedParticleMoments(particles,low_fidelity_state,dg_euler_operations,true);
@@ -1713,10 +1712,9 @@ struct OneDimensionalMaxwellianVarianceReductionSetup {
       velocity_dims);
   }
 
-  void useSpecifiedMoments(const double reference_number_density, const bool limit_variance_reduction = false) {
+  void useUniformMaxwellian(const double reference_number_density, const bool limit_variance_reduction = false) {
     VarianceReductionParameters variance_reduction_parameters;
-    variance_reduction_parameters.strategy = VarianceReductionParameters::Strategy::EulerFluid;
-    variance_reduction_parameters.specified_lf_moments = true;
+    variance_reduction_parameters.strategy = VarianceReductionParameters::Strategy::UniformMaxwellian;
     variance_reduction_parameters.reference_number_density = reference_number_density;
     variance_reduction_parameters.reference_bulk_velocity = {bulk_velocity(0), bulk_velocity(1), bulk_velocity(2)};
     variance_reduction_parameters.reference_temperature = temperature;
@@ -1733,9 +1731,9 @@ struct OneDimensionalMaxwellianVarianceReductionSetup {
   }
 };
 
-TEST(ParticleOperations, VarianceReducedChargeWithSpecifiedMomentsIsExactWithoutLowFidelityModel) {
+TEST(ParticleOperations, VarianceReducedChargeWithUniformMaxwellianIsExactWithoutLowFidelityModel) {
   OneDimensionalMaxwellianVarianceReductionSetup setup;
-  setup.useSpecifiedMoments(setup.number_density);
+  setup.useUniformMaxwellian(setup.number_density);
 
   const IntegratedCharge variance_reduced_charge = setup.particle_operations.assembleVarianceReducedCharge(setup.particles);
   const mfem::Vector expected_charge = setup.uniformCharge(setup.species.charge * setup.number_density);
@@ -1745,11 +1743,11 @@ TEST(ParticleOperations, VarianceReducedChargeWithSpecifiedMomentsIsExactWithout
   }
 }
 
-TEST(ParticleOperations, VarianceReducedMomentsWithSpecifiedMomentsIgnoreLowFidelityModel) {
+TEST(ParticleOperations, VarianceReducedMomentsWithUniformMaxwellianIgnoreLowFidelityModel) {
   OneDimensionalMaxwellianVarianceReductionSetup setup;
-  setup.useSpecifiedMoments(setup.number_density);
+  setup.useUniformMaxwellian(setup.number_density);
 
-  // A fluid that disagrees with the particles; the specified moments must be used instead.
+  // A fluid that disagrees with the particles; the uniform Maxwellian must be used instead.
   Discretization dg_discretization(setup.mesh.get(), 0, FETypes::DG, 5);
   std::shared_ptr<DGEulerAssembly> operator_ptr = std::make_shared<DGEulerAssembly>(dg_discretization.getFeSpace(), setup.species);
   std::vector<std::shared_ptr<DGEulerAssembly>> dg_operators({operator_ptr});
@@ -1772,11 +1770,11 @@ TEST(ParticleOperations, VarianceReducedMomentsWithSpecifiedMomentsIgnoreLowFide
   }
 }
 
-TEST(ParticleOperations, VarianceReducedBulkVelocityWithSpecifiedMomentsWeightsReferenceVelocityByDensity) {
+TEST(ParticleOperations, VarianceReducedBulkVelocityWithUniformMaxwellianWeightsReferenceVelocityByDensity) {
   OneDimensionalMaxwellianVarianceReductionSetup setup;
   // f_LF = 2 f at every particle, so each particle's noise reducing factor is exactly -1
   const double reference_number_density = 2.0 * setup.number_density;
-  setup.useSpecifiedMoments(reference_number_density);
+  setup.useUniformMaxwellian(reference_number_density);
 
   const ParticleMoments variance_reduced = setup.particle_operations.getVarianceReducedParticleMoments(setup.particles, true);
   const ParticleMoments pic = setup.particle_operations.getParticleMoments(setup.particles);
@@ -1800,10 +1798,10 @@ TEST(ParticleOperations, VarianceReducedChargeRespectsCellLimiting) {
   const mfem::Vector pic_charge = setup.particle_operations.assembleCharge(setup.particles).getIntegratedCharge();
   const mfem::Vector control_variate_charge = setup.uniformCharge(setup.species.charge * reference_number_density);
 
-  setup.useSpecifiedMoments(reference_number_density, true);
+  setup.useUniformMaxwellian(reference_number_density, true);
   const mfem::Vector limited_charge = setup.particle_operations.assembleVarianceReducedCharge(setup.particles).getIntegratedCharge();
 
-  setup.useSpecifiedMoments(reference_number_density, false);
+  setup.useUniformMaxwellian(reference_number_density, false);
   const mfem::Vector unlimited_charge = setup.particle_operations.assembleVarianceReducedCharge(setup.particles).getIntegratedCharge();
 
   for (int dof = 0; dof < pic_charge.Size(); ++dof) {
@@ -1815,7 +1813,7 @@ TEST(ParticleOperations, VarianceReducedChargeRespectsCellLimiting) {
 
 TEST(ParticleOperations, VarianceReducedMomentsRespectCellLimiting) {
   OneDimensionalMaxwellianVarianceReductionSetup setup;
-  setup.useSpecifiedMoments(3.0 * setup.number_density, true);
+  setup.useUniformMaxwellian(3.0 * setup.number_density, true);
 
   const ParticleMoments variance_reduced = setup.particle_operations.getVarianceReducedParticleMoments(setup.particles, true);
   const ParticleMoments pic = setup.particle_operations.getParticleMoments(setup.particles);
@@ -1827,12 +1825,11 @@ TEST(ParticleOperations, VarianceReducedMomentsRespectCellLimiting) {
   }
 }
 
-TEST(ParticleOperations, SpecifiedMomentsOnlyApplyToListedSpecies) {
+TEST(ParticleOperations, UniformMaxwellianOnlyAppliesToListedSpecies) {
   OneDimensionalMaxwellianVarianceReductionSetup setup;
   VarianceReductionParameters variance_reduction_parameters;
-  variance_reduction_parameters.strategy = VarianceReductionParameters::Strategy::EulerFluid;
-  variance_reduction_parameters.specified_lf_moments = true;
-  variance_reduction_parameters.specified_lf_species = {"some_other_species"};
+  variance_reduction_parameters.strategy = VarianceReductionParameters::Strategy::UniformMaxwellian;
+  variance_reduction_parameters.reference_species = {"some_other_species"};
   variance_reduction_parameters.reference_number_density = 3.0 * setup.number_density;
   variance_reduction_parameters.reference_temperature = setup.temperature;
   setup.particle_operations.setVarianceReductionParameters(variance_reduction_parameters);
