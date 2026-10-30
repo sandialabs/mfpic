@@ -42,7 +42,7 @@ void VerletTimeIntegrator::advanceTimestep(
   if ((variance_reduction_parameters.strategy != VarianceReductionParameters::Strategy::None) &&
       (variance_reduction_parameters.use_variance_reduced_electric_field))
   {
-    particle_charge = low_fidelity_states.empty()
+    particle_charge = (variance_reduction_parameters.strategy == VarianceReductionParameters::Strategy::UniformMaxwellian)
       ? particle_operations.assembleVarianceReducedCharge(particle_container)
       : particle_operations.assembleVarianceReducedCharge(particle_container,low_fidelity_states[0],*low_fidelity_operations[0]);
   }

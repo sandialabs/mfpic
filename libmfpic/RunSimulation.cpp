@@ -168,8 +168,18 @@ void runSimulation(int argc, char* argv[]) {
       dg_euler_operations = dynamic_cast<const DGEulerOperations*>(low_fidelity_operations[0].get());
       if (!dg_euler_operations) throw std::runtime_error("Cannot compute variance reduced moments for low_fidelity_operations that is not DGEulerOperations.");
     }
+    // The fluid is the control variate only for Strategy: Euler Fluid; its moments are written either way.
+    const bool fluid_is_control_variate =
+      variance_reduction_parameters.strategy == VarianceReductionParameters::Strategy::EulerFluid;
     const std::string variance_reduced_prefix = "variance_reduced_particle_moments";
-    dumpVarianceReducedParticleMoments(particle_operations,particle_container,low_fidelity_state,dg_euler_operations,variance_reduced_prefix, step, time);
+    dumpVarianceReducedParticleMoments(
+      particle_operations,
+      particle_container,
+      fluid_is_control_variate ? low_fidelity_state : nullptr,
+      fluid_is_control_variate ? dg_euler_operations : nullptr,
+      variance_reduced_prefix,
+      step,
+      time);
     if (dg_euler_operations) {
       const std::string low_fidelity_prefix = "low_fidelity_moments";
       dumpLowFidelityMoments(*low_fidelity_state,*dg_euler_operations,low_fidelity_prefix, step, time);
@@ -193,7 +203,7 @@ void runSimulation(int argc, char* argv[]) {
   if ((variance_reduction_parameters.strategy != VarianceReductionParameters::Strategy::None) &&
      (variance_reduction_parameters.use_variance_reduced_electric_field))
   {
-    particle_charge = low_fidelity_states.empty()
+    particle_charge = (variance_reduction_parameters.strategy == VarianceReductionParameters::Strategy::UniformMaxwellian)
       ? particle_operations.assembleVarianceReducedCharge(particle_container)
       : particle_operations.assembleVarianceReducedCharge(particle_container,low_fidelity_states[0],*low_fidelity_operations[0]);
   }

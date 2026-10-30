@@ -433,6 +433,11 @@ std::unordered_map<Species, mfem::DenseMatrix>& ParticleOperations::getVarianceR
   mfem::FiniteElementSpace& finite_element_space = discretization_.getFeSpace();
   mfem::Mesh &mesh = *finite_element_space.GetMesh();
 
+  auto uses_variance_reduced_velocity = [&](const Species& species, const int elem_id) {
+    const double number_density = variance_reduced_particle_moments_.number_density.at(species)(elem_id);
+    return variance_reduction_elements_.at(species)[elem_id] && number_density > 0.0 && std::isfinite(number_density);
+  };
+
   for (const Particle& particle : particles) {
     if (not particle.is_alive) continue;
 
@@ -441,7 +446,7 @@ std::unordered_map<Species, mfem::DenseMatrix>& ParticleOperations::getVarianceR
 
     mfem::Vector velocity_in_element(variance_reduced_particle_moments_.bulk_velocity.at(particle.species).GetColumn(elem_id), 3);
     double variance_reduced_number_density = variance_reduced_particle_moments_.number_density.at(particle.species)(elem_id);
-    if (variance_reduction_elements_.at(particle.species)[elem_id])
+    if (uses_variance_reduced_velocity(particle.species, elem_id))
     {
       double low_fidelity_particle_distribution_function_value = evaluateControlVariate_(particle,low_fidelity_state,low_fidelity_operations);
       double noise_reducing_factor = (1 - low_fidelity_particle_distribution_function_value / particle.particle_distribution_function_value);
@@ -455,11 +460,11 @@ std::unordered_map<Species, mfem::DenseMatrix>& ParticleOperations::getVarianceR
     }
   }
 
-  for (const auto& [species, elements] : variance_reduction_elements_)
+  for (const Species& species : std::views::keys(variance_reduction_elements_))
   {
     for (int elem_id = 0; elem_id < finite_element_space.GetNE(); ++elem_id)
     {
-      if (!elements[elem_id]) continue;
+      if (!uses_variance_reduced_velocity(species, elem_id)) continue;
 
       const double element_volume = mesh.GetElementVolume(elem_id);
       const mfem::DenseMatrix& momentum_integral = control_variate_moment_integrals_.momentum.at(species);
