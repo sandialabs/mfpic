@@ -1791,6 +1791,28 @@ TEST(ParticleOperations, VarianceReducedBulkVelocityWithUniformMaxwellianWeights
   }
 }
 
+TEST(ParticleOperations, VarianceReducedBulkVelocityFallsBackToPICWhereVarianceReducedDensityIsNotPositive) {
+  OneDimensionalMaxwellianVarianceReductionSetup setup;
+  // f_LF = 3 f at every particle, so each particle's factor is exactly -2 and
+  // n_VR = n_ref - 2 n_PIC. With n_ref = n0, n_VR < 0 wherever n_PIC > n0 / 2, i.e. everywhere.
+  setup.useUniformMaxwellian(setup.number_density);
+  for (Particle& particle : setup.particles) {
+    particle.particle_distribution_function_value /= 3.0;
+  }
+
+  const ParticleMoments variance_reduced = setup.particle_operations.getVarianceReducedParticleMoments(setup.particles, true);
+  const ParticleMoments pic = setup.particle_operations.getParticleMoments(setup.particles);
+
+  for (int elem_id = 0; elem_id < setup.num_elems; ++elem_id) {
+    ASSERT_LT(variance_reduced.number_density.at(setup.species)(elem_id), 0.0);
+    for (int vel_dim = 0; vel_dim < 3; ++vel_dim) {
+      const double velocity = variance_reduced.bulk_velocity.at(setup.species)(vel_dim, elem_id);
+      EXPECT_TRUE(std::isfinite(velocity));
+      EXPECT_DOUBLE_EQ(velocity, pic.bulk_velocity.at(setup.species)(vel_dim, elem_id));
+    }
+  }
+}
+
 TEST(ParticleOperations, VarianceReducedChargeRespectsCellLimiting) {
   OneDimensionalMaxwellianVarianceReductionSetup setup;
   // f_LF = 3 f at every particle, so each particle's noise reducing factor is exactly -2
