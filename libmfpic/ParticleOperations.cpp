@@ -320,7 +320,7 @@ ParticleMoments& ParticleOperations::getVarianceReducedParticleMoments(
 ParticleMoments& ParticleOperations::getVarianceReducedParticleMoments_(
   const ParticleContainer& particles,
   const LowFidelityState* low_fidelity_state,
-  const DGEulerOperations* low_fidelity_operations,
+  const LowFidelityOperations* low_fidelity_operations,
   const bool compute_standard_pic_moments
 ) {
   if (compute_standard_pic_moments)
@@ -802,7 +802,7 @@ std::unordered_map<Species, std::vector<char>> ParticleOperations::computeVarian
 
 ParticleOperations::ControlVariateMomentIntegrals ParticleOperations::computeControlVariateMomentIntegrals_(
   const LowFidelityState* low_fidelity_state,
-  const DGEulerOperations* low_fidelity_operations
+  const LowFidelityOperations* low_fidelity_operations
 ) const {
   const mfem::FiniteElementSpace& finite_element_space = discretization_.getFeSpace();
   mfem::Mesh& mesh = *finite_element_space.GetMesh();

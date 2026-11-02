@@ -190,7 +190,7 @@ private:
   ParticleMoments& getVarianceReducedParticleMoments_(
     const ParticleContainer& particles,
     const LowFidelityState* low_fidelity_state,
-    const DGEulerOperations* low_fidelity_operations,
+    const LowFidelityOperations* low_fidelity_operations,
     const bool compute_standard_pic_moments
   );
 
@@ -228,7 +228,7 @@ private:
 
   ControlVariateMomentIntegrals computeControlVariateMomentIntegrals_(
     const LowFidelityState* low_fidelity_state,
-    const DGEulerOperations* low_fidelity_operations
+    const LowFidelityOperations* low_fidelity_operations
   ) const;
 
   /**

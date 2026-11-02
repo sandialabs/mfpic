@@ -181,7 +181,7 @@ void runSimulation(int argc, char* argv[]) {
       time);
     if (low_fidelity_operations) {
       const std::string low_fidelity_prefix = "low_fidelity_moments";
-      dumpLowFidelityMoments(*low_fidelity_state,*low_fidelity_operations,low_fidelity_prefix, step, time);
+      dumpLowFidelityMoments(*low_fidelity_state,*low_fidelity_operations,*mesh,low_fidelity_prefix, step, time);
     }
   };
 
