@@ -40,10 +40,6 @@ VarianceReductionParameters buildVarianceReductionParametersFromYAML(const YAML:
     errorWithUserMessage(formatParseMessage(moments_node,
       "Uniform Maxwellian Moments is only used with Strategy: Uniform Maxwellian."));
   }
-  if (node["Specified LF Moments"]) {
-    errorWithUserMessage(formatParseMessage(node["Specified LF Moments"],
-      "Specified LF Moments has been replaced by Strategy: Uniform Maxwellian with a Uniform Maxwellian Moments block."));
-  }
 
   parameters.limit_variance_reduction = node["Apply Cell Limiting"].as<bool>(false);
 

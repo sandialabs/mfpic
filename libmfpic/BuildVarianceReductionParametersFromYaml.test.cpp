@@ -101,17 +101,4 @@ Uniform Maxwellian Moments:
   EXPECT_THROW(buildVarianceReductionParametersFromYAML(node), std::logic_error);
 }
 
-TEST(BuildVarianceReductionParametersFromYaml, SpecifiedLFMomentsIsRejected) {
-  const std::string yaml = R"(
-Strategy: Euler Fluid
-Specified LF Moments:
-  Reference Number Density: 1.0
-  Reference Bulk Velocity: [0.0, 0.0, 0.0]
-  Reference Temperature: 1.0
-  )";
-  const YAML::Node node = YAML::Load(yaml);
-
-  EXPECT_THROW(buildVarianceReductionParametersFromYAML(node), std::logic_error);
-}
-
 }
