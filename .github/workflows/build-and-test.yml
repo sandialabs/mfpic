@@ -74,6 +74,7 @@ jobs:
 
     - name: Push dependencies to build cache
       # if: ${{ github.ref_name == 'main' }}
+      continue-on-error: true
       run: |
         . spack/share/spack/setup-env.sh
         spack -e mfpic-dev buildcache push --update-index --only=dependencies mfpic-buildcache
