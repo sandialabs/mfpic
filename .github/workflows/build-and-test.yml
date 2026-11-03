@@ -106,5 +106,6 @@ jobs:
         . spack/share/spack/setup-env.sh
         spack env activate mfpic-dev
         spack build-env mfpic -- bash
+        spack load python
         cd build
         ctest -j $(nproc) --output-on-failure
