@@ -48,6 +48,15 @@ jobs:
       with:
         path: mfpic
 
+    # Workaround: mesa 25.0's bundled C11 threads header conflicts with newer glibc
+    # (once_flag redefinition), so use the system mesa instead of building it.
+    # Remove this step once spack's mesa builds on the runner image.
+    - name: Use system mesa
+      run: |
+        sudo apt install libgl-dev libglx-dev mesa-common-dev
+        . spack/share/spack/setup-env.sh
+        spack external find --scope site --not-buildable mesa
+
     - name: Configure spack
       run: |
         sudo apt install llvm libomp-dev
