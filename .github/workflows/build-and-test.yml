@@ -54,8 +54,15 @@ jobs:
     - name: Use system mesa
       run: |
         sudo apt install libgl-dev libglx-dev mesa-common-dev
-        . spack/share/spack/setup-env.sh
-        spack external find --scope site --not-buildable mesa
+        MESA_VERSION=$(dpkg-query -W -f='${Version}' mesa-common-dev | sed -E 's/^([0-9]+:)?([0-9.]+).*/\2/')
+        cat > spack/etc/spack/packages.yaml <<EOF
+        packages:
+          mesa:
+            buildable: false
+            externals:
+            - spec: mesa@${MESA_VERSION}
+              prefix: /usr
+        EOF
 
     - name: Configure spack
       run: |
