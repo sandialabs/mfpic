@@ -99,4 +99,4 @@ jobs:
       run: |
         . spack/share/spack/setup-env.sh
         spack env activate mfpic-dev
-        spack install --test=root --verbose --until=build
+        spack install --test=root --verbose --until=build --show-log-on-error
