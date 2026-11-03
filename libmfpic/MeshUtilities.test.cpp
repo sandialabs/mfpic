@@ -37,7 +37,7 @@ TEST(MeshUtilities, GetElementFaceCentroidWorksIn1D) {
   std::vector<int> periodic_vertex_mapping = non_periodic_mesh.CreatePeriodicVertexMapping({mfem::Vector({1.0})});
   mfem::Mesh periodic_mesh = mfem::Mesh::MakePeriodic(non_periodic_mesh, periodic_vertex_mapping);
 
-  constexpr double dx = 123123.0 / num_elems;
+  constexpr double dx = 1.0 / num_elems;
   for (const mfem::Mesh* mesh : {&non_periodic_mesh, &periodic_mesh}) {
     for (int element = 0; element < num_elems; element++) {
       EXPECT_DOUBLE_EQ(getElementFaceCentroid(*mesh, element, 0)[0], element*dx);
