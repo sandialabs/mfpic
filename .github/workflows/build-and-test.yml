@@ -95,8 +95,16 @@ jobs:
         spack buildcache push --update-index --only=package mfpic-buildcache \
           $(spack -e mfpic-dev find --format '/{hash}')
 
-    - name: Build and test
+    - name: Build
       run: |
         . spack/share/spack/setup-env.sh
         spack env activate mfpic-dev
-        spack install --test=root --verbose --until=build --show-log-on-error
+        spack install --verbose --until=build
+
+    - name: Test
+      run: |
+        . spack/share/spack/setup-env.sh
+        spack env activate mfpic-dev
+        spack build-env mfpic -- bash
+        cd build
+        ctest -j $(nproc) --output-on-failure
