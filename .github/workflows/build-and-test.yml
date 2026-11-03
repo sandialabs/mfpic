@@ -22,7 +22,7 @@ jobs:
     env:
       SPACK_DISABLE_LOCAL_CONFIG: true
       SPACK_USER_CACHE_PATH: spack_cache
-      SPACK_VERSION: v1.1.1
+      SPACK_VERSION: v1.2.2
       SPACK_BUILDCACHE: oci://ghcr.io/${{ github.repository_owner }}/mfpic-spack-buildcache
       GITHUB_USER: ${{ github.actor }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
