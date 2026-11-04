@@ -31,7 +31,7 @@ jobs:
       fail-fast: false
 
       matrix:
-        os: [ubuntu-24.04]
+        os: [ubuntu-latest]
         build_type: [Release, Debug]
         compiler: [gcc, llvm]
 
@@ -89,7 +89,7 @@ jobs:
         spack install --test=root --only=dependencies
 
     - name: Push dependencies to build cache
-      # if: ${{ github.ref_name == 'main' }}
+      if: ${{ github.ref_name == 'main' }}
       run: |
         . spack/share/spack/setup-env.sh
         spack buildcache push --update-index --only=package mfpic-buildcache \
