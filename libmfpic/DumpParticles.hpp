@@ -17,11 +17,16 @@ void dumpParticles(const ParticleContainer& particles, double simulation_time, c
 
 void dumpParticleMoments(ParticleOperations& particle_operations,const ParticleContainer& particles,const std::string& file_prefix,const int step,const double time);
 
+/**
+ * @brief Append variance reduced particle moments to <file_prefix>_<species>.csv
+ *
+ * The low-fidelity state and operations may be null for Strategy: Uniform Maxwellian.
+ */
 void dumpVarianceReducedParticleMoments(
     ParticleOperations& particle_operations,
     const ParticleContainer& particles,
-    const LowFidelityState& low_fidelity_state,
-    const LowFidelityOperations& low_fidelity_operations,
+    const LowFidelityState* low_fidelity_state,
+    const LowFidelityOperations* low_fidelity_operations,
     const std::string& file_prefix,
     const int step,
     const double time);

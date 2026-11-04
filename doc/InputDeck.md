@@ -636,6 +636,58 @@ Collisions:
         Collision Frequency: 1.0e8 # [1/s]
 ```
 
+## Variance Reduction
+Particle charge and moments can optionally be computed with a control variate $f_{LF}$,
+$$
+\langle \phi \rangle = \sum_i w_i \phi(x_i, v_i) \left(1 - \frac{f_{LF}(x_i, v_i)}{f_i}\right) + \int \phi f_{LF} \, dv,
+$$
+where $f_i$ is the phase-space density carried by particle $i$.
+The ``Strategy`` selects $f_{LF}$.
+
+```yaml
+Variance Reduction:
+    Strategy: string # (default = Euler Fluid)
+    Use VR E Field: boolean # (default = false)
+    Apply Cell Limiting: boolean # (default = false)
+    Uniform Maxwellian Moments: # (required for, and only allowed with, Strategy: Uniform Maxwellian)
+        Number Density: float # [1/m^3]
+        Bulk Velocity: [float, float, float] # [m/s]
+        Temperature: float # [K]
+        Species: [string, ...] # (optional, default = all species)
+```
+
+**``Strategy``**: One of
+- `Euler Fluid`: $f_{LF}$ is the Maxwellian of the first ``Euler Fluids`` state of the particle's species.
+  Particle species without one are not variance reduced. Requires ``Euler Fluids``.
+- `Uniform Maxwellian`: $f_{LF}$ is a spatially uniform Maxwellian with the moments in ``Uniform Maxwellian Moments``,
+  for the species listed there. Any ``Euler Fluids`` are still evolved and output, but are not used by variance reduction,
+  and none are required.
+- `none`: no variance reduction.
+
+**``Use VR E Field``**: Solve for the particle electric field from the variance reduced charge.
+
+**``Apply Cell Limiting``**: For each species, turn off variance reduction in any element containing a particle with
+$|1 - f_{LF}/f_i| \ge 1$.
+This applies to both the charge and the moments.
+For the charge, a degree of freedom is variance reduced only if every element it touches is.
+
+**``Uniform Maxwellian Moments``**: The number density, bulk velocity and temperature of the uniform Maxwellian.
+``Bulk Velocity`` must have 3 components, as for the initial conditions; with ``Number of Velocity Dimensions`` $d < 3$,
+components beyond $d$ should match the particles' (cold) drift in those directions.
+``Species`` lists the species that use it; species not listed are not variance reduced.
+
+#### Example
+```yaml
+Variance Reduction:
+    Strategy: Uniform Maxwellian
+    Use VR E Field: true
+    Uniform Maxwellian Moments:
+        Number Density: 1.0e18
+        Bulk Velocity: [0.0, 0.0, 0.0]
+        Temperature: 116045.0
+        Species: [electron]
+```
+
 ## Output
 
 Output can be controlled under the ``Output`` key.
