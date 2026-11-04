@@ -22,7 +22,7 @@ jobs:
     env:
       SPACK_DISABLE_LOCAL_CONFIG: true
       SPACK_USER_CACHE_PATH: spack_cache
-      SPACK_VERSION: v1.1.1
+      SPACK_VERSION: v1.2.2
       SPACK_BUILDCACHE: oci://ghcr.io/${{ github.repository_owner }}/mfpic-spack-buildcache
       GITHUB_USER: ${{ github.actor }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -47,6 +47,22 @@ jobs:
       uses: actions/checkout@v4
       with:
         path: mfpic
+
+    # Workaround: mesa 25.0's bundled C11 threads header conflicts with newer glibc
+    # (once_flag redefinition), so use the system mesa instead of building it.
+    # Remove this step once spack's mesa builds on the runner image.
+    - name: Use system mesa
+      run: |
+        sudo apt install libgl-dev libglx-dev mesa-common-dev
+        MESA_VERSION=$(dpkg-query -W -f='${Version}' mesa-common-dev | sed -E 's/^([0-9]+:)?([0-9.]+).*/\2/')
+        cat > spack/etc/spack/packages.yaml <<EOF
+        packages:
+          mesa:
+            buildable: false
+            externals:
+            - spec: mesa@${MESA_VERSION}
+              prefix: /usr
+        EOF
 
     - name: Configure spack
       run: |
@@ -76,10 +92,17 @@ jobs:
       if: ${{ github.ref_name == 'main' }}
       run: |
         . spack/share/spack/setup-env.sh
-        spack -e mfpic-dev buildcache push --update-index --only=dependencies mfpic-buildcache
+        spack buildcache push --update-index --only=package mfpic-buildcache \
+          $(spack -e mfpic-dev find --format '/{hash}')
 
-    - name: Build and test
+    - name: Build
       run: |
         . spack/share/spack/setup-env.sh
         spack env activate mfpic-dev
-        spack install --test=root --verbose --until=build
+        spack install --verbose --until=build
+
+    - name: Test
+      run: |
+        . spack/share/spack/setup-env.sh
+        spack env activate mfpic-dev
+        spack build-env mfpic -- ctest --test-dir build -j $(nproc) --output-on-failure
