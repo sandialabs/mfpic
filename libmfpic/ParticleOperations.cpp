@@ -791,20 +791,49 @@ std::unordered_map<Species, std::vector<char>> ParticleOperations::computeVarian
     variance_reduction_elements.emplace(species, std::vector<char>(number_of_elements, has_control_variate));
   }
 
-  if (!variance_reduction_parameters_.limit_variance_reduction)
+  using CellLimiting = VarianceReductionParameters::CellLimiting;
+  const CellLimiting cell_limiting = variance_reduction_parameters_.cell_limiting;
+  if (cell_limiting == CellLimiting::None)
     return variance_reduction_elements;
+
+  if (cell_limiting == CellLimiting::EveryParticle) {
+    for (const Particle& particle : particles) {
+      if (not particle.is_alive) continue;
+
+      char& use_variance_reduction = variance_reduction_elements.at(particle.species)[particle.element];
+      if (!use_variance_reduction) continue;
+
+      const double noise_reducing_factor =
+        1.0 - evaluateControlVariate_(particle, low_fidelity_state, low_fidelity_operations) / particle.particle_distribution_function_value;
+      if (!(std::abs(noise_reducing_factor) < 1.0))
+        use_variance_reduction = 0;
+    }
+    return variance_reduction_elements;
+  }
+
+  std::unordered_map<Species, std::vector<double>> standard_variance;
+  std::unordered_map<Species, std::vector<double>> variance_reduced_variance;
+  for (const Species& species : std::views::keys(variance_reduction_elements)) {
+    standard_variance.emplace(species, std::vector<double>(number_of_elements, 0.0));
+    variance_reduced_variance.emplace(species, std::vector<double>(number_of_elements, 0.0));
+  }
 
   for (const Particle& particle : particles) {
     if (not particle.is_alive) continue;
-
-    char& use_variance_reduction = variance_reduction_elements.at(particle.species)[particle.element];
-    if (!use_variance_reduction) continue;
+    if (!variance_reduction_elements.at(particle.species)[particle.element]) continue;
 
     const double noise_reducing_factor =
       1.0 - evaluateControlVariate_(particle, low_fidelity_state, low_fidelity_operations) / particle.particle_distribution_function_value;
-    // Written so that a NaN factor also disables variance reduction
-    if (!(std::abs(noise_reducing_factor) < 1.0))
-      use_variance_reduction = 0;
+    const double squared_weight = particle.weight * particle.weight;
+    standard_variance.at(particle.species)[particle.element] += squared_weight;
+    variance_reduced_variance.at(particle.species)[particle.element] += squared_weight * noise_reducing_factor * noise_reducing_factor;
+  }
+
+  for (auto& [species, use_variance_reduction] : variance_reduction_elements) {
+    for (int elem_id = 0; elem_id < number_of_elements; ++elem_id) {
+      if (!(variance_reduced_variance.at(species)[elem_id] < standard_variance.at(species)[elem_id]))
+        use_variance_reduction[elem_id] = 0;
+    }
   }
   return variance_reduction_elements;
 }

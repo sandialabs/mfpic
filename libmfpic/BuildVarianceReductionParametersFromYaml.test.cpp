@@ -3,6 +3,10 @@
 #include <gtest/gtest.h>
 #include <yaml-cpp/yaml.h>
 
+#include <string>
+#include <utility>
+#include <vector>
+
 namespace {
 
 using namespace mfpic;
@@ -15,14 +19,14 @@ Uniform Maxwellian Moments:
   Bulk Velocity: [53920.183,620.1988,28.190]
   Temperature: 53290.201
 Use VR E Field: true
-Apply Cell Limiting: true
+Cell Limiting: Variance
   )";
   const YAML::Node node = YAML::Load(yaml);
 
   auto params= buildVarianceReductionParametersFromYAML(node);
 
   EXPECT_EQ(params.strategy,VarianceReductionParameters::Strategy::UniformMaxwellian);
-  EXPECT_EQ(params.limit_variance_reduction,true);
+  EXPECT_EQ(params.cell_limiting,VarianceReductionParameters::CellLimiting::Variance);
   EXPECT_EQ(params.use_variance_reduced_electric_field,true);
   EXPECT_EQ(params.reference_number_density,9320.59320);
   EXPECT_EQ(params.reference_bulk_velocity[0],53920.183);
@@ -54,7 +58,20 @@ TEST(BuildVarianceReductionParametersFromYaml, DefaultsAreEulerFluidWithoutCellL
   auto params = buildVarianceReductionParametersFromYAML(node);
 
   EXPECT_EQ(params.strategy, VarianceReductionParameters::Strategy::EulerFluid);
-  EXPECT_EQ(params.limit_variance_reduction, false);
+  EXPECT_EQ(params.cell_limiting, VarianceReductionParameters::CellLimiting::None);
+}
+
+TEST(BuildVarianceReductionParametersFromYaml, CellLimitingOptionsAreParsed) {
+  using CellLimiting = VarianceReductionParameters::CellLimiting;
+  const std::vector<std::pair<std::string, CellLimiting>> cases = {
+    {"None", CellLimiting::None},
+    {"Every Particle", CellLimiting::EveryParticle},
+    {"Variance", CellLimiting::Variance},
+  };
+  for (const auto& [text, expected] : cases) {
+    const YAML::Node node = YAML::Load("Cell Limiting: " + text);
+    EXPECT_EQ(buildVarianceReductionParametersFromYAML(node).cell_limiting, expected) << text;
+  }
 }
 
 TEST(BuildVarianceReductionParametersFromYaml, NoneStrategyIsParsed) {

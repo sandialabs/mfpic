@@ -226,10 +226,9 @@ private:
   ) const;
 
   /**
-   * @brief Flag the elements in which each species uses variance reduction
-   *
-   * An element is flagged when the species has a control variate and, with Apply Cell Limiting,
-   * every particle of that species in the element has |1 - f_LF / f| < 1.
+   * @brief Flag the elements in which each species uses variance reduction;
+   * an element is flagged when the species has a control variate and passes
+   * the Cell Limiting test.
    *
    * @return Map of particle species to flags, (species, (element))
    */
