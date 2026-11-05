@@ -13,7 +13,9 @@
 #include <libmfpic/Species.hpp>
 
 #include <gtest/gtest.h>
-#include <mfem/mesh/element.hpp>
+#include <mfem/mfem.hpp>
+
+#include <ranges>
 #include <unordered_map>
 
 namespace {
@@ -941,6 +943,78 @@ TEST(ParticleOperations, ParticleMovesAcrossPeriodicBoundariesIn3D) {
     EXPECT_DOUBLE_EQ(moved_particle.position[1], 0.3);
     EXPECT_DOUBLE_EQ(moved_particle.position[2], 0.3);
     EXPECT_EQ(moved_particle.element, 0);
+  }
+}
+
+TEST(ParticleOperations, PerParticleTimeIntervalsMoveEachParticleByItsOwnInterval) {
+  constexpr int num_elems = 6;
+  constexpr double dx = 1.0 / num_elems;
+  mfem::Mesh mesh = mfem::Mesh::MakeCartesian1D(num_elems);
+  ParticleContainer particles;
+  const std::vector<double> per_particle_dt{0.0, 0.5, 2.0};
+  for (int i = 0; i < std::ssize(per_particle_dt); i++) {
+    particles.addParticle(Particle{
+      .position = mfem::Vector{dx / 2.0, 0.0, 0.0},
+      .velocity = mfem::Vector{2.0 * dx, 0.0, 0.0},
+      .element = 0,
+      .species = default_species
+    });
+  }
+  constexpr int order = 1;
+  Discretization discretization(&mesh, order);
+  ParticleOperations particle_operations(
+    discretization,
+    empty_particle_boundary_factory_list,
+    default_reflecting_particle_boundary_factory,
+    one_species
+  );
+
+  const ParticleContainer moved_particles = particle_operations.move(per_particle_dt, particles);
+
+  const std::vector<double> expected_positions{dx / 2.0, 3.0 * dx / 2.0, 9.0 * dx / 2.0};
+  const std::vector<int> expected_elements{0, 1, 4};
+  int i_particle = 0;
+  for (const Particle& moved_particle : moved_particles) {
+    EXPECT_DOUBLE_EQ(moved_particle.position[0], expected_positions[i_particle]);
+    EXPECT_EQ(moved_particle.element, expected_elements[i_particle]);
+    i_particle++;
+  }
+}
+
+TEST(ParticleOperations, PerParticleTimeIntervalsMatchUniformMoveWhenAllEqual) {
+  constexpr int num_elems = 6;
+  constexpr double dx = 1.0 / num_elems;
+  mfem::Mesh mesh = mfem::Mesh::MakeCartesian1D(num_elems);
+  ParticleContainer particles;
+  const std::vector<double> velocities{3.0 * dx, -4.0 * dx, 7.5 * dx};
+  for (const double velocity : velocities) {
+    particles.addParticle(Particle{
+      .position = mfem::Vector{2.5 * dx, 0.0, 0.0},
+      .velocity = mfem::Vector{velocity, 0.0, 0.0},
+      .element = 2,
+      .species = default_species
+    });
+  }
+  constexpr int order = 1;
+  Discretization discretization(&mesh, order);
+  ParticleOperations particle_operations(
+    discretization,
+    empty_particle_boundary_factory_list,
+    default_reflecting_particle_boundary_factory,
+    one_species
+  );
+
+  constexpr double dt = 1.0;
+  const ParticleContainer uniformly_moved_particles = particle_operations.move(dt, particles);
+  const ParticleContainer individually_moved_particles = particle_operations.move(
+    std::vector<double>(velocities.size(), dt),
+    particles
+  );
+
+  for (const auto& [individually_moved_particle, uniformly_moved_particle] : std::views::zip(individually_moved_particles, uniformly_moved_particles)) {
+    EXPECT_DOUBLE_EQ(individually_moved_particle.position[0], uniformly_moved_particle.position[0]);
+    EXPECT_DOUBLE_EQ(individually_moved_particle.velocity[0], uniformly_moved_particle.velocity[0]);
+    EXPECT_EQ(individually_moved_particle.element, uniformly_moved_particle.element);
   }
 }
 
