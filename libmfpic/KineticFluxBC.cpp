@@ -4,19 +4,19 @@
 
 namespace mfpic {
 
-  double KineticFluxNumericalFlux::Eval(const mfem::Vector &conservative_state, 
-                                        const mfem::Vector &, 
+  double KineticFluxNumericalFlux::Eval(const mfem::Vector &conservative_state,
+                                        const mfem::Vector &,
                                         const mfem::Vector &normal,
                                         mfem::FaceElementTransformations &,
                                         mfem::Vector &flux_dot_n) const
   {
     using namespace euler;
-    const double pressure = getPressureFromConservativeState(conservative_state, species_);
-    const double temperature = getTemperatureFromConservativeState(conservative_state, species_);
+    const double pressure = getPressureFromConservativeState(conservative_state, species);
+    const double temperature = getTemperatureFromConservativeState(conservative_state, species);
     const mfem::Vector momentum = getMomentumDensityFromConservativeState(conservative_state);
     const mfem::Vector velocity = getBulkVelocityFromConservativeState(conservative_state);
 
-    const double d_area = normal.Norml2(); 
+    const double d_area = normal.Norml2();
     mfem::Vector unit_normal = normal;
     unit_normal /= d_area;
 
@@ -29,7 +29,7 @@ namespace mfpic {
     double normal_velocity(0.);
     for (int d = 0; d < fluxFunction.dim; d++)
       normal_velocity += velocity(d) * unit_normal(d);
-    const double most_probable_speed = std::sqrt(2. * constants::boltzmann_constant * temperature / species_.mass);
+    const double most_probable_speed = std::sqrt(2. * constants::boltzmann_constant * temperature / species.mass);
     const double reduced_velocity = normal_velocity / most_probable_speed;
     const double sqrt_pi = std::sqrt(M_PI);
     const double exp_term = std::exp(-reduced_velocity * reduced_velocity);
@@ -47,17 +47,17 @@ namespace mfpic {
 
     flux_dot_n = 0.;
 
-    flux_dot_n(ConservativeVariables::MASS_DENSITY) = 
+    flux_dot_n(ConservativeVariables::MASS_DENSITY) =
       conservative_state[ConservativeVariables::MASS_DENSITY] *
       ( normal_velocity * a_plus + b_plus );
 
-    flux_dot_n(ConservativeVariables::X_MOMENTUM_DENSITY) = 
+    flux_dot_n(ConservativeVariables::X_MOMENTUM_DENSITY) =
       flux_dot_n(ConservativeVariables::MASS_DENSITY) * velocity(0);
 
-    flux_dot_n(ConservativeVariables::Y_MOMENTUM_DENSITY) = 
+    flux_dot_n(ConservativeVariables::Y_MOMENTUM_DENSITY) =
       flux_dot_n(ConservativeVariables::MASS_DENSITY) * velocity(1);
 
-    flux_dot_n(ConservativeVariables::Z_MOMENTUM_DENSITY) = 
+    flux_dot_n(ConservativeVariables::Z_MOMENTUM_DENSITY) =
       flux_dot_n(ConservativeVariables::MASS_DENSITY) * velocity(2);
 
     switch (fluxFunction.dim) {
@@ -72,7 +72,7 @@ namespace mfpic {
       break;
     }
 
-    flux_dot_n(ConservativeVariables::TOTAL_ENERGY_DENSITY) = 
+    flux_dot_n(ConservativeVariables::TOTAL_ENERGY_DENSITY) =
       flux_dot_n(ConservativeVariables::MASS_DENSITY) / conservative_state[ConservativeVariables::MASS_DENSITY] *
       ( conservative_state[ConservativeVariables::TOTAL_ENERGY_DENSITY] + pressure ) - 1. / 2. * pressure * b_plus;
 
@@ -81,11 +81,15 @@ namespace mfpic {
     // Compute maximum characteristic speed
 
     // sound speed
-    const double sound = euler::speedOfSound(species_, conservative_state[ConservativeVariables::MASS_DENSITY], pressure);
+    const double sound = euler::speedOfSound(species, conservative_state[ConservativeVariables::MASS_DENSITY], pressure);
     // fluid speed
     const double speed = std::fabs(normal_velocity);
     // max characteristic speed = fluid speed + sound speed
     return speed + sound;
   }
+
+std::unique_ptr<KineticFluxNumericalFlux> KineticFluxBC::makeNumericalFlux_(const mfem::FluxFunction & flux_function) const {
+  return std::make_unique<KineticFluxNumericalFlux>(flux_function, species);
+}
 
 } // namespace mfpic
