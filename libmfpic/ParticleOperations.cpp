@@ -113,11 +113,20 @@ ParticleContainer ParticleOperations::move(
   double dt,
   const ParticleContainer& current_particles
 ) const {
+  std::vector<double> per_particle_dt(current_particles.numParticles(), dt);
+
+  return move(per_particle_dt, current_particles);
+}
+
+ParticleContainer ParticleOperations::move(
+  const std::vector<double>& per_particle_dt,
+  const ParticleContainer& current_particles
+) const {
   ParticleContainer moved_particles = current_particles;
 
   const ElementFaceContainer<mfem::Vector>& element_face_unit_normal = *element_face_unit_normal_;
   #pragma omp parallel for
-  for (Particle& particle : moved_particles) {
+  for (auto&& [dt, particle] : std::views::zip(per_particle_dt, moved_particles)) {
     if (not particle.is_alive) continue;
 
     double time_remaining = dt;

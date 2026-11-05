@@ -64,6 +64,19 @@ public:
   ) const;
 
   /**
+   * @brief Move each particle according to its velocity over its own time interval.
+   *
+   * @param[in] per_particle_dt   Time interval over which to move each particle, in container order.
+   * @param[in] current_particles Particles before moving.
+   *
+   * @returns Moved particles.
+   */
+  ParticleContainer move(
+    const std::vector<double>& per_particle_dt,
+    const ParticleContainer& current_particles
+  ) const;
+
+  /**
   * @brief Assemble charges from the particles into the charge density
   *
   * @param current_particles - ParticleContainer of particles
