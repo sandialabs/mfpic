@@ -808,7 +808,7 @@ std::unordered_map<Species, std::vector<bool>> ParticleOperations::computeVarian
     }
   }
 
-  if (cell_limiting == CellLimiting::Variance) {
+  else if (cell_limiting == CellLimiting::Variance) {
     std::unordered_map<Species, std::vector<double>> standard_variance;
     std::unordered_map<Species, std::vector<double>> variance_reduced_variance;
     for (const Species& species : std::views::keys(variance_reduction_elements)) {
