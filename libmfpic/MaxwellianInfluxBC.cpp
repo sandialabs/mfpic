@@ -22,30 +22,27 @@ double MaxwellianInfluxNumericalFlux::Eval(const mfem::Vector &conservative_stat
                                             mfem::Vector &flux_dot_n) const
 {
   using namespace euler;
-  const double max_speed = KineticFluxNumericalFlux::Eval(conservative_state, not_used, normal, transformation, flux_dot_n);
+  const double outflow_max_speed = KineticFluxNumericalFlux::Eval(conservative_state, not_used, normal, transformation, flux_dot_n);
 
-  const double d_area = normal.Norml2();
-  flux_dot_n(ConservativeVariables::MASS_DENSITY) -= d_area * species.mass * number_flux_density_;
+  mfem::Vector inward_normal = normal;
+  inward_normal *= -1.0;
 
   const double mean_speed = std::sqrt(8.0 * constants::boltzmann_constant * temperature_ / (M_PI * species.mass));
   const double reservoir_number_density = 4.0 * number_flux_density_ / mean_speed;
-  const double pressure_from_incoming_particles = reservoir_number_density * constants::boltzmann_constant * temperature_ / 2.0;
-  switch (fluxFunction.dim) {
-  case 3:
-    flux_dot_n(ConservativeVariables::Z_MOMENTUM_DENSITY) += pressure_from_incoming_particles * normal(2);
-    [[fallthrough]];
-  case 2:
-    flux_dot_n(ConservativeVariables::Y_MOMENTUM_DENSITY) += pressure_from_incoming_particles * normal(1);
-    [[fallthrough]];
-  case 1:
-    flux_dot_n(ConservativeVariables::X_MOMENTUM_DENSITY) += pressure_from_incoming_particles * normal(0);
-    break;
-  }
+  const mfem::Vector reservoir_bulk_velocity{0.0, 0.0, 0.0};
+  const mfem::Vector reservoir_primitive_state = constructPrimitiveState(reservoir_number_density, reservoir_bulk_velocity, temperature_);
+  mfem::Vector influx_dot_n(ConservativeVariables::NUM_VARS);
+  const double inflow_max_speed = KineticFluxNumericalFlux::Eval(
+    convertFromPrimitiveToConservative(reservoir_primitive_state, species),
+    not_used,
+    inward_normal,
+    transformation,
+    influx_dot_n
+  );
 
-  const double mean_energy_per_incoming_particle = 2.0 * constants::boltzmann_constant * temperature_;
-  flux_dot_n(ConservativeVariables::TOTAL_ENERGY_DENSITY) -= d_area * mean_energy_per_incoming_particle * number_flux_density_;
+  flux_dot_n -= influx_dot_n;
 
-  return max_speed;
+  return std::max(outflow_max_speed, inflow_max_speed);
 }
 
 MaxwellianInfluxBC::MaxwellianInfluxBC(

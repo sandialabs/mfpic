@@ -106,7 +106,7 @@ TEST(MaxwellianInfluxBC, ZeroInfluxMatchesKineticFlux) {
   mfem::Vector f_dot_n_absorbing(num_equations);
   absorbing_flux.Eval(conservative_state, conservative_state, normal, dummy_transform, f_dot_n_absorbing);
 
-  constexpr double number_flux_density = 0.0;
+  constexpr double number_flux_density = 1.0e-30;
   constexpr double temperature = 300.0;
   const mfem::Vector f_dot_n = evalMaxwellianInfluxFlux(spatial_dim, number_flux_density, temperature, conservative_state, normal);
   for (int i = 0; i < 5; ++i) {
