@@ -41,7 +41,20 @@ VarianceReductionParameters buildVarianceReductionParametersFromYAML(const YAML:
       "Uniform Maxwellian Moments is only used with Strategy: Uniform Maxwellian."));
   }
 
-  parameters.limit_variance_reduction = node["Apply Cell Limiting"].as<bool>(false);
+  const YAML::Node& cell_limiting_node = node["Cell Limiting"];
+  if (cell_limiting_node) {
+    const std::string cell_limiting = cell_limiting_node.as<std::string>();
+    if (cell_limiting == "None") {
+      parameters.cell_limiting = VarianceReductionParameters::CellLimiting::None;
+    } else if (cell_limiting == "Every Particle") {
+      parameters.cell_limiting = VarianceReductionParameters::CellLimiting::EveryParticle;
+    } else if (cell_limiting == "Variance") {
+      parameters.cell_limiting = VarianceReductionParameters::CellLimiting::Variance;
+    } else {
+      errorWithUserMessage(formatParseMessage(cell_limiting_node,
+        "Unknown Cell Limiting \"" + cell_limiting + "\". Must be \"None\", \"Every Particle\", or \"Variance\"."));
+    }
+  }
 
   parameters.use_variance_reduced_electric_field = node["Use VR E Field"].as<bool>(false);
 

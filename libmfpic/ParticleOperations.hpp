@@ -226,14 +226,13 @@ private:
   ) const;
 
   /**
-   * @brief Flag the elements in which each species uses variance reduction
-   *
-   * An element is flagged when the species has a control variate and, with Apply Cell Limiting,
-   * every particle of that species in the element has |1 - f_LF / f| < 1.
+   * @brief Flag the elements in which each species uses variance reduction;
+   * an element is flagged when the species has a control variate and passes
+   * the Cell Limiting test.
    *
    * @return Map of particle species to flags, (species, (element))
    */
-  std::unordered_map<Species, std::vector<char>> computeVarianceReductionElements_(
+  std::unordered_map<Species, std::vector<bool>> computeVarianceReductionElements_(
     const ParticleContainer& particles,
     const LowFidelityState* low_fidelity_state,
     const LowFidelityOperations* low_fidelity_operations
@@ -370,7 +369,7 @@ private:
   int velocity_dims_ = 3;
 
   /// Elements in which each species uses variance reduction, set by getVarianceReducedParticleMoments
-  std::unordered_map<Species, std::vector<char>> variance_reduction_elements_;
+  std::unordered_map<Species, std::vector<bool>> variance_reduction_elements_;
 
   /// Control variate moment integrals, set by getVarianceReducedParticleMoments
   ControlVariateMomentIntegrals control_variate_moment_integrals_;

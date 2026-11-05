@@ -648,7 +648,7 @@ The ``Strategy`` selects $f_{LF}$.
 Variance Reduction:
     Strategy: string # (default = Euler Fluid)
     Use VR E Field: boolean # (default = false)
-    Apply Cell Limiting: boolean # (default = false)
+    Cell Limiting: string # (default = None)
     Uniform Maxwellian Moments: # (required for, and only allowed with, Strategy: Uniform Maxwellian)
         Number Density: float # [1/m^3]
         Bulk Velocity: [float, float, float] # [m/s]
@@ -666,9 +666,17 @@ Variance Reduction:
 
 **``Use VR E Field``**: Solve for the particle electric field from the variance reduced charge.
 
-**``Apply Cell Limiting``**: For each species, turn off variance reduction in any element containing a particle with
-$|1 - f_{LF}/f_i| \ge 1$.
-This applies to both the charge and the moments.
+**``Cell Limiting``**: Where the control variate is too far from the particles' distribution, fall back to standard PIC.
+The test is made per species and element, with $r_i = f_{LF}(x_i, v_i)/f_i$ for the particles $i$ of that species in the element:
+- `None`: never fall back.
+- `Every Particle`: fall back if any particle has $|1 - r_i| \ge 1$.
+  Note that this becomes stricter as the number of particles per element grows,
+  since a single particle in the tail of the distribution can fail it.
+- `Variance`: fall back if $\sum_i w_i^2 (1 - r_i)^2 > \sum_i w_i^2$,
+  i.e. if the estimated variance of the variance reduced number density is above that of the standard estimator.
+  Elements without particles of the species also fall back.
+
+The same decision applies to the charge and to all moments.
 For the charge, a degree of freedom is variance reduced only if every element it touches is.
 
 **``Uniform Maxwellian Moments``**: The number density, bulk velocity and temperature of the uniform Maxwellian.

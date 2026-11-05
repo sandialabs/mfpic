@@ -1501,7 +1501,7 @@ TEST(ParticleOperations, VarianceReducedMomentsAreExactForMaxwellianIn3D) {
   );
   VarianceReductionParameters variance_reduction_parameters;
   variance_reduction_parameters.strategy = VarianceReductionParameters::Strategy::EulerFluid;
-  variance_reduction_parameters.limit_variance_reduction = false;
+  variance_reduction_parameters.cell_limiting = VarianceReductionParameters::CellLimiting::None;
   variance_reduction_parameters.use_variance_reduced_electric_field = false;
   particle_operations.setVarianceReductionParameters(variance_reduction_parameters);
 
@@ -1786,13 +1786,17 @@ struct OneDimensionalMaxwellianVarianceReductionSetup {
       velocity_dims);
   }
 
-  void useUniformMaxwellian(const double reference_number_density, const bool limit_variance_reduction = false) {
+  void useUniformMaxwellian(
+    const double reference_number_density,
+    const VarianceReductionParameters::CellLimiting cell_limiting = VarianceReductionParameters::CellLimiting::None,
+    const double reference_temperature_ratio = 1.0
+  ) {
     VarianceReductionParameters variance_reduction_parameters;
     variance_reduction_parameters.strategy = VarianceReductionParameters::Strategy::UniformMaxwellian;
     variance_reduction_parameters.reference_number_density = reference_number_density;
     variance_reduction_parameters.reference_bulk_velocity = {bulk_velocity(0), bulk_velocity(1), bulk_velocity(2)};
-    variance_reduction_parameters.reference_temperature = temperature;
-    variance_reduction_parameters.limit_variance_reduction = limit_variance_reduction;
+    variance_reduction_parameters.reference_temperature = reference_temperature_ratio * temperature;
+    variance_reduction_parameters.cell_limiting = cell_limiting;
     particle_operations.setVarianceReductionParameters(variance_reduction_parameters);
   }
 
@@ -1888,37 +1892,76 @@ TEST(ParticleOperations, VarianceReducedBulkVelocityFallsBackToPICWhereVarianceR
 }
 
 TEST(ParticleOperations, VarianceReducedChargeRespectsCellLimiting) {
+  using CellLimiting = VarianceReductionParameters::CellLimiting;
   OneDimensionalMaxwellianVarianceReductionSetup setup;
-  // f_LF = 3 f at every particle, so each particle's noise reducing factor is exactly -2
+  // f_LF = 3 f at every particle, so each particle's noise reducing factor is exactly -2.
+  // That fails both cell limiting rules: |-2| >= 1, and sum w^2 (-2)^2 = 4 sum w^2.
   const double reference_number_density = 3.0 * setup.number_density;
   const mfem::Vector pic_charge = setup.particle_operations.assembleCharge(setup.particles).getIntegratedCharge();
   const mfem::Vector control_variate_charge = setup.uniformCharge(setup.species.charge * reference_number_density);
 
-  setup.useUniformMaxwellian(reference_number_density, true);
-  const mfem::Vector limited_charge = setup.particle_operations.assembleVarianceReducedCharge(setup.particles).getIntegratedCharge();
-
-  setup.useUniformMaxwellian(reference_number_density, false);
+  setup.useUniformMaxwellian(reference_number_density, CellLimiting::None);
   const mfem::Vector unlimited_charge = setup.particle_operations.assembleVarianceReducedCharge(setup.particles).getIntegratedCharge();
 
+  for (const CellLimiting cell_limiting : {CellLimiting::EveryParticle, CellLimiting::Variance}) {
+    setup.useUniformMaxwellian(reference_number_density, cell_limiting);
+    const mfem::Vector limited_charge = setup.particle_operations.assembleVarianceReducedCharge(setup.particles).getIntegratedCharge();
+
+    for (int dof = 0; dof < pic_charge.Size(); ++dof) {
+      const double scale = std::abs(control_variate_charge(dof));
+      EXPECT_NEAR(limited_charge(dof), pic_charge(dof), 1e-12 * scale);
+    }
+  }
   for (int dof = 0; dof < pic_charge.Size(); ++dof) {
     const double scale = std::abs(control_variate_charge(dof));
-    EXPECT_NEAR(limited_charge(dof), pic_charge(dof), 1e-12 * scale);
     EXPECT_NEAR(unlimited_charge(dof), -2.0 * pic_charge(dof) + control_variate_charge(dof), 1e-12 * scale);
   }
 }
 
 TEST(ParticleOperations, VarianceReducedMomentsRespectCellLimiting) {
+  using CellLimiting = VarianceReductionParameters::CellLimiting;
   OneDimensionalMaxwellianVarianceReductionSetup setup;
-  setup.useUniformMaxwellian(3.0 * setup.number_density, true);
 
-  const ParticleMoments variance_reduced = setup.particle_operations.getVarianceReducedParticleMoments(setup.particles, true);
-  const ParticleMoments pic = setup.particle_operations.getParticleMoments(setup.particles);
+  for (const CellLimiting cell_limiting : {CellLimiting::EveryParticle, CellLimiting::Variance}) {
+    setup.useUniformMaxwellian(3.0 * setup.number_density, cell_limiting);
 
-  for (int elem_id = 0; elem_id < setup.num_elems; ++elem_id) {
-    EXPECT_DOUBLE_EQ(variance_reduced.number_density.at(setup.species)(elem_id), pic.number_density.at(setup.species)(elem_id));
-    EXPECT_DOUBLE_EQ(variance_reduced.bulk_velocity.at(setup.species)(0, elem_id), pic.bulk_velocity.at(setup.species)(0, elem_id));
-    EXPECT_DOUBLE_EQ(variance_reduced.temperature.at(setup.species)(elem_id), pic.temperature.at(setup.species)(elem_id));
+    const ParticleMoments variance_reduced = setup.particle_operations.getVarianceReducedParticleMoments(setup.particles, true);
+    const ParticleMoments pic = setup.particle_operations.getParticleMoments(setup.particles);
+
+    for (int elem_id = 0; elem_id < setup.num_elems; ++elem_id) {
+      EXPECT_DOUBLE_EQ(variance_reduced.number_density.at(setup.species)(elem_id), pic.number_density.at(setup.species)(elem_id));
+      EXPECT_DOUBLE_EQ(variance_reduced.bulk_velocity.at(setup.species)(0, elem_id), pic.bulk_velocity.at(setup.species)(0, elem_id));
+      EXPECT_DOUBLE_EQ(variance_reduced.temperature.at(setup.species)(elem_id), pic.temperature.at(setup.species)(elem_id));
+    }
   }
+}
+
+TEST(ParticleOperations, VarianceCellLimitingKeepsVarianceReductionWhereEveryParticleRuleDoesNot) {
+  using CellLimiting = VarianceReductionParameters::CellLimiting;
+  OneDimensionalMaxwellianVarianceReductionSetup setup;
+  // A control variate 20% too hot: the mean of (1 - f_LF / f)^2 is about 0.02, so variance reduction
+  // works well on average, but f_LF / f >= 2 beyond about 3.1 thermal speeds (~0.2% of particles).
+  // With ~500 particles per element most elements contain such a particle.
+  constexpr double reference_temperature_ratio = 1.2;
+  const mfem::Vector pic_number_density = setup.particle_operations.getParticleMoments(setup.particles).number_density.at(setup.species);
+
+  auto elements_using_variance_reduction = [&](const CellLimiting cell_limiting) {
+    setup.useUniformMaxwellian(setup.number_density, cell_limiting, reference_temperature_ratio);
+    const mfem::Vector number_density =
+      setup.particle_operations.getVarianceReducedParticleMoments(setup.particles, true).number_density.at(setup.species);
+    int count = 0;
+    for (int elem_id = 0; elem_id < setup.num_elems; ++elem_id) {
+      // A VR element differs from PIC; a fallen-back element equals it exactly
+      if (number_density(elem_id) != pic_number_density(elem_id)) ++count;
+    }
+    return count;
+  };
+
+  const int every_particle = elements_using_variance_reduction(CellLimiting::EveryParticle);
+  const int variance = elements_using_variance_reduction(CellLimiting::Variance);
+
+  EXPECT_EQ(variance, setup.num_elems);
+  EXPECT_LT(every_particle, setup.num_elems);
 }
 
 TEST(ParticleOperations, UniformMaxwellianOnlyAppliesToListedSpecies) {

@@ -232,14 +232,14 @@ IntegratedCharge ParticleOperations::assembleVarianceReducedCharge_(
   mfem::FiniteElementSpace& finite_element_space = discretization_.getFeSpace();
   mfem::Mesh& mesh = *finite_element_space.GetMesh();
 
-  const std::unordered_map<Species, std::vector<char>> variance_reduction_elements =
+  const std::unordered_map<Species, std::vector<bool>> variance_reduction_elements =
     computeVarianceReductionElements_(current_particles, low_fidelity_state, low_fidelity_operations);
 
   // A DOF uses variance reduction only if every element it touches does, so that the particle and
   // control variate contributions to it cover the same region.
-  std::unordered_map<Species, std::vector<char>> variance_reduction_dofs;
+  std::unordered_map<Species, std::vector<bool>> variance_reduction_dofs;
   for (const auto& [species, elements] : variance_reduction_elements) {
-    std::vector<char> dofs(finite_element_space.GetNDofs(), 1);
+    std::vector<bool> dofs(finite_element_space.GetNDofs(), 1);
     for (int element_id = 0; element_id < finite_element_space.GetNE(); ++element_id) {
       if (elements[element_id]) continue;
       finite_element_space.GetElementVDofs(element_id, vector_dofs);
@@ -257,7 +257,7 @@ IntegratedCharge ParticleOperations::assembleVarianceReducedCharge_(
     const int element_id = particle.element;
     const Species& particle_species = particle.species;
     const double particle_charge = particle_species.charge;
-    const std::vector<char>& dofs_using_variance_reduction = variance_reduction_dofs.at(particle_species);
+    const std::vector<bool>& dofs_using_variance_reduction = variance_reduction_dofs.at(particle_species);
 
     mfem::ElementTransformation* element_transformation =
       mesh.GetElementTransformation(element_id);
@@ -575,7 +575,7 @@ ParticleOperations::getVarianceReducedTemperature(
   for (auto& species_and_sum : residual_weight_squared_sum)
     species_and_sum.second = 0.0;
 
-  std::unordered_map<Species, std::vector<char>> variance_reduction_valid;
+  std::unordered_map<Species, std::vector<bool>> variance_reduction_valid;
 
   variance_reduction_valid.reserve(variance_reduced_particle_moments_.temperature.size());
 
@@ -584,7 +584,7 @@ ParticleOperations::getVarianceReducedTemperature(
 
     variance_reduction_valid.emplace(
       species,
-      std::vector<char>(number_of_elements, 1)
+      std::vector<bool>(number_of_elements, true)
     );
   }
 
@@ -778,34 +778,63 @@ double ParticleOperations::evaluateControlVariate_(
     low_fidelity_state->getSpeciesIndex(particle.species));
 }
 
-std::unordered_map<Species, std::vector<char>> ParticleOperations::computeVarianceReductionElements_(
+std::unordered_map<Species, std::vector<bool>> ParticleOperations::computeVarianceReductionElements_(
   const ParticleContainer& particles,
   const LowFidelityState* low_fidelity_state,
   const LowFidelityOperations* low_fidelity_operations
 ) const {
   const int number_of_elements = discretization_.getFeSpace().GetNE();
 
-  std::unordered_map<Species, std::vector<char>> variance_reduction_elements;
+  std::unordered_map<Species, std::vector<bool>> variance_reduction_elements;
   for (const Species& species : std::views::keys(sum_of_weights_)) {
-    const char has_control_variate = hasControlVariate_(species, low_fidelity_state) ? 1 : 0;
-    variance_reduction_elements.emplace(species, std::vector<char>(number_of_elements, has_control_variate));
+    const bool has_control_variate = hasControlVariate_(species, low_fidelity_state) ? true : false;
+    variance_reduction_elements.emplace(species, std::vector<bool>(number_of_elements, has_control_variate));
   }
 
-  if (!variance_reduction_parameters_.limit_variance_reduction)
-    return variance_reduction_elements;
+  using CellLimiting = VarianceReductionParameters::CellLimiting;
+  const CellLimiting cell_limiting = variance_reduction_parameters_.cell_limiting;
 
-  for (const Particle& particle : particles) {
-    if (not particle.is_alive) continue;
+  if (cell_limiting == CellLimiting::EveryParticle) {
+    for (const Particle& particle : particles) {
+      if (not particle.is_alive) continue;
 
-    char& use_variance_reduction = variance_reduction_elements.at(particle.species)[particle.element];
-    if (!use_variance_reduction) continue;
+      auto use_variance_reduction = variance_reduction_elements.at(particle.species)[particle.element];
+      if (!use_variance_reduction) continue;
 
-    const double noise_reducing_factor =
-      1.0 - evaluateControlVariate_(particle, low_fidelity_state, low_fidelity_operations) / particle.particle_distribution_function_value;
-    // Written so that a NaN factor also disables variance reduction
-    if (!(std::abs(noise_reducing_factor) < 1.0))
-      use_variance_reduction = 0;
+      const double noise_reducing_factor =
+        1.0 - evaluateControlVariate_(particle, low_fidelity_state, low_fidelity_operations) / particle.particle_distribution_function_value;
+      if (!(std::abs(noise_reducing_factor) < 1.0))
+        use_variance_reduction = false;
+    }
   }
+
+  else if (cell_limiting == CellLimiting::Variance) {
+    std::unordered_map<Species, std::vector<double>> standard_variance;
+    std::unordered_map<Species, std::vector<double>> variance_reduced_variance;
+    for (const Species& species : std::views::keys(variance_reduction_elements)) {
+      standard_variance.emplace(species, std::vector<double>(number_of_elements, 0.0));
+      variance_reduced_variance.emplace(species, std::vector<double>(number_of_elements, 0.0));
+    }
+
+    for (const Particle& particle : particles) {
+      if (not particle.is_alive) continue;
+      if (!variance_reduction_elements.at(particle.species)[particle.element]) continue;
+
+      const double noise_reducing_factor =
+        1.0 - evaluateControlVariate_(particle, low_fidelity_state, low_fidelity_operations) / particle.particle_distribution_function_value;
+      const double squared_weight = particle.weight * particle.weight;
+      standard_variance.at(particle.species)[particle.element] += squared_weight;
+      variance_reduced_variance.at(particle.species)[particle.element] += squared_weight * noise_reducing_factor * noise_reducing_factor;
+    }
+
+    for (auto& [species, use_variance_reduction] : variance_reduction_elements) {
+      for (int elem_id = 0; elem_id < number_of_elements; ++elem_id) {
+        if (!(variance_reduced_variance.at(species)[elem_id] < standard_variance.at(species)[elem_id]))
+          use_variance_reduction[elem_id] = false;
+      }
+    }
+  }
+
   return variance_reduction_elements;
 }
 

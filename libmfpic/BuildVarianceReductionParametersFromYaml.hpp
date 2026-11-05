@@ -14,6 +14,13 @@ namespace mfpic {
  */
 struct VarianceReductionParameters
 {
+  // How elements fall back to standard PIC when the control variate is too far from the particles
+  enum class CellLimiting {
+    None, // Never fall back
+    EveryParticle, // Fall back if any particle in the element has |1 - f_LF / f| >= 1
+    Variance, // Fall back if sum w^2 (1 - f_LF / f)^2 > sum w^2 over the element's particles
+  };
+
   enum class Strategy {
     None,
     EulerFluid,
@@ -21,12 +28,11 @@ struct VarianceReductionParameters
   };
 
   Strategy strategy = Strategy::None;
-  /// Reference moments, used only by Strategy::UniformMaxwellian
   double reference_number_density = 0.0;
   std::vector<double> reference_bulk_velocity{0.0,0.0,0.0};
   double reference_temperature = 0.0;
   std::vector<std::string> reference_species;
-  bool limit_variance_reduction = false;
+  CellLimiting cell_limiting = CellLimiting::None;
   bool use_variance_reduced_electric_field = false;
 };
 
