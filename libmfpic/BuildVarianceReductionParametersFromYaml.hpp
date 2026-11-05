@@ -18,7 +18,7 @@ struct VarianceReductionParameters
   enum class CellLimiting {
     None, // Never fall back
     EveryParticle, // Fall back if any particle in the element has |1 - f_LF / f| >= 1
-    Variance, // Fall back if sum w^2 (1 - f_LF / f)^2 < sum w^2 over the element's particles
+    Variance, // Fall back if sum w^2 (1 - f_LF / f)^2 > sum w^2 over the element's particles
   };
 
   enum class Strategy {
