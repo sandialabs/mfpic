@@ -672,8 +672,8 @@ The test is made per species and element, with $r_i = f_{LF}(x_i, v_i)/f_i$ for 
 - `Every Particle`: fall back if any particle has $|1 - r_i| \ge 1$.
   Note that this becomes stricter as the number of particles per element grows,
   since a single particle in the tail of the distribution can fail it.
-- `Variance`: fall back unless $\sum_i w_i^2 (1 - r_i)^2 < \sum_i w_i^2$,
-  i.e. unless the estimated variance of the variance reduced number density is below that of the standard estimator.
+- `Variance`: fall back if $\sum_i w_i^2 (1 - r_i)^2 > \sum_i w_i^2$,
+  i.e. if the estimated variance of the variance reduced number density is above that of the standard estimator.
   Elements without particles of the species also fall back.
 
 The same decision applies to the charge and to all moments.
