@@ -37,6 +37,10 @@ mfem::Vector generateMaxwellianFluxVelocity(
 ) {
   assert(unit_normal.Size() == 3);
   assert(temperature > 0.0);
+  assert(mass > 0.0);
+  for (int idim = velocity_dims; idim < 3; idim++) {
+    assert(unit_normal[idim] == 0);
+  }
 
   const mfem::Vector zero_bulk_velocity({0.0, 0.0, 0.0});
   mfem::Vector velocity = generateMaxwellianVelocity(zero_bulk_velocity, temperature, mass, generator, velocity_dims);
