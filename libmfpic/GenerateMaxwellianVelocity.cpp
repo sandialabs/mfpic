@@ -29,18 +29,21 @@ mfem::Vector generateMaxwellianVelocity(
 }
 
 mfem::Vector generateMaxwellianFluxVelocity(
-  const mfem::Vector& unit_normal,
+  const mfem::Vector& normal,
   double temperature,
   double mass,
   RandomNumberGenerator& generator,
   int velocity_dims
 ) {
-  assert(unit_normal.Size() == 3);
+  assert(normal.Size() == 3);
   assert(temperature > 0.0);
   assert(mass > 0.0);
   for (int idim = velocity_dims; idim < 3; idim++) {
-    assert(unit_normal[idim] == 0);
+    assert(normal[idim] == 0);
   }
+
+  mfem::Vector unit_normal = normal;
+  unit_normal /= unit_normal.Norml2();
 
   const mfem::Vector zero_bulk_velocity({0.0, 0.0, 0.0});
   mfem::Vector velocity = generateMaxwellianVelocity(zero_bulk_velocity, temperature, mass, generator, velocity_dims);
