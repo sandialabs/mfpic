@@ -232,7 +232,7 @@ private:
    *
    * @return Map of particle species to flags, (species, (element))
    */
-  std::unordered_map<Species, std::vector<char>> computeVarianceReductionElements_(
+  std::unordered_map<Species, std::vector<bool>> computeVarianceReductionElements_(
     const ParticleContainer& particles,
     const LowFidelityState* low_fidelity_state,
     const LowFidelityOperations* low_fidelity_operations
@@ -369,7 +369,7 @@ private:
   int velocity_dims_ = 3;
 
   /// Elements in which each species uses variance reduction, set by getVarianceReducedParticleMoments
-  std::unordered_map<Species, std::vector<char>> variance_reduction_elements_;
+  std::unordered_map<Species, std::vector<bool>> variance_reduction_elements_;
 
   /// Control variate moment integrals, set by getVarianceReducedParticleMoments
   ControlVariateMomentIntegrals control_variate_moment_integrals_;
