@@ -28,6 +28,7 @@ add_library(libmfpic
   GenerateKappaVelocity.cpp
   GenerateMaxwellianVelocity.cpp
   KineticFluxBC.cpp
+  MaxwellianInfluxBC.cpp
   IntegratedCharge.cpp
   LoadParticles.cpp
   LowFidelityState.cpp
@@ -93,6 +94,7 @@ mfpic_unit_test(GenerateKappaVelocity)
 mfpic_unit_test(GenerateMaxwellianVelocity)
 mfpic_unit_test(LoadParticles)
 mfpic_unit_test(LowFidelityState)
+mfpic_unit_test(MaxwellianInfluxBC)
 mfpic_unit_test(MeshDataWriter)
 mfpic_unit_test(MeshDistribution)
 mfpic_unit_test(MeshFactory)
