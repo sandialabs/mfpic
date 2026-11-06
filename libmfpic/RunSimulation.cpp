@@ -139,9 +139,10 @@ void runSimulation(int argc, char* argv[]) {
     low_fidelity_states.push_back(dg_euler_state);
 
     std::vector<Species> species_list = dg_euler_state.getSpeciesList();
-    std::unordered_map<int, DGEulerBCType> boundary_attribute_to_bc_type = buildBoundaryAttributeToBCTypeFromYAML(
-      euler_fluids["Boundary Conditions"], mesh_dimension);
-    std::vector<std::vector<std::unique_ptr<DGBC>>> dg_euler_bcs = buildDGEulerBoundaryConditions(boundary_attribute_to_bc_type, *mesh, species_list);
+    std::unordered_map<int, std::unique_ptr<DGEulerBCParameters>> boundary_attribute_to_bc_parameters =
+      buildBoundaryAttributeToBCParametersFromYAML(euler_fluids["Boundary Conditions"], mesh_dimension);
+    std::vector<std::vector<std::unique_ptr<DGBC>>> dg_euler_bcs =
+      buildDGEulerBoundaryConditions(boundary_attribute_to_bc_parameters, *mesh, species_list);
     std::vector<std::pair<Species, std::unique_ptr<mfem::VectorCoefficient>>> dg_euler_sources = buildListOfSpeciesAndEulerSourceCoefficients(list_of_euler_source_parameters);
     std::unique_ptr<LowFidelityOperations> dg_euler_operations = buildDGEulerOperations(
       dg_euler_discretization,
