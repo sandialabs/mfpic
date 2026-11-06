@@ -568,6 +568,15 @@ The integer is a mesh "attribute" in MFEM parlance or the index of the sideset i
 The options are:
 - **``Reflecting``**: Reflects incident fluid.
 - **``Absorbing``**: The portion of the fluid VDF leaving the domain is fluxed out.
+- **``Maxwellian Influx``**: The portion of the fluid VDF leaving the domain is fluxed out, as for ``Absorbing``,
+and the inward half of a non-drifting Maxwellian located immediately outside the boundary is fluxed in.
+This boundary condition requires two additional keys:
+  - **``Number Flux Density``**: The one-way number flux density $\Gamma$ [1/(m^2 s)] of the external Maxwellian into the domain.
+  It must be nonnegative.
+  The external Maxwellian has number density $n = \Gamma / \sqrt{k_B T / (2 \pi m)}$.
+  - **``Temperature``**: The temperature $T$ [K] of the external Maxwellian. It must be positive.
+
+  The same flux density and temperature are applied to every Euler fluid species.
 
 Periodic boundaries are specified under ```Mesh``` and are handled automatically without any additional input here.
 
@@ -580,6 +589,10 @@ Euler Fluids:
           Type: Reflecting
         - Side: right
           Type: Absorbing
+        - Side: top
+          Type: Maxwellian Influx
+          Number Flux Density: 1.0e20   # [1/(m^2 s)]
+          Temperature: 11600.0          # [K]
 ```
 
 ## Collisions
