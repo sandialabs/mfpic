@@ -1,7 +1,7 @@
 #include <libmfpic/AbsorbingParticleBoundary.hpp>
 #include <libmfpic/BuildParticleBoundariesFromYaml.hpp>
 #include <libmfpic/Errors.hpp>
-#include <libmfpic/MeshUtilities.hpp>
+#include <libmfpic/ParseHelpers.hpp>
 #include <libmfpic/ReflectingParticleBoundary.hpp>
 
 #include <yaml-cpp/yaml.h>
@@ -34,17 +34,8 @@ buildParticleBoundariesFromYaml(const YAML::Node& particles_node, int mesh_dimen
   if (particles_node["Boundary Conditions"]) {
     const YAML::Node& particle_bcs = particles_node["Boundary Conditions"];
     if (particle_bcs.IsSequence()) {
-      std::unordered_map<std::string, int> side_name_to_boundary_attribute = getSideNameToBoundaryAttributeForInlineMeshes(
-        mesh_dimension
-      );
       for (const YAML::Node& particle_bc : particle_bcs) {
-        const std::string side_name = particle_bc["Side"].as<std::string>();
-        int boundary_attribute;
-        if (side_name_to_boundary_attribute.contains(side_name)) {
-          boundary_attribute = side_name_to_boundary_attribute.at(side_name);
-        } else {
-          boundary_attribute = particle_bc["Side"].as<int>();
-        }
+        const int boundary_attribute = parseBoundaryAttribute(particle_bc, mesh_dimension);
 
         std::shared_ptr<ParticleBoundaryFactory> boundary_factory = createParticleBoundaryFactoryFromTypeNode(
           particle_bc["Type"]
