@@ -4,7 +4,7 @@
 #include <libmfpic/Errors.hpp>
 #include <libmfpic/KineticFluxBC.hpp>
 #include <libmfpic/MaxwellianInfluxBC.hpp>
-#include <libmfpic/MeshUtilities.hpp>
+#include <libmfpic/ParseHelpers.hpp>
 
 #include <yaml-cpp/yaml.h>
 
@@ -46,22 +46,10 @@ namespace {
 
 using DGEulerBCParametersParser = std::function<std::unique_ptr<DGEulerBCParameters>(const YAML::Node&)>;
 
-double getRequiredPositiveDouble(const YAML::Node& fluid_bc, const std::string& key)
-{
-  if (not fluid_bc[key]) {
-    errorWithUserMessage(formatParseMessage(fluid_bc, key + " is required for this boundary condition type."));
-  }
-  const double input = fluid_bc[key].as<double>();
-  if (input <= 0.) {
-    errorWithUserMessage(formatParseMessage(fluid_bc, key + " is nonpositive!"));
-  }
-  return input;
-}
-
 std::unique_ptr<DGEulerBCParameters> parseMaxwellianInfluxBCParameters(const YAML::Node& fluid_bc)
 {
-  const double number_flux_density = getRequiredPositiveDouble(fluid_bc, "Number Flux Density");
-  const double temperature = getRequiredPositiveDouble(fluid_bc, "Temperature");
+  const double number_flux_density = parseRequiredPositiveDouble(fluid_bc, "Number Flux Density");
+  const double temperature = parseRequiredPositiveDouble(fluid_bc, "Temperature");
   return std::make_unique<MaxwellianInfluxDGEulerBCParameters>(number_flux_density, temperature);
 }
 
@@ -83,21 +71,9 @@ std::unordered_map<int, std::unique_ptr<DGEulerBCParameters>> buildBoundaryAttri
 {
   assert(fluid_bcs.IsSequence() or fluid_bcs.IsNull() or not fluid_bcs.IsDefined());
 
-  std::unordered_map<std::string, int> side_name_to_boundary_attribute = getSideNameToBoundaryAttributeForInlineMeshes(
-    mesh_dimension);
-
   std::unordered_map<int, std::unique_ptr<DGEulerBCParameters>> boundary_attribute_to_bc_parameters;
   for (const YAML::Node& fluid_bc : fluid_bcs) {
-    const std::string side_name = fluid_bc["Side"].as<std::string>();
-    int boundary_attribute;
-    if (side_name_to_boundary_attribute.contains(side_name)) {
-      boundary_attribute = side_name_to_boundary_attribute[side_name];
-    } else {
-      boundary_attribute = fluid_bc["Side"].as<int>();
-      if (boundary_attribute < 1) {
-        errorWithUserMessage(formatParseMessage(fluid_bc["Side"], "Side must be >= 1 if specified as boundary attribute."));
-      }
-    }
+    const int boundary_attribute = parseBoundaryAttribute(fluid_bc, mesh_dimension);
 
     const std::string bc_type_string = fluid_bc["Type"].as<std::string>();
     const auto& bc_type_name_to_parser = getBCTypeNameToParser();

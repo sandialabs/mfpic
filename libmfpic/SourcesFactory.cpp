@@ -1,6 +1,8 @@
 #include <libmfpic/Errors.hpp>
 #include <libmfpic/Euler.hpp>
+#include <libmfpic/ParseHelpers.hpp>
 #include <libmfpic/SourcesFactory.hpp>
+
 #include <memory>
 
 namespace mfpic {
@@ -8,6 +10,18 @@ namespace mfpic {
 namespace {
 mfem::Vector constructPrimitiveState(const SourceStateParameters state) {
   return euler::constructPrimitiveState(state.number_density, state.bulk_velocity, state.temperature);
+}
+
+double parseOptionalKappa(const YAML::Node& parent_node, const std::string& key) {
+  const YAML::Node& kappa_node = parent_node[key];
+  if (not kappa_node) {
+    return -1.0;
+  }
+  const double kappa = kappa_node.as<double>();
+  if (kappa <= 0.5) {
+    errorWithUserMessage(formatParseMessage(kappa_node, "kappa must be > 0.5!"));
+  }
+  return kappa;
 }
 }
 
@@ -152,12 +166,7 @@ SourceStateParameters buildSourceStateParametersFromYAML(const YAML::Node& state
   mfem::Vector bulk_velocity({0.0, 0.0, 0.0});
   if (bulk_velocity_node) {
     if (bulk_velocity_node.IsSequence()) {
-      if (bulk_velocity_node.size() != 3) {
-        errorWithUserMessage(formatParseMessage(bulk_velocity_node, "Bulk Velocity does not have length 3!"));
-      }
-      for (int i = 0; i < 3; i++) {
-        bulk_velocity[i] = bulk_velocity_node[i].as<double>();
-      }
+      bulk_velocity = parseVector3(bulk_velocity_node, "Bulk Velocity");
     } else {
       std::cout << formatParseMessage(
         bulk_velocity_node, "Bulk Velocity is not a sequence, so it's ignored. Continuing.") << std::endl;
@@ -172,14 +181,7 @@ SourceStateParameters buildSourceStateParametersFromYAML(const YAML::Node& state
     errorWithUserMessage(formatParseMessage(state_node["Temperature"], "Temperature is negative!"));
   }
 
-  double kappa=-1;
-  if (state_node["kappa"]) 
-  {
-    kappa = state_node["kappa"].as<double>();
-    if (kappa <= 0.5) {
-      errorWithUserMessage(formatParseMessage(state_node["kappa"], "kappa must be > 0.5!"));
-    }
-  }
+  const double kappa = parseOptionalKappa(state_node, "kappa");
 
   SourceStateParameters state_parameters{
     .number_density = number_density,
@@ -200,19 +202,7 @@ std::vector<std::unique_ptr<SourceParameters>> buildListOfSourceParametersFromYA
 
   if (sources_node.IsSequence()) {
     for (const YAML::Node& source : sources_node) {
-      std::vector<std::string> species_names;
-      const YAML::Node& species_node = source["Species"];
-      if (species_node.IsSequence()) {
-        for (const YAML::Node& species : species_node) {
-          const std::string species_name = species.as<std::string>();
-          if (not species_map.contains(species_name)) {
-            errorWithUserMessage(formatParseMessage(species, "Species was not created in the Species block!"));
-          }
-          species_names.push_back(species_name);
-        }
-      } else {
-        errorWithUserMessage(formatParseMessage(species_node, "Species is not a sequence!"));
-      }
+      const std::vector<std::string> species_names = parseSpeciesNames(source["Species"], species_map);
 
       int num_particles_per_species = 0;
       if (source["Number of Macroparticles per Species"]) {
@@ -254,15 +244,7 @@ std::vector<std::unique_ptr<SourceParameters>> buildListOfSourceParametersFromYA
       } else if (source["Gaussian"]) {
         const YAML::Node& gaussian_node = source["Gaussian"];
 
-        const YAML::Node& center_node = gaussian_node["Center"];
-        mfem::Vector center(center_node.size());
-        if (center_node.IsSequence()) {
-          for (int i = 0; i < std::ssize(center_node); ++i){
-            center[i] = center_node[i].as<double>();
-          }
-        } else {
-          errorWithUserMessage(formatParseMessage(center_node, "Center must be a sequence.")); 
-        }
+        const mfem::Vector center = parseVector(gaussian_node["Center"], "Center");
 
         const double standard_deviation = gaussian_node["Standard Deviation"].as<double>();
         const SourceStateParameters offsets = buildSourceStateParametersFromYAML(gaussian_node["Offsets"]);
@@ -272,14 +254,7 @@ std::vector<std::unique_ptr<SourceParameters>> buildListOfSourceParametersFromYA
         if (pressure_offset <= 0 or (pressure_height + pressure_offset) <= 0) {
           errorWithUserMessage(formatParseMessage(gaussian_node, "Pressure must be positive."));
         }
-        double kappa=-1;
-        if (gaussian_node["Velocity Kappa"]) 
-        {
-          kappa = gaussian_node["Velocity Kappa"].as<double>();
-          if (kappa <= 0.5) {
-          errorWithUserMessage(formatParseMessage(gaussian_node["Velocity Kappa"], "kappa must be > 0.5!"));
-          }
-        }
+        const double kappa = parseOptionalKappa(gaussian_node, "Velocity Kappa");
 
         for (const std::string& species_name : species_names) {
           list_of_parameters.push_back(std::make_unique<GaussianSourceParameters>(
@@ -299,11 +274,7 @@ std::vector<std::unique_ptr<SourceParameters>> buildListOfSourceParametersFromYA
         const SourceStateParameters base = buildSourceStateParametersFromYAML(perturbation_node["Base Values"]);
         const SourceStateParameters perturbations = buildSourceStateParametersFromYAML(perturbation_node["Perturbations"]);
 
-        const YAML::Node& wavevector_node = perturbation_node["Wavevector"];
-        mfem::Vector wavevector(wavevector_node.size());
-        for (int i = 0; i < std::ssize(wavevector_node); ++i){
-          wavevector[i] = wavevector_node[i].as<double>();
-        }
+        const mfem::Vector wavevector = parseVector(perturbation_node["Wavevector"], "Wavevector");
 
         for (const std::string& species_name : species_names) {
           list_of_parameters.push_back(std::make_unique<PeriodicPerturbationSourceParameters>(

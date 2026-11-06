@@ -1,5 +1,6 @@
 #include <libmfpic/BuildVarianceReductionParametersFromYaml.hpp>
 #include <libmfpic/Errors.hpp>
+#include <libmfpic/ParseHelpers.hpp>
 
 #include <yaml-cpp/yaml.h>
 
@@ -25,12 +26,9 @@ VarianceReductionParameters buildVarianceReductionParametersFromYAML(const YAML:
       errorWithUserMessage(formatParseMessage(node, "Strategy: Uniform Maxwellian requires a Uniform Maxwellian Moments block."));
     }
     parameters.reference_number_density = moments_node["Number Density"].as<double>();
-    const YAML::Node& bulk_velocity_node = moments_node["Bulk Velocity"];
-    if (not bulk_velocity_node.IsSequence() or bulk_velocity_node.size() != 3) {
-      errorWithUserMessage(formatParseMessage(bulk_velocity_node, "Bulk Velocity does not have length 3!"));
-    }
+    const mfem::Vector bulk_velocity = parseVector3(moments_node["Bulk Velocity"], "Bulk Velocity");
     for (int i = 0; i < 3; ++i) {
-      parameters.reference_bulk_velocity[i] = bulk_velocity_node[i].as<double>();
+      parameters.reference_bulk_velocity[i] = bulk_velocity[i];
     }
     parameters.reference_temperature = moments_node["Temperature"].as<double>();
     if (moments_node["Species"]) {

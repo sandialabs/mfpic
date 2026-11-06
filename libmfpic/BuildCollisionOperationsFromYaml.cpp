@@ -1,6 +1,7 @@
 #include <libmfpic/BGKRelaxationOperations.hpp>
 #include <libmfpic/BuildCollisionOperationsFromYaml.hpp>
 #include <libmfpic/Errors.hpp>
+#include <libmfpic/ParseHelpers.hpp>
 
 namespace mfpic {
 
@@ -14,17 +15,8 @@ std::vector<std::unique_ptr<CollisionOperations>> buildCollisionOperationsFromYa
       if (collisions_node["BGK Relaxation"]) {
         const YAML::Node bgk_relaxation_node = collisions_node["BGK Relaxation"];
 
-        const YAML::Node collision_frequency_node = bgk_relaxation_node["Collision Frequency"];
-        const double collision_frequency = collision_frequency_node.as<double>();
-        if (collision_frequency <= 0.0) {
-          errorWithUserMessage(formatParseMessage(collision_frequency_node, "Collision Frequency must be positive!"));
-        }
-
-        const YAML::Node species_node = bgk_relaxation_node["Species"];
-        const std::string species_name = species_node.as<std::string>();
-        if (not species_map.contains(species_name)) {
-          errorWithUserMessage(formatParseMessage(species_node, "Species was not created in the Species block!"));
-        }
+        const double collision_frequency = parseRequiredPositiveDouble(bgk_relaxation_node, "Collision Frequency");
+        const std::string species_name = parseSpeciesName(bgk_relaxation_node["Species"], species_map);
 
         collision_operations.push_back(std::make_unique<BGKRelaxationOperations>(
           collision_frequency,
