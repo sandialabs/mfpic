@@ -159,4 +159,23 @@ TEST(MaxwellianParticleBoundarySource, DistributionFunctionIntegratesToNearWallD
   EXPECT_NEAR(integral, expected_near_wall_density, relative_tolerance * expected_near_wall_density);
 }
 
+TEST(MaxwellianParticleBoundarySource, InwardVelocityTimesDistributionFunctionIntegratesToFluxDensityOverInwardVelocities) {
+  const auto mesh = std::make_shared<mfem::Mesh>(mfem::Mesh::MakeCartesian1D(4, 1.0));
+  const MaxwellianParticleBoundarySource source(
+    mesh, left_boundary_attribute_1d, proton_species, 1, flux_density, temperature, 1);
+
+  constexpr int num_intervals = 4000;
+  const double max_speed = 10.0 * thermalSpeed();
+  const double dv = max_speed / num_intervals;
+  double integral = 0.0;
+  mfem::Vector velocity(1);
+  for (int i = 0; i < num_intervals; i++) {
+    velocity[0] = (i + 0.5) * dv;
+    integral += velocity[0] * source.distributionFunctionValue(velocity) * dv;
+  }
+
+  constexpr double relative_tolerance = 1.0e-6;
+  EXPECT_NEAR(integral, flux_density, relative_tolerance * flux_density);
+}
+
 } // namespace
