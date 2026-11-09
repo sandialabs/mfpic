@@ -38,6 +38,7 @@ add_library(libmfpic
   MeshFactory.cpp
   MeshUtilities.cpp
   MFEMHelpers.cpp
+  ParseHelpers.cpp
   ParticleBoundary.cpp
   ParticleContainer.cpp
   ParticleOperations.cpp
@@ -102,6 +103,7 @@ mfpic_unit_test(MeshDistribution)
 mfpic_unit_test(MeshFactory)
 mfpic_unit_test(MeshUtilities)
 mfpic_unit_test(MFEMHelpers)
+mfpic_unit_test(ParseHelpers)
 mfpic_unit_test(ParticleContainer)
 mfpic_unit_test(ParticleOperations)
 mfpic_unit_test(Pinning)

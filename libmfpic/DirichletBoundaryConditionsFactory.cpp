@@ -1,6 +1,6 @@
 #include <libmfpic/DirichletBoundaryConditionsFactory.hpp>
 #include <libmfpic/DirichletBoundaryConditionsConstant.hpp>
-#include <libmfpic/MeshUtilities.hpp>
+#include <libmfpic/ParseHelpers.hpp>
 #include <libmfpic/Pinning.hpp>
 
 #include <yaml-cpp/yaml.h>
@@ -13,19 +13,9 @@ std::unordered_map<int, double> buildBoundaryAttributeToDirichletValueFromYAML(
 {
   assert(field_bcs.IsSequence() or field_bcs.IsNull() or not field_bcs.IsDefined());
 
-  std::unordered_map<std::string, int> side_name_to_boundary_attribute = getSideNameToBoundaryAttributeForInlineMeshes(
-    mesh_dimension);
-
   std::unordered_map<int, double> boundary_attribute_to_dirichlet_value;
   for (const YAML::Node& field_bc : field_bcs) {
-    const std::string side_name = field_bc["Side"].as<std::string>();
-    int boundary_attribute;
-    if (side_name_to_boundary_attribute.contains(side_name)) {
-      boundary_attribute = side_name_to_boundary_attribute[side_name];
-    } else {
-      boundary_attribute = field_bc["Side"].as<int>();
-    }
-
+    const int boundary_attribute = parseBoundaryAttribute(field_bc, mesh_dimension);
     const double dirichlet_value = field_bc["Value"].as<double>();
     boundary_attribute_to_dirichlet_value[boundary_attribute] = dirichlet_value;
   }
