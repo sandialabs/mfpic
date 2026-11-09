@@ -31,7 +31,7 @@ std::string parseSpeciesName(
 {
   const std::string species_name = species_node.as<std::string>();
   if (not species_map.contains(species_name)) {
-    errorWithUserMessage(formatParseMessage(species_node, "Species was not created in the Species block!"));
+    errorWithUserMessage(formatParseMessage(species_node, "Species \"" + species_name + "\" was not created in the Species block!"));
   }
   return species_name;
 }

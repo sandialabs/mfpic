@@ -43,7 +43,7 @@ TEST(ParseHelpers, SpeciesNameMustExist) {
   EXPECT_EQ(parseSpeciesName(YAML::Load("proton"), species_map), "proton");
   expectThrowsWithMessage(
     []() { parseSpeciesName(YAML::Load("electron"), species_map); },
-    "Species was not created in the Species block!");
+    "Species \"electron\" was not created in the Species block!");
 }
 
 TEST(ParseHelpers, SpeciesNamesMustBeASequenceOfExistingSpecies) {
@@ -51,7 +51,7 @@ TEST(ParseHelpers, SpeciesNamesMustBeASequenceOfExistingSpecies) {
   expectThrowsWithMessage([]() { parseSpeciesNames(YAML::Load("proton"), species_map); }, "Species is not a sequence!");
   expectThrowsWithMessage(
     []() { parseSpeciesNames(YAML::Load("[proton, electron]"), species_map); },
-    "Species was not created in the Species block!");
+    "Species \"electron\" was not created in the Species block!");
 }
 
 TEST(ParseHelpers, RequiredPositiveDouble) {
