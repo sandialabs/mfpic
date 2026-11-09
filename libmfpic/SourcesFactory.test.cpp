@@ -345,7 +345,7 @@ TEST(SourcesFactory, SpeciesMustExistInSpeciesMap) {
 
   EXPECT_THAT(
     [&]() {buildListOfSourceParametersFromYAML(initial_conditions_node, species_map);},
-    ThrowsMessage<std::logic_error>(HasSubstr("Species was not created in the Species block!"))
+    ThrowsMessage<std::logic_error>(HasSubstr("Species \"nonexistent\" was not created in the Species block!"))
   );
 }
 
@@ -422,7 +422,7 @@ TEST(SourcesFactory, OneInitialConditionWithOneSpeciesGivesListOfOneSourceParame
     "    Constant:\n"
     "      Number Density: " + std::to_string(number_density) + "\n"
     "      Temperature: " + std::to_string(temperature) + "\n"
-    "      Bulk Velocity: [" + std::to_string(bulk_velocity[0]) + ", " + std::to_string(bulk_velocity[1]) + ", " + 
+    "      Bulk Velocity: [" + std::to_string(bulk_velocity[0]) + ", " + std::to_string(bulk_velocity[1]) + ", " +
       std::to_string(bulk_velocity[2]) + "]\n"
   );
 
@@ -456,7 +456,7 @@ TEST(SourcesFactory, OneInitialConditionWithTwoSpeciesGivesListOfTwoSourceParame
     "    Constant:\n"
     "      Number Density: " + std::to_string(number_density) + "\n"
     "      Temperature: " + std::to_string(temperature) + "\n"
-    "      Bulk Velocity: [" + std::to_string(bulk_velocity[0]) + ", " + std::to_string(bulk_velocity[1]) + ", " + 
+    "      Bulk Velocity: [" + std::to_string(bulk_velocity[0]) + ", " + std::to_string(bulk_velocity[1]) + ", " +
       std::to_string(bulk_velocity[2]) + "]\n"
   );
 
@@ -513,7 +513,7 @@ TEST(SourcesFactory, TwoInitialConditionsWithOneSpeciesGivesListOfTwoSourceParam
     "    Constant:\n"
     "      Number Density: " + std::to_string(number_density_p) + "\n"
     "      Temperature: " + std::to_string(temperature_p) + "\n"
-    "      Bulk Velocity: [" + std::to_string(bulk_velocity_p[0]) + ", " + std::to_string(bulk_velocity_p[1]) + ", " + 
+    "      Bulk Velocity: [" + std::to_string(bulk_velocity_p[0]) + ", " + std::to_string(bulk_velocity_p[1]) + ", " +
       std::to_string(bulk_velocity_p[2]) + "]\n"
   );
 
@@ -695,7 +695,7 @@ TEST(SourcesFactory, PeriodicPerturbationInitialConditionsGivesBackCorrectParame
     "  - Species: [" + proton_species_name + "]\n"
     "    Number of Macroparticles per Species: " + std::to_string(num_particles_per_species) + "\n"
     "    Periodic Perturbation:\n"
-    "      Wavevector: [" + std::to_string(wavevector[0]) + ", " + std::to_string(wavevector[1]) + ", " + 
+    "      Wavevector: [" + std::to_string(wavevector[0]) + ", " + std::to_string(wavevector[1]) + ", " +
       std::to_string(wavevector[2]) + "]\n"
     "      Base Values:\n"
     "        Number Density: " + std::to_string(number_density_base) + "\n"
