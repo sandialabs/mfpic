@@ -18,12 +18,11 @@ dt = min(dx / (3.0 * most_probable_ion_speed), 0.1 / ion_plasma_frequency)
 num_macroparticles_per_population = 100 * num_elements
 bohm_speed = np.sqrt(Boltzmann * temperature / proton_mass)
 bohm_current_density = number_density * elementary_charge * bohm_speed * np.exp(-0.5)
-ion_wall_flux = bohm_current_density / elementary_charge
-source_number_density = ion_wall_flux / domain_length * dt
-source_num_macroparticles = int(source_number_density / number_density * num_macroparticles_per_population)
+ion_wall_flux_density = bohm_current_density / elementary_charge
+source_num_macroparticles_per_timestep = int(ion_wall_flux_density / domain_length * dt / number_density * num_macroparticles_per_population)
 electron_thermal_speed = np.sqrt(8.0 * Boltzmann * temperature / np.pi / electron_mass)
 electron_boundary_flux_per_unit_number_density = electron_thermal_speed / 4.0
-electron_source_rate = ion_wall_flux
+electron_source_rate = ion_wall_flux_density
 electron_reference_number_density = electron_source_rate / electron_boundary_flux_per_unit_number_density
 num_timesteps = int(np.ceil(ion_acoustic_transit_time / dt))
 
@@ -65,12 +64,13 @@ Particles:
       Constant:
         Temperature: {temperature}
         Number Density: {number_density}
-  Sources:
+  Boundary Sources:
     - Species: [proton]
-      Number of Macroparticles per Species: {source_num_macroparticles}
-      Constant:
+      Side: right
+      Number of Macroparticles per Species per Timestep: {source_num_macroparticles_per_timestep}
+      Maxwellian:
         Temperature: {temperature}
-        Number Density: {source_number_density}
+        Flux Density: {ion_wall_flux_density}
 
 Output:
   Stride: {num_timesteps}
