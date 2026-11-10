@@ -162,11 +162,11 @@ void runSimulation(int argc, char* argv[]) {
   }
 
   auto dump_variance_reduced_moments = [&](const int step, const double time) {
-    const LowFidelityState* low_fidelity_state = nullptr;
-    const LowFidelityOperations* low_fidelity_operations = nullptr;
+    const LowFidelityState* first_low_fidelity_state = nullptr;
+    const LowFidelityOperations* first_low_fidelity_operations = nullptr;
     if (not low_fidelity_states.empty()) {
-      low_fidelity_state = &low_fidelity_states[0];
-      low_fidelity_operations = &low_fidelity_operations[0];
+      first_low_fidelity_state = &low_fidelity_states[0];
+      first_low_fidelity_operations = low_fidelity_operations[0].get();
     }
 
     const bool fluid_is_control_variate =
@@ -175,14 +175,14 @@ void runSimulation(int argc, char* argv[]) {
     dumpVarianceReducedParticleMoments(
       particle_operations,
       particle_container,
-      fluid_is_control_variate ? low_fidelity_state : nullptr,
-      fluid_is_control_variate ? low_fidelity_operations: nullptr,
+      fluid_is_control_variate ? first_low_fidelity_state : nullptr,
+      fluid_is_control_variate ? first_low_fidelity_operations : nullptr,
       variance_reduced_prefix,
       step,
       time);
-    if (low_fidelity_operations) {
+    if (first_low_fidelity_operations) {
       const std::string low_fidelity_prefix = "low_fidelity_moments";
-      dumpLowFidelityMoments(*low_fidelity_state,*low_fidelity_operations,*mesh,low_fidelity_prefix, step, time);
+      dumpLowFidelityMoments(*first_low_fidelity_state, *first_low_fidelity_operations, *mesh, low_fidelity_prefix, step, time);
     }
   };
 
