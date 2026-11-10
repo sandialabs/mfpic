@@ -2,6 +2,7 @@
 #include <libmfpic/BuildElectrostaticFieldOperationsFromYaml.hpp>
 #include <libmfpic/BuildOutputParametersFromYaml.hpp>
 #include <libmfpic/BuildParticleBoundariesFromYaml.hpp>
+#include <libmfpic/BuildParticleBoundarySourcesFromYAML.hpp>
 #include <libmfpic/BuildParticlesFromYaml.hpp>
 #include <libmfpic/BuildSpeciesMapFromYaml.hpp>
 #include <libmfpic/BuildVarianceReductionParametersFromYaml.hpp>
@@ -103,6 +104,12 @@ void runSimulation(int argc, char* argv[]) {
     main["Particles"]["Initial Conditions"],
     species_map,
     generator,
+    mesh,
+    mesh_parameters.num_velocity_dims
+  );
+  std::vector<std::unique_ptr<ParticleBoundarySource>> particle_boundary_sources = buildParticleBoundarySourcesFromYAML(
+    main["Particles"]["Boundary Sources"],
+    species_map,
     mesh,
     mesh_parameters.num_velocity_dims
   );
@@ -286,6 +293,10 @@ void runSimulation(int argc, char* argv[]) {
       );
 
       particle_container.addParticles(source_particles);
+    }
+
+    for (const std::unique_ptr<ParticleBoundarySource>& particle_boundary_source : particle_boundary_sources) {
+      particle_container.addParticles(particle_boundary_source->loadParticles(generator, particle_operations, timestep_size));
     }
 
     if (i_timestep % output_parameters.output_stride == 0) {
