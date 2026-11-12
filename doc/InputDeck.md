@@ -436,6 +436,49 @@ Particles:
               Number Density: 1.0e16
 ```
 
+### Particle Boundary Sources
+Particles can be injected through a mesh side each time step with the optional `Boundary Sources` key.
+The value must be a sequence, each member of which specifies the species, the mesh side,
+the number of macroparticles injected per species per time step, and the injected distribution.
+```yaml
+Particles:
+    Boundary Sources:
+        - Species: list of strings
+          Side: string or integer
+          Number of Macroparticles per Species per Timestep: integer
+          <Boundary Source Type>:
+              <Type Subparameters>
+        ...
+```
+
+**``Side``**: The side through which particles are injected,
+specified as in [Particle Boundary Conditions](#particle-boundary-conditions).
+
+The injected particles are spread uniformly over the side.
+Each is placed as if it crossed the side at a uniformly random time during the time step,
+so it is moved inward for a random fraction of the time step without the electric field.
+Particles that leave the domain through an absorbing boundary during this partial step are removed.
+
+The boundary source types are:
+- **``Maxwellian``**: Particles crossing the side from a non-drifting Maxwellian gas.
+  The normal velocity follows the flux-weighted distribution
+  $f(v_n) \propto v_n \exp(-v_n^2 / 2\sigma^2)$ with $\sigma = \sqrt{k_B T / m}$,
+  and the tangential velocities are Maxwellian.
+  - **``Flux Density``**: Number of physical particles crossing the side per unit area per unit time ($\mathrm{m^{-2} s^{-1}}$).
+  - **``Temperature``**: Temperature of the gas (K).
+
+#### Example
+```yaml
+Particles:
+    Boundary Sources:
+        - Species: [proton, electron]
+          Side: left
+          Number of Macroparticles per Species per Timestep: 100
+          Maxwellian:
+              Flux Density: 1.0e20
+              Temperature: 11600.0
+```
+
 ### Particle Boundary Conditions
 The particle boundary conditions are defined under the `Boundary Conditions`
 and `Default Boundary Condition` keys.

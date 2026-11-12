@@ -6,6 +6,7 @@ add_library(libmfpic
   BuildElectrostaticFieldOperationsFromYaml.cpp
   BuildOutputParametersFromYaml.cpp
   BuildParticleBoundariesFromYaml.cpp
+  BuildParticleBoundarySourcesFromYAML.cpp
   BuildSpeciesMapFromYaml.cpp
   BuildVarianceReductionParametersFromYaml.cpp
   ConjugateGradientLinearSolver.cpp
@@ -74,6 +75,7 @@ mfpic_unit_test(BuildCollisionOperationsFromYaml)
 mfpic_unit_test(BuildElectrostaticFieldOperationsFromYaml)
 mfpic_unit_test(BuildOutputParametersFromYaml)
 mfpic_unit_test(BuildParticleBoundariesFromYaml)
+mfpic_unit_test(BuildParticleBoundarySourcesFromYAML)
 mfpic_unit_test(BuildParticlesFromYaml)
 mfpic_unit_test(BuildSpeciesMapFromYaml)
 mfpic_unit_test(BuildVarianceReductionParametersFromYaml)
