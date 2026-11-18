@@ -21,17 +21,20 @@ dt = min(dx / (3.0 * most_probable_ion_speed), 0.1 / ion_plasma_frequency)
 particles_per_cell = 100
 num_macroparticles_per_population = particles_per_cell * num_elements
 bohm_speed = np.sqrt(Boltzmann * temperature / proton_mass)
+ion_thermal_speed = bohm_speed
 bohm_current_density = number_density * elementary_charge * bohm_speed * np.exp(-0.5)
 ion_wall_flux = bohm_current_density / elementary_charge
-source_number_density = ion_wall_flux / domain_length * dt
+right_wall = "reservoir"  # "reservoir": absorbing for particles and fluid, with a Maxwellian influx; "reflecting": reflecting particles, influx only
+reservoir_outflux_at_initial_density = number_density * ion_thermal_speed / np.sqrt(2.0 * np.pi)
+right_wall_influx = ion_wall_flux + (reservoir_outflux_at_initial_density if right_wall == "reservoir" else 0.0)
+source_number_density = right_wall_influx / domain_length * dt
 source_num_macroparticles = int(source_number_density / number_density * num_macroparticles_per_population)
 fluid_volumetric_source_rate = ion_wall_flux / domain_length
-ion_thermal_speed = np.sqrt(Boltzmann * temperature / proton_mass)
 fluid_wall_cell_source_rate = ion_wall_flux / dx
 fluid_wall_cell_source_bulk_velocity = -ion_thermal_speed * np.sqrt(np.pi / 2.0)
 fluid_wall_cell_source_temperature = (2.0 / 3.0) * (2.0 - np.pi / 4.0) * temperature
 negligible_source_rate_fraction = 1.0e-12
-fluid_source_shape = "wall_cell"
+fluid_source_shape = "boundary"  # "boundary": Maxwellian influx BC matching the particle boundary source; "wall_cell"/"uniform": volumetric sources
 particle_source_type = "boundary"  # "volumetric" mirrors the fluid source; "boundary" injects a Maxwellian flux at the right wall
 electron_thermal_speed = np.sqrt(8.0 * Boltzmann * temperature / np.pi / electron_mass)
 electron_boundary_flux_per_unit_number_density = electron_thermal_speed / 4.0
@@ -64,8 +67,29 @@ def get_volumetric_source_state(number_density_scale):
 
 
 def get_fluid_source_block():
-    return f"""    - Species: [proton]
+    if fluid_source_shape == "boundary":
+        return ""
+    return f"""  Sources:
+    - Species: [proton]
 {get_volumetric_source_state(1.0)}"""
+
+
+def get_particle_right_boundary_block():
+    if right_wall == "reservoir":
+        return """    - Side: right
+      Type: Absorbing
+"""
+    return ""
+
+
+def get_fluid_right_boundary_block():
+    if fluid_source_shape == "boundary":
+        return f"""    - Side: right
+      Type: Maxwellian Influx
+      Number Flux Density: {right_wall_influx}
+      Temperature: {temperature}"""
+    return """    - Side: right
+      Type: Reflecting"""
 
 
 def get_particle_source_block():
@@ -81,7 +105,7 @@ def get_particle_source_block():
       Number of Macroparticles per Species per Timestep: {source_num_macroparticles}
       Maxwellian:
         Temperature: {temperature}
-        Flux Density: {ion_wall_flux}"""
+        Flux Density: {right_wall_influx}"""
     raise ValueError(f"Unknown particle source type: {particle_source_type}")
 
 
@@ -143,7 +167,7 @@ Particles:
   Boundary Conditions:
     - Side: left
       Type: Absorbing
-  Default Boundary Condition: Reflecting
+{get_particle_right_boundary_block()}  Default Boundary Condition: Reflecting
   Initial Conditions:
     - Species: [proton]
       Number of Macroparticles per Species: {num_macroparticles_per_population}
@@ -159,13 +183,11 @@ Euler Fluids:
       Constant:
         Temperature: {temperature}
         Number Density: {number_density}
-  Sources:
 {get_fluid_source_block()}
   Boundary Conditions:
     - Side: left
       Type: Absorbing
-    - Side: right
-      Type: Reflecting
+{get_fluid_right_boundary_block()}
 
 {collision_block if collision_frequency > 0 else ""}
 
