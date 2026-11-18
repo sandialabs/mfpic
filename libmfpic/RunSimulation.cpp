@@ -1,6 +1,7 @@
 #include <libmfpic/BuildCollisionOperationsFromYaml.hpp>
 #include <libmfpic/BuildElectrostaticFieldOperationsFromYaml.hpp>
 #include <libmfpic/BuildOutputParametersFromYaml.hpp>
+#include <libmfpic/BuildPDFUpdateParametersFromYaml.hpp>
 #include <libmfpic/BuildParticleBoundariesFromYaml.hpp>
 #include <libmfpic/BuildParticleBoundarySourcesFromYAML.hpp>
 #include <libmfpic/BuildParticlesFromYaml.hpp>
@@ -18,6 +19,7 @@
 #include <libmfpic/ElectrostaticFieldOperations.hpp>
 #include <libmfpic/ElectrostaticFieldState.hpp>
 #include <libmfpic/Euler.hpp>
+#include <libmfpic/EnergyLedger.hpp>
 #include <libmfpic/LowFidelityOperations.hpp>
 #include <libmfpic/LowFidelityState.hpp>
 #include <libmfpic/MeshDataWriter.hpp>
@@ -54,6 +56,16 @@ void runSimulation(int argc, char* argv[]) {
   OutputParameters output_parameters;
   if (main["Output"].IsDefined())
     output_parameters = buildOutputParametersFromYAML(main["Output"]);
+
+  std::unique_ptr<EnergyLedger> energy_ledger;
+  if (main["Output"].IsDefined() and main["Output"]["Energy Ledger Regions"].IsDefined()) {
+    energy_ledger = std::make_unique<EnergyLedger>(main["Output"]["Energy Ledger Regions"].as<std::vector<int>>());
+    activeEnergyLedger() = energy_ledger.get();
+  }
+
+  PDFUpdateParameters pdf_update_parameters;
+  if (main["PDF Update"].IsDefined())
+    pdf_update_parameters = buildPDFUpdateParametersFromYaml(main["PDF Update"]);
 
   YAML::Node fields = main["Fields"];
   int electrostatic_basis_order = 1;
@@ -275,6 +287,13 @@ void runSimulation(int argc, char* argv[]) {
       timestep_size
     );
 
+    if (pdf_update_parameters.enabled) {
+      particle_operations.accumulateForPDFUpdate(particle_container);
+      if (i_timestep % pdf_update_parameters.stride == 0) {
+        particle_operations.reestimateDistributionFunctionValues(particle_container);
+      }
+    }
+
     double cfl = 0.;
 
     for (size_t i_lf_model = 0; i_lf_model < low_fidelity_operations.size(); ++i_lf_model) {
@@ -298,6 +317,7 @@ void runSimulation(int argc, char* argv[]) {
     for (const std::unique_ptr<ParticleBoundarySource>& particle_boundary_source : particle_boundary_sources) {
       particle_container.addParticles(particle_boundary_source->loadParticles(generator, particle_operations, timestep_size));
     }
+    recordEnergyLedger("source", particle_container);
 
     if (i_timestep % output_parameters.output_stride == 0) {
       if (output_parameters.output_particle_moments) {
@@ -334,6 +354,7 @@ void runSimulation(int argc, char* argv[]) {
       }
     }
   }
+  activeEnergyLedger() = nullptr;
 }
 
 }

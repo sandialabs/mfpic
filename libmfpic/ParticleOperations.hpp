@@ -23,6 +23,10 @@ struct ParticleMoments
   std::unordered_map<Species, mfem::Vector> number_density;
   std::unordered_map<Species, mfem::DenseMatrix> bulk_velocity;
   std::unordered_map<Species, mfem::Vector> temperature;
+  std::unordered_map<Species, mfem::Vector> temperature_bias_correction;
+  std::unordered_map<Species, mfem::Vector> relaxation_temperature;
+  std::unordered_map<Species, mfem::Vector> energy_conserving_temperature;
+  std::unordered_map<Species, mfem::DenseMatrix> energy_conserving_bulk_velocity;
 };
 
 class ParticleOperations {
@@ -173,6 +177,32 @@ public:
    */
   const VarianceReductionParameters getVarianceReductionParameters() const {
     return variance_reduction_parameters_;
+  }
+
+  /**
+   * @brief Accumulate particle moments into running sums for time-averaged f_HF re-estimation.
+   *
+   * Call once per timestep.  The accumulated sum is consumed (and reset) by
+   * reestimateDistributionFunctionValues on the next PDF-update stride boundary.
+   *
+   * @param[in] particles ParticleContainer to accumulate moments from.
+   */
+  void accumulateForPDFUpdate(const ParticleContainer& particles);
+
+  /**
+   * @brief Re-estimate per-particle f_HF values from the time-averaged particle moments.
+   *
+   * Uses the moments accumulated since the last call (via accumulateForPDFUpdate),
+   * averages them, evaluates the Maxwellian at each particle's velocity, and resets
+   * the accumulator.  No fluid/LF model is used.
+   *
+   * @param[in,out] particles ParticleContainer whose f_HF values are updated in place.
+   */
+  void reestimateDistributionFunctionValues(ParticleContainer& particles);
+
+  /// Elements in which each species used variance reduction in the last variance-reduced moment computation.
+  const std::unordered_map<Species, std::vector<bool>>& getVarianceReductionElements() const {
+    return variance_reduction_elements_;
   }
 
   /**
@@ -373,6 +403,12 @@ private:
 
   /// Control variate moment integrals, set by getVarianceReducedParticleMoments
   ControlVariateMomentIntegrals control_variate_moment_integrals_;
+
+  /// Running sums for time-averaged PDF update (number density, bulk velocity, temperature)
+  ParticleMoments pdf_update_sums_;
+
+  /// Number of steps accumulated into pdf_update_sums_
+  int pdf_update_accumulated_steps_ = 0;
 };
 
 } // namespace mfpic

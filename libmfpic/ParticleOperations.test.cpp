@@ -3,6 +3,7 @@
 #include <libmfpic/DGEulerInitialConditionsFactory.hpp>
 #include <libmfpic/Discretization.hpp>
 #include <libmfpic/BuildVarianceReductionParametersFromYaml.hpp>
+#include <libmfpic/BGKRelaxationOperations.hpp>
 #include <libmfpic/ElectromagneticFieldsEvaluator.hpp>
 #include <libmfpic/LoadParticles.hpp>
 #include <libmfpic/LowFidelityState.hpp>
@@ -1980,5 +1981,461 @@ TEST(ParticleOperations, UniformMaxwellianOnlyAppliesToListedSpecies) {
     EXPECT_DOUBLE_EQ(variance_reduced_charge(dof), pic_charge(dof));
   }
 }
+
+double measureMomentum(const ParticleContainer& particles) {
+  double total = 0.0;
+  for (const Particle& particle : particles) total += particle.weight * particle.species.mass * particle.velocity(0);
+  return total;
+}
+
+double measureKineticEnergy(const ParticleContainer& particles) {
+  double total = 0.0;
+  for (const Particle& particle : particles) total += 0.5 * particle.weight * particle.species.mass * (particle.velocity * particle.velocity);
+  return total;
+}
+
+struct BGKVariant {
+  const char* name;
+};
+
+void measureBGKEnergyChange(double lf_temperature_ratio, double lf_drift_in_thermal_speeds, int particles_per_cell) {
+  Species species{.charge = constants::elementary_charge, .mass = constants::proton_mass};
+  const std::unordered_map<std::string, Species> species_map{{"one", species}};
+  constexpr double number_density = 1e20;
+  constexpr double temperature = 1.16e5;
+  const double thermal_speed = std::sqrt(constants::boltzmann_constant * temperature / species.mass);
+  const mfem::Vector bulk_velocity({-3.0e4, 0.0, 0.0});
+  mfem::Vector lf_bulk_velocity = bulk_velocity;
+  lf_bulk_velocity(0) += lf_drift_in_thermal_speeds * thermal_speed;
+
+  constexpr int num_elems = 40;
+  std::shared_ptr<mfem::Mesh> mesh = std::make_shared<mfem::Mesh>(mfem::Mesh::MakeCartesian1D(num_elems));
+  Discretization dg_discretization(mesh.get(), 0, FETypes::DG, 5);
+  Discretization charge_discretization(mesh.get(), 1, FETypes::HGRAD);
+  mfem::FiniteElementSpace finite_element_space = dg_discretization.getFeSpace();
+  std::vector<std::shared_ptr<DGEulerAssembly>> dg_operators({std::make_shared<DGEulerAssembly>(finite_element_space, species)});
+  DGEulerOperations dg_euler_operations(charge_discretization, dg_operators);
+  std::vector<std::unique_ptr<SourceParameters>> lf_parameters;
+  lf_parameters.push_back(std::make_unique<ConstantSourceParameters>(species, number_density, lf_temperature_ratio * temperature, lf_bulk_velocity));
+  LowFidelityState low_fidelity_state = buildEulerState(dg_discretization, lf_parameters);
+
+  ParticleOperations particle_operations(charge_discretization, empty_particle_boundary_factory_list,
+    default_reflecting_particle_boundary_factory, species_map);
+  VarianceReductionParameters vr_parameters;
+  vr_parameters.strategy = VarianceReductionParameters::Strategy::EulerFluid;
+  particle_operations.setVarianceReductionParameters(vr_parameters);
+
+  const BGKVariant variants[] = {
+    {"BGK"},
+  };
+  constexpr int num_trials = 2000;
+  for (const BGKVariant& variant : variants) {
+    BGKRelaxationOperations relaxer(1.0, species);
+    double sum_before = 0.0, sum_difference = 0.0, sum_difference_squares = 0.0;
+    double sum_momentum_before = 0.0, sum_momentum_difference = 0.0, sum_momentum_difference_squares = 0.0;
+    for (int trial = 0; trial < num_trials; ++trial) {
+      RandomNumberGenerator generator(trial);
+      ParticleContainer particles = loadParticles(
+        ConstantSourceParameters(species, SourceStateParameters{.number_density = number_density, .bulk_velocity = bulk_velocity, .temperature = temperature}, particles_per_cell * num_elems),
+        generator, mesh, 3);
+      const double energy_before = measureKineticEnergy(particles);
+      const double momentum_before = measureMomentum(particles);
+      relaxer.performCollisions(1.0e15, generator, particles, particle_operations, low_fidelity_state, dg_euler_operations);
+      const double difference = measureKineticEnergy(particles) - energy_before;
+      sum_before += energy_before; sum_difference += difference; sum_difference_squares += difference * difference;
+      const double momentum_difference = measureMomentum(particles) - momentum_before;
+      sum_momentum_before += std::abs(momentum_before);
+      sum_momentum_difference += momentum_difference;
+      sum_momentum_difference_squares += momentum_difference * momentum_difference;
+    }
+    const double mean_before = sum_before / num_trials;
+    const double mean_difference = sum_difference / num_trials;
+    const double standard_error = std::sqrt((sum_difference_squares / num_trials - mean_difference * mean_difference) / num_trials);
+    const double mean_momentum_before = sum_momentum_before / num_trials;
+    const double mean_momentum_difference = sum_momentum_difference / num_trials;
+    const double momentum_standard_error = std::sqrt(
+      (sum_momentum_difference_squares / num_trials - mean_momentum_difference * mean_momentum_difference) / num_trials);
+    std::printf("MEASURE LF T/T=%.2f drift=%+.2f vth N/cell=%3d %s: <dE>/<E> = %+.3f%% +- %.3f%%  <dPx>/<|Px|> = %+.3f%% +- %.3f%%\n",
+      lf_temperature_ratio, lf_drift_in_thermal_speeds, particles_per_cell, variant.name,
+      100.0 * mean_difference / mean_before, 100.0 * standard_error / mean_before,
+      100.0 * mean_momentum_difference / mean_momentum_before, 100.0 * momentum_standard_error / mean_momentum_before);
+  }
+}
+
+TEST(ParticleOperations, DISABLED_MeasureBGKEnergyChangeWithVRMoments) {
+  measureBGKEnergyChange(1.0, 0.0, 40);
+  measureBGKEnergyChange(0.9, 0.0, 40);
+  measureBGKEnergyChange(1.0, 0.2, 40);
+  measureBGKEnergyChange(0.9, 0.2, 40);
+  measureBGKEnergyChange(0.9, 0.2, 10);
+  measureBGKEnergyChange(0.9, 0.2, 160);
+}
+
+struct RunningMean {
+  double sum = 0.0;
+  double sum_squares = 0.0;
+  long count = 0;
+  void add(double value) { sum += value; sum_squares += value * value; ++count; }
+  double mean() const { return sum / count; }
+  double standardError() const { return std::sqrt((sum_squares / count - mean() * mean()) / count); }
+};
+
+TEST(ParticleOperations, DISABLED_DiagnoseVRTemperatureBias) {
+  Species species{.charge = constants::elementary_charge, .mass = constants::proton_mass};
+  const std::unordered_map<std::string, Species> species_map{{"one", species}};
+  constexpr double number_density = 1e20;
+  constexpr double temperature = 1.16e5;
+  const double thermal_speed = std::sqrt(constants::boltzmann_constant * temperature / species.mass);
+  const mfem::Vector bulk_velocity({-3.0e4, 0.0, 0.0});
+  const double three_k_over_m = 3.0 * constants::boltzmann_constant / species.mass;
+  const double true_bulk_speed_squared = bulk_velocity * bulk_velocity;
+  const double true_specific_energy = true_bulk_speed_squared + three_k_over_m * temperature;
+
+  for (const auto& [lf_temperature_ratio, lf_drift, particles_per_cell] :
+       {std::tuple{1.0, 0.0, 40}, std::tuple{0.9, 0.0, 40}, std::tuple{1.0, 0.2, 40},
+        std::tuple{0.9, 0.2, 40}, std::tuple{0.9, 0.2, 10}, std::tuple{0.9, 0.2, 160}}) {
+    mfem::Vector lf_bulk_velocity = bulk_velocity;
+    lf_bulk_velocity(0) += lf_drift * thermal_speed;
+    constexpr int num_elems = 40;
+    std::shared_ptr<mfem::Mesh> mesh = std::make_shared<mfem::Mesh>(mfem::Mesh::MakeCartesian1D(num_elems));
+    Discretization dg_discretization(mesh.get(), 0, FETypes::DG, 5);
+    Discretization charge_discretization(mesh.get(), 1, FETypes::HGRAD);
+    mfem::FiniteElementSpace finite_element_space = dg_discretization.getFeSpace();
+    std::vector<std::shared_ptr<DGEulerAssembly>> dg_operators({std::make_shared<DGEulerAssembly>(finite_element_space, species)});
+    DGEulerOperations dg_euler_operations(charge_discretization, dg_operators);
+    std::vector<std::unique_ptr<SourceParameters>> lf_parameters;
+    lf_parameters.push_back(std::make_unique<ConstantSourceParameters>(species, number_density, lf_temperature_ratio * temperature, lf_bulk_velocity));
+    LowFidelityState low_fidelity_state = buildEulerState(dg_discretization, lf_parameters);
+    ParticleOperations particle_operations(charge_discretization, empty_particle_boundary_factory_list,
+      default_reflecting_particle_boundary_factory, species_map);
+    VarianceReductionParameters vr_parameters;
+    vr_parameters.strategy = VarianceReductionParameters::Strategy::EulerFluid;
+    particle_operations.setVarianceReductionParameters(vr_parameters);
+
+    RunningMean energy, weight, sampling, total_plugin, total_variance_corrected, total_energy_conserving, total_raw;
+    RunningMean momentum, momentum_sampling, momentum_vr, momentum_corrected, energy_both_corrected;
+    RunningMean bulk_weighted, bulk_unweighted, thermal_plugin_weighted, thermal_plugin_unweighted;
+    RunningMean thermal_variance_corrected_weighted, thermal_variance_corrected_unweighted, vr_active;
+    double max_raw_identity_violation = 0.0;
+
+    constexpr int num_trials = 2000;
+    for (int trial = 0; trial < num_trials; ++trial) {
+      RandomNumberGenerator generator(trial);
+      ParticleContainer particles = loadParticles(
+        ConstantSourceParameters(species, SourceStateParameters{.number_density = number_density, .bulk_velocity = bulk_velocity, .temperature = temperature}, particles_per_cell * num_elems),
+        generator, mesh, 3);
+      std::vector<double> cell_weight(num_elems, 0.0), cell_energy(num_elems, 0.0), cell_momentum(num_elems, 0.0);
+      for (const Particle& particle : particles) {
+        cell_weight[particle.element] += particle.weight;
+        cell_energy[particle.element] += particle.weight * (particle.velocity * particle.velocity);
+        cell_momentum[particle.element] += particle.weight * particle.velocity(0);
+      }
+
+      const ParticleMoments vr = particle_operations.getVarianceReducedParticleMoments(particles, low_fidelity_state, dg_euler_operations, true);
+      const ParticleMoments raw = particle_operations.getParticleMoments(particles);
+
+      for (int e = 0; e < num_elems; ++e) {
+        const double w = cell_weight[e];
+        const double s = cell_energy[e];
+        double vr_bulk_speed_squared = 0.0, raw_bulk_speed_squared = 0.0;
+        for (int d = 0; d < 3; ++d) {
+          vr_bulk_speed_squared += std::pow(vr.bulk_velocity.at(species)(d, e), 2);
+          raw_bulk_speed_squared += std::pow(raw.bulk_velocity.at(species)(d, e), 2);
+        }
+        const double plugin_temperature = vr.temperature.at(species)(e) / vr.temperature_bias_correction.at(species)(e);
+        const double variance_corrected_temperature = vr.relaxation_temperature.at(species)(e);
+        const double energy_conserving_temperature = vr.energy_conserving_temperature.at(species)(e);
+        const double raw_plugin_temperature = raw.temperature.at(species)(e) / raw.temperature_bias_correction.at(species)(e);
+
+        const double raw_change = w * (raw_bulk_speed_squared + three_k_over_m * raw_plugin_temperature) - s;
+        max_raw_identity_violation = std::max(max_raw_identity_violation, std::abs(raw_change) / s);
+
+        energy.add(s);
+        weight.add(w);
+        sampling.add(w * true_specific_energy - s);
+        total_raw.add(raw_change);
+        total_plugin.add(w * (vr_bulk_speed_squared + three_k_over_m * plugin_temperature) - s);
+        total_variance_corrected.add(w * (vr_bulk_speed_squared + three_k_over_m * variance_corrected_temperature) - s);
+        total_energy_conserving.add(w * (vr_bulk_speed_squared + three_k_over_m * energy_conserving_temperature) - s);
+        double corrected_bulk_speed_squared = 0.0;
+        for (int d = 0; d < 3; ++d)
+          corrected_bulk_speed_squared += std::pow(vr.energy_conserving_bulk_velocity.at(species)(d, e), 2);
+        energy_both_corrected.add(w * (corrected_bulk_speed_squared + three_k_over_m * energy_conserving_temperature) - s);
+        const double p = cell_momentum[e];
+        momentum.add(std::abs(p));
+        momentum_sampling.add(w * bulk_velocity(0) - p);
+        momentum_vr.add(w * vr.bulk_velocity.at(species)(0, e) - p);
+        momentum_corrected.add(w * vr.energy_conserving_bulk_velocity.at(species)(0, e) - p);
+        bulk_weighted.add(w * (vr_bulk_speed_squared - true_bulk_speed_squared));
+        bulk_unweighted.add(vr_bulk_speed_squared - true_bulk_speed_squared);
+        thermal_plugin_weighted.add(w * three_k_over_m * (plugin_temperature - temperature));
+        thermal_plugin_unweighted.add(three_k_over_m * (plugin_temperature - temperature));
+        thermal_variance_corrected_weighted.add(w * three_k_over_m * (variance_corrected_temperature - temperature));
+        thermal_variance_corrected_unweighted.add(three_k_over_m * (variance_corrected_temperature - temperature));
+        vr_active.add(vr.number_density.at(species)(e) != raw.number_density.at(species)(e) ? 1.0 : 0.0);
+      }
+    }
+
+    const double e0 = energy.mean();
+    const double w0 = weight.mean();
+    auto pct = [&](const RunningMean& m) { return 100.0 * m.mean() / e0; };
+    auto pct_se = [&](const RunningMean& m) { return 100.0 * m.standardError() / e0; };
+    auto expected_part = [&](const RunningMean& unweighted) { return 100.0 * w0 * unweighted.mean() / e0; };
+    std::printf("DIAG ===== LF T/T=%.2f drift=%+.2f vth, N/cell=%3d, VR active in %.0f%% of cells\n",
+      lf_temperature_ratio, lf_drift, particles_per_cell, 100.0 * vr_active.mean());
+    std::printf("DIAG   raw identity: max |W(u^2+3kT/m)-S|/S = %.1e, mean %+.4f%% +- %.4f%%\n",
+      max_raw_identity_violation, pct(total_raw), pct_se(total_raw));
+    std::printf("DIAG   sampling check <W eps0 - S>: %+.3f%% +- %.3f%%\n", pct(sampling), pct_se(sampling));
+    std::printf("DIAG   TOTAL predicted dE/E: plug-in %+.3f%% +- %.3f%% | var-corrected %+.3f%% +- %.3f%% | energy-conserving %+.3f%% +- %.3f%%\n",
+      pct(total_plugin), pct_se(total_plugin), pct(total_variance_corrected), pct_se(total_variance_corrected),
+      pct(total_energy_conserving), pct_se(total_energy_conserving));
+    std::printf("DIAG   TOTAL predicted dE/E with corrected u and T: %+.3f%% +- %.3f%%\n",
+      pct(energy_both_corrected), pct_se(energy_both_corrected));
+    const double p0 = momentum.mean();
+    std::printf("DIAG   x-momentum dP/|P|: sampling check %+.3f%% +- %.3f%% | VR u %+.3f%% +- %.3f%% | corrected u %+.3f%% +- %.3f%%\n",
+      100.0 * momentum_sampling.mean() / p0, 100.0 * momentum_sampling.standardError() / p0,
+      100.0 * momentum_vr.mean() / p0, 100.0 * momentum_vr.standardError() / p0,
+      100.0 * momentum_corrected.mean() / p0, 100.0 * momentum_corrected.standardError() / p0);
+    std::printf("DIAG   bulk    W(|u_VR|^2-|u0|^2)     : %+.3f%% +- %.3f%%  = E[W]E[.] %+.3f%% + cov %+.3f%%\n",
+      pct(bulk_weighted), pct_se(bulk_weighted), expected_part(bulk_unweighted), pct(bulk_weighted) - expected_part(bulk_unweighted));
+    std::printf("DIAG   thermal W 3k/m(T_plugin-T0)    : %+.3f%% +- %.3f%%  = E[W]E[.] %+.3f%% + cov %+.3f%%\n",
+      pct(thermal_plugin_weighted), pct_se(thermal_plugin_weighted), expected_part(thermal_plugin_unweighted),
+      pct(thermal_plugin_weighted) - expected_part(thermal_plugin_unweighted));
+    std::printf("DIAG   thermal W 3k/m(T_varcorr-T0)   : %+.3f%% +- %.3f%%  = E[W]E[.] %+.3f%% + cov %+.3f%%\n",
+      pct(thermal_variance_corrected_weighted), pct_se(thermal_variance_corrected_weighted),
+      expected_part(thermal_variance_corrected_unweighted),
+      pct(thermal_variance_corrected_weighted) - expected_part(thermal_variance_corrected_unweighted));
+  }
+}
+
+
+void measureRepeatedBGKEnergyDrift(double lf_temperature_ratio, double lf_drift_in_thermal_speeds, int particles_per_cell, bool use_vr_moments) {
+  Species species{.charge = constants::elementary_charge, .mass = constants::proton_mass};
+  const std::unordered_map<std::string, Species> species_map{{"one", species}};
+  constexpr double number_density = 1e20;
+  constexpr double temperature = 1.16e5;
+  const double thermal_speed = std::sqrt(constants::boltzmann_constant * temperature / species.mass);
+  const mfem::Vector bulk_velocity({-3.0e4, 0.0, 0.0});
+  mfem::Vector lf_bulk_velocity = bulk_velocity;
+  lf_bulk_velocity(0) += lf_drift_in_thermal_speeds * thermal_speed;
+
+  constexpr int num_elems = 40;
+  std::shared_ptr<mfem::Mesh> mesh = std::make_shared<mfem::Mesh>(mfem::Mesh::MakeCartesian1D(num_elems));
+  Discretization dg_discretization(mesh.get(), 0, FETypes::DG, 5);
+  Discretization charge_discretization(mesh.get(), 1, FETypes::HGRAD);
+  mfem::FiniteElementSpace finite_element_space = dg_discretization.getFeSpace();
+  std::vector<std::shared_ptr<DGEulerAssembly>> dg_operators({std::make_shared<DGEulerAssembly>(finite_element_space, species)});
+  DGEulerOperations dg_euler_operations(charge_discretization, dg_operators);
+  std::vector<std::unique_ptr<SourceParameters>> lf_parameters;
+  lf_parameters.push_back(std::make_unique<ConstantSourceParameters>(species, number_density, lf_temperature_ratio * temperature, lf_bulk_velocity));
+  LowFidelityState low_fidelity_state = buildEulerState(dg_discretization, lf_parameters);
+
+  ParticleOperations particle_operations(charge_discretization, empty_particle_boundary_factory_list,
+    default_reflecting_particle_boundary_factory, species_map);
+  VarianceReductionParameters vr_parameters;
+  vr_parameters.strategy = VarianceReductionParameters::Strategy::EulerFluid;
+  particle_operations.setVarianceReductionParameters(vr_parameters);
+
+  constexpr double collision_frequency = 1.0;
+  constexpr double dt = 0.1;
+  constexpr int num_calls = 100;
+  constexpr int num_trials = 200;
+  const BGKRelaxationOperations relaxer(collision_frequency, species, 1.0, 0.0, 0, use_vr_moments);
+  const std::vector<std::pair<int, int>> windows{{0, 10}, {10, 30}, {30, 60}, {60, 100}};
+  std::vector<RunningMean> energy_change(windows.size()), vr_minus_raw_temperature(windows.size()), active_fraction(windows.size());
+  RunningMean final_energy_change;
+  for (int trial = 0; trial < num_trials; ++trial) {
+    RandomNumberGenerator generator(trial);
+    ParticleContainer particles = loadParticles(
+      ConstantSourceParameters(species, SourceStateParameters{.number_density = number_density, .bulk_velocity = bulk_velocity, .temperature = temperature}, particles_per_cell * num_elems),
+      generator, mesh, 3);
+    const double initial_energy = measureKineticEnergy(particles);
+    std::vector<double> window_change(windows.size(), 0.0), window_temperature(windows.size(), 0.0), window_active(windows.size(), 0.0);
+    for (int call = 0; call < num_calls; ++call) {
+      const ParticleMoments vr = particle_operations.getVarianceReducedParticleMoments(particles, low_fidelity_state, dg_euler_operations, true);
+      const ParticleMoments raw = particle_operations.getParticleMoments(particles);
+      double temperature_difference = 0.0, active = 0.0;
+      for (int e = 0; e < num_elems; ++e) {
+        active += vr.number_density.at(species)(e) != raw.number_density.at(species)(e);
+        temperature_difference += vr.energy_conserving_temperature.at(species)(e) / raw.relaxation_temperature.at(species)(e) - 1.0;
+      }
+      const double energy_before = measureKineticEnergy(particles);
+      relaxer.performCollisions(dt, generator, particles, particle_operations, low_fidelity_state, dg_euler_operations);
+      const double change = (measureKineticEnergy(particles) - energy_before) / initial_energy;
+      for (size_t w = 0; w < windows.size(); ++w)
+        if (call >= windows[w].first and call < windows[w].second) {
+          const double length = windows[w].second - windows[w].first;
+          window_change[w] += change / length;
+          window_temperature[w] += temperature_difference / num_elems / length;
+          window_active[w] += active / num_elems / length;
+        }
+    }
+    for (size_t w = 0; w < windows.size(); ++w) {
+      energy_change[w].add(window_change[w]);
+      vr_minus_raw_temperature[w].add(window_temperature[w]);
+      active_fraction[w].add(window_active[w]);
+    }
+    final_energy_change.add(measureKineticEnergy(particles) / initial_energy - 1.0);
+  }
+  std::printf("DRIFT LF T/T=%.2f drift=%+.2f vth N/cell=%3d %s: cumulative dE/E after %d calls = %+.3f%% +- %.3f%%\n",
+    lf_temperature_ratio, lf_drift_in_thermal_speeds, particles_per_cell, use_vr_moments ? "VR-moment BGK" : "raw BGK      ",
+    num_calls, 100.0 * final_energy_change.mean(), 100.0 * final_energy_change.standardError());
+  for (size_t w = 0; w < windows.size(); ++w)
+    std::printf("    calls %3d-%3d: dE/E per call = %+.4f%% +- %.4f%%   <T_VR,ec / T_raw,ec - 1> = %+.3f%% +- %.3f%%   VR active %.0f%%\n",
+      windows[w].first + 1, windows[w].second, 100.0 * energy_change[w].mean(), 100.0 * energy_change[w].standardError(),
+      100.0 * vr_minus_raw_temperature[w].mean(), 100.0 * vr_minus_raw_temperature[w].standardError(), 100.0 * active_fraction[w].mean());
+}
+
+TEST(ParticleOperations, DISABLED_RepeatedBGKDriftRaw) { measureRepeatedBGKEnergyDrift(1.0, 0.0, 100, false); }
+TEST(ParticleOperations, DISABLED_RepeatedBGKDriftVRMatched) { measureRepeatedBGKEnergyDrift(1.0, 0.0, 100, true); }
+TEST(ParticleOperations, DISABLED_RepeatedBGKDriftVRCold5) { measureRepeatedBGKEnergyDrift(0.95, 0.0, 100, true); }
+TEST(ParticleOperations, DISABLED_RepeatedBGKDriftVRCold10) { measureRepeatedBGKEnergyDrift(0.9, 0.0, 100, true); }
+TEST(ParticleOperations, DISABLED_RepeatedBGKDriftVRCold10Drift) { measureRepeatedBGKEnergyDrift(0.9, 0.2, 100, true); }
+
+void measureVRMomentBiasUnderRepeatedBGK(double lf_temperature_ratio, double lf_drift_in_thermal_speeds, int particles_per_cell, bool stamp_raw_density = false,
+  double cells_per_call_at_thermal_speed = 0.0, double final_lf_temperature_ratio = -1.0) {
+  Species species{.charge = constants::elementary_charge, .mass = constants::proton_mass};
+  const std::unordered_map<std::string, Species> species_map{{"one", species}};
+  constexpr double number_density = 1e20;
+  constexpr double temperature = 1.16e5;
+  const double thermal_speed = std::sqrt(constants::boltzmann_constant * temperature / species.mass);
+  const mfem::Vector bulk_velocity({-3.0e4, 0.0, 0.0});
+  mfem::Vector lf_bulk_velocity = bulk_velocity;
+  lf_bulk_velocity(0) += lf_drift_in_thermal_speeds * thermal_speed;
+
+  constexpr int num_elems = 40;
+  mfem::Mesh line_mesh = mfem::Mesh::MakeCartesian1D(num_elems);
+  std::shared_ptr<mfem::Mesh> mesh = std::make_shared<mfem::Mesh>(
+    mfem::Mesh::MakePeriodic(line_mesh, line_mesh.CreatePeriodicVertexMapping({mfem::Vector({1.0})})));
+  Discretization dg_discretization(mesh.get(), 0, FETypes::DG, 5);
+  Discretization charge_discretization(mesh.get(), 1, FETypes::HGRAD);
+  mfem::FiniteElementSpace finite_element_space = dg_discretization.getFeSpace();
+  std::vector<std::shared_ptr<DGEulerAssembly>> dg_operators({std::make_shared<DGEulerAssembly>(finite_element_space, species)});
+  DGEulerOperations dg_euler_operations(charge_discretization, dg_operators);
+  constexpr int num_lf_states = 21;
+  const double end_ratio = final_lf_temperature_ratio > 0.0 ? final_lf_temperature_ratio : lf_temperature_ratio;
+  std::vector<LowFidelityState> lf_states;
+  for (int k = 0; k < num_lf_states; ++k) {
+    const double ratio = lf_temperature_ratio + (end_ratio - lf_temperature_ratio) * k / (num_lf_states - 1.0);
+    std::vector<std::unique_ptr<SourceParameters>> lf_parameters;
+    lf_parameters.push_back(std::make_unique<ConstantSourceParameters>(species, number_density, ratio * temperature, lf_bulk_velocity));
+    lf_states.push_back(buildEulerState(dg_discretization, lf_parameters));
+  }
+
+  ParticleOperations particle_operations(charge_discretization, empty_particle_boundary_factory_list,
+    default_reflecting_particle_boundary_factory, species_map);
+  VarianceReductionParameters vr_parameters;
+  vr_parameters.strategy = VarianceReductionParameters::Strategy::EulerFluid;
+  particle_operations.setVarianceReductionParameters(vr_parameters);
+
+  constexpr double dt = 0.1;
+  constexpr int num_calls = 100;
+  constexpr int num_trials = 100;
+  const double move_dt = cells_per_call_at_thermal_speed / num_elems / thermal_speed;
+  const double relaxation_probability = -std::expm1(-dt);
+  const BGKRelaxationOperations relaxer(1.0, species, 1.0, 0.0, 0, true, false, stamp_raw_density);
+  const double three_k_over_m = 3.0 * constants::boltzmann_constant / species.mass;
+  const std::vector<std::pair<int, int>> windows{{0, 10}, {10, 30}, {30, 60}, {60, 100}};
+  enum Quantity { kEnergyTarget, kEnergyUncorrected, kVelocity, kNumber, kCalibration, kStamped, kMeasured, kEnergyThermal, kEnergyBulk, kNumQuantities };
+  std::vector<std::vector<RunningMean>> stats(windows.size(), std::vector<RunningMean>(kNumQuantities));
+  for (int trial = 0; trial < num_trials; ++trial) {
+    RandomNumberGenerator generator(trial);
+    ParticleContainer particles = loadParticles(
+      ConstantSourceParameters(species, SourceStateParameters{.number_density = number_density, .bulk_velocity = bulk_velocity, .temperature = temperature}, particles_per_cell * num_elems),
+      generator, mesh, 3);
+    std::vector<double> initial_pdf;
+    for (const Particle& particle : particles) initial_pdf.push_back(particle.particle_distribution_function_value);
+    std::vector<std::vector<double>> window_sums(windows.size(), std::vector<double>(kNumQuantities, 0.0));
+    for (int call = 0; call < num_calls; ++call) {
+      const LowFidelityState& low_fidelity_state = lf_states[(call * (num_lf_states - 1)) / (num_calls - 1)];
+      const ParticleMoments vr = particle_operations.getVarianceReducedParticleMoments(particles, low_fidelity_state, dg_euler_operations, true);
+      std::vector<double> mass(num_elems, 0.0), momentum(num_elems, 0.0), speed_squared(num_elems, 0.0), calibration(num_elems, 0.0);
+      std::vector<double> raw_y_momentum(num_elems, 0.0), raw_z_momentum(num_elems, 0.0);
+      double stamped = 0.0, count = 0.0;
+      int index = 0;
+      for (const Particle& particle : particles) {
+        const int e = particle.element;
+        mass[e] += particle.weight;
+        momentum[e] += particle.weight * particle.velocity(0);
+        raw_y_momentum[e] += particle.weight * particle.velocity(1);
+        raw_z_momentum[e] += particle.weight * particle.velocity(2);
+        speed_squared[e] += particle.weight * (particle.velocity * particle.velocity);
+        const mfem::Vector position(particle.position.GetData(), 1);
+        calibration[e] += particle.weight * dg_euler_operations.evaluateParticleDistributionFunction(low_fidelity_state, position, particle.velocity, e, 0)
+          / particle.particle_distribution_function_value;
+        stamped += particle.particle_distribution_function_value != initial_pdf[index++];
+        count += 1.0;
+      }
+      double total_raw_energy = 0.0, target_bias = 0.0, uncorrected_bias = 0.0, velocity_bias = 0.0, number_bias = 0.0, calibration_bias = 0.0;
+      double thermal_bias = 0.0, bulk_bias = 0.0;
+      for (int e = 0; e < num_elems; ++e) {
+        const double volume = mesh->GetElementVolume(e);
+        const double raw_specific_energy = speed_squared[e] / mass[e];
+        double target_bulk_squared = 0.0, vr_bulk_squared = 0.0;
+        for (int d = 0; d < 3; ++d) {
+          target_bulk_squared += std::pow(vr.energy_conserving_bulk_velocity.at(species)(d, e), 2);
+          vr_bulk_squared += std::pow(vr.bulk_velocity.at(species)(d, e), 2);
+        }
+        const double target_specific_energy = target_bulk_squared + three_k_over_m * vr.energy_conserving_temperature.at(species)(e);
+        const double uncorrected_specific_energy = vr_bulk_squared + three_k_over_m * vr.relaxation_temperature.at(species)(e);
+        total_raw_energy += speed_squared[e];
+        target_bias += mass[e] * (target_specific_energy - raw_specific_energy);
+        const double raw_bulk_squared = std::pow(momentum[e] / mass[e], 2);
+        const double raw_thermal = raw_specific_energy - raw_bulk_squared - std::pow(raw_y_momentum[e] / mass[e], 2) - std::pow(raw_z_momentum[e] / mass[e], 2);
+        thermal_bias += mass[e] * (three_k_over_m * vr.energy_conserving_temperature.at(species)(e) - raw_thermal);
+        bulk_bias += mass[e] * (target_bulk_squared - (raw_specific_energy - raw_thermal));
+        uncorrected_bias += mass[e] * (uncorrected_specific_energy - raw_specific_energy);
+        velocity_bias += (vr.energy_conserving_bulk_velocity.at(species)(0, e) - momentum[e] / mass[e]) / thermal_speed / num_elems;
+        number_bias += (vr.number_density.at(species)(e) * volume / mass[e] - 1.0) / num_elems;
+        calibration_bias += (calibration[e] / (number_density * volume) - 1.0) / num_elems;
+      }
+      const double energy_before = measureKineticEnergy(particles);
+      relaxer.performCollisions(dt, generator, particles, particle_operations, low_fidelity_state, dg_euler_operations);
+      const double measured = (measureKineticEnergy(particles) - energy_before) / energy_before;
+      if (move_dt > 0.0) particles = particle_operations.move(move_dt, particles);
+      const double values[kNumQuantities] = {relaxation_probability * target_bias / total_raw_energy, relaxation_probability * uncorrected_bias / total_raw_energy,
+        velocity_bias, number_bias, calibration_bias, stamped / count, measured,
+        relaxation_probability * thermal_bias / total_raw_energy, relaxation_probability * bulk_bias / total_raw_energy};
+      for (size_t w = 0; w < windows.size(); ++w)
+        if (call >= windows[w].first and call < windows[w].second)
+          for (int q = 0; q < kNumQuantities; ++q) window_sums[w][q] += values[q] / (windows[w].second - windows[w].first);
+    }
+    for (size_t w = 0; w < windows.size(); ++w)
+      for (int q = 0; q < kNumQuantities; ++q) stats[w][q].add(window_sums[w][q]);
+  }
+  std::printf("BIAS LF T/T=%.2f->%.2f drift=%+.2f vth N/cell=%3d stamp=%s streaming=%.2f cells/call\n", lf_temperature_ratio, end_ratio, lf_drift_in_thermal_speeds, particles_per_cell, stamp_raw_density ? "raw n" : "VR n", cells_per_call_at_thermal_speed);
+  for (size_t w = 0; w < windows.size(); ++w) {
+    const auto& s = stats[w];
+    std::printf("  calls %3d-%3d stamped %3.0f%% | dE/E per call: measured %+.4f%% +- %.4f%%, predicted from target %+.4f%% +- %.4f%%, from uncorrected VR %+.4f%% +- %.4f%%"
+      " [thermal %+.4f%% +- %.4f%%, bulk %+.4f%% +- %.4f%%]"
+      " | u_target-u_raw %+.4f +- %.4f vth | n_VR/n_raw-1 %+.3f%% +- %.3f%% | sum w f_LF/f_HF / N_LF - 1 %+.3f%% +- %.3f%%\n",
+      windows[w].first + 1, windows[w].second, 100.0 * s[kStamped].mean(),
+      100.0 * s[kMeasured].mean(), 100.0 * s[kMeasured].standardError(),
+      100.0 * s[kEnergyTarget].mean(), 100.0 * s[kEnergyTarget].standardError(),
+      100.0 * s[kEnergyUncorrected].mean(), 100.0 * s[kEnergyUncorrected].standardError(),
+      100.0 * s[kEnergyThermal].mean(), 100.0 * s[kEnergyThermal].standardError(),
+      100.0 * s[kEnergyBulk].mean(), 100.0 * s[kEnergyBulk].standardError(),
+      s[kVelocity].mean(), s[kVelocity].standardError(),
+      100.0 * s[kNumber].mean(), 100.0 * s[kNumber].standardError(),
+      100.0 * s[kCalibration].mean(), 100.0 * s[kCalibration].standardError());
+  }
+}
+
+TEST(ParticleOperations, DISABLED_VRMomentBiasMatched) { measureVRMomentBiasUnderRepeatedBGK(1.0, 0.0, 100); }
+TEST(ParticleOperations, DISABLED_VRMomentBiasCold5) { measureVRMomentBiasUnderRepeatedBGK(0.95, 0.0, 100); }
+TEST(ParticleOperations, DISABLED_VRMomentBiasCold10Drift) { measureVRMomentBiasUnderRepeatedBGK(0.9, 0.2, 100); }
+TEST(ParticleOperations, DISABLED_VRMomentBiasMatchedRawStamp) { measureVRMomentBiasUnderRepeatedBGK(1.0, 0.0, 100, true); }
+TEST(ParticleOperations, DISABLED_VRMomentBiasCold5RawStamp) { measureVRMomentBiasUnderRepeatedBGK(0.95, 0.0, 100, true); }
+TEST(ParticleOperations, DISABLED_VRMomentBiasCold10DriftRawStamp) { measureVRMomentBiasUnderRepeatedBGK(0.9, 0.2, 100, true); }
+TEST(ParticleOperations, DISABLED_VRMomentBiasMatchedRawStampStreaming) { measureVRMomentBiasUnderRepeatedBGK(1.0, 0.0, 100, true, 0.5); }
+TEST(ParticleOperations, DISABLED_VRMomentBiasCold5RawStampStreaming) { measureVRMomentBiasUnderRepeatedBGK(0.95, 0.0, 100, true, 0.5); }
+TEST(ParticleOperations, DISABLED_VRMomentBiasMatchedVRStampStreaming) { measureVRMomentBiasUnderRepeatedBGK(1.0, 0.0, 100, false, 0.5); }
+TEST(ParticleOperations, DISABLED_VRMomentBiasCold5VRStampStreaming) { measureVRMomentBiasUnderRepeatedBGK(0.95, 0.0, 100, false, 0.5); }
+TEST(ParticleOperations, DISABLED_VRMomentBiasCold5RawStampStreaming25) { measureVRMomentBiasUnderRepeatedBGK(0.95, 0.0, 25, true, 0.5); }
+TEST(ParticleOperations, DISABLED_VRMomentBiasCold5RawStampStatic25) { measureVRMomentBiasUnderRepeatedBGK(0.95, 0.0, 25, true, 0.0); }
+TEST(ParticleOperations, DISABLED_VRMomentBiasCoolingRawStampStreaming) { measureVRMomentBiasUnderRepeatedBGK(1.0, 0.0, 100, true, 0.5, 0.95); }
+TEST(ParticleOperations, DISABLED_VRMomentBiasCoolingRawStampStatic) { measureVRMomentBiasUnderRepeatedBGK(1.0, 0.0, 100, true, 0.0, 0.95); }
+TEST(ParticleOperations, DISABLED_VRMomentBiasCooling10RawStampStreaming) { measureVRMomentBiasUnderRepeatedBGK(1.0, 0.0, 100, true, 0.5, 0.90); }
+TEST(ParticleOperations, DISABLED_VRMomentBiasCoolingVRStampStreaming) { measureVRMomentBiasUnderRepeatedBGK(1.0, 0.0, 100, false, 0.5, 0.95); }
 
 } // namespace

@@ -1,4 +1,5 @@
 #include <libmfpic/BuildVarianceReductionParametersFromYaml.hpp>
+#include <libmfpic/Euler.hpp>
 #include <libmfpic/Constants.hpp>
 #include <libmfpic/Errors.hpp>
 #include <libmfpic/Euler.hpp>
@@ -38,10 +39,21 @@ ParticleOperations::ParticleOperations(
     particle_moments_.number_density.insert({species, mfem::Vector(mesh.GetNE())});
     particle_moments_.bulk_velocity.insert({species, mfem::DenseMatrix(3, mesh.GetNE())});
     particle_moments_.temperature.insert({species, mfem::Vector(mesh.GetNE())});
+    particle_moments_.temperature_bias_correction.insert({species, mfem::Vector(mesh.GetNE())});
+    particle_moments_.relaxation_temperature.insert({species, mfem::Vector(mesh.GetNE())});
+    particle_moments_.energy_conserving_temperature.insert({species, mfem::Vector(mesh.GetNE())});
+    particle_moments_.energy_conserving_bulk_velocity.insert({species, mfem::DenseMatrix(3, mesh.GetNE())});
     variance_reduced_particle_moments_.number_density.insert({species, mfem::Vector(mesh.GetNE())});
     variance_reduced_particle_moments_.bulk_velocity.insert({species, mfem::DenseMatrix(3, mesh.GetNE())});
     variance_reduced_particle_moments_.temperature.insert({species, mfem::Vector(mesh.GetNE())});
+    variance_reduced_particle_moments_.temperature_bias_correction.insert({species, mfem::Vector(mesh.GetNE())});
+    variance_reduced_particle_moments_.relaxation_temperature.insert({species, mfem::Vector(mesh.GetNE())});
+    variance_reduced_particle_moments_.energy_conserving_temperature.insert({species, mfem::Vector(mesh.GetNE())});
+    variance_reduced_particle_moments_.energy_conserving_bulk_velocity.insert({species, mfem::DenseMatrix(3, mesh.GetNE())});
     sum_of_weights_.insert({species, mfem::Vector(mesh.GetNE())});
+    pdf_update_sums_.number_density.insert({species, mfem::Vector(mesh.GetNE())});
+    pdf_update_sums_.bulk_velocity.insert({species, mfem::DenseMatrix(3, mesh.GetNE())});
+    pdf_update_sums_.temperature.insert({species, mfem::Vector(mesh.GetNE())});
   }
 
   element_face_unit_normal_ = std::make_shared<ElementFaceContainer<mfem::Vector>>();
@@ -491,6 +503,8 @@ std::unordered_map<Species, mfem::Vector>& ParticleOperations::getTemperature(co
 
   for (auto & species_and_temperature : particle_moments_.temperature)
     species_and_temperature.second = 0.0;
+  for (auto & species_and_correction : particle_moments_.temperature_bias_correction)
+    species_and_correction.second = 1.0;
 
   if (sum_weights) this->sumParticleWeights_(particles);
   if (compute_bulk_velocity) this->getBulkVelocity(particles, false);
@@ -525,11 +539,22 @@ std::unordered_map<Species, mfem::Vector>& ParticleOperations::getTemperature(co
       particle_moments_.temperature.at(species)(elem_id) = 0.0;
     }
     else {
-      const double bias_corrected_weight = effective_num_particles / (effective_num_particles - 1.0) * particle.weight;
+      const double bias_correction = effective_num_particles / (effective_num_particles - 1.0);
+      particle_moments_.temperature_bias_correction.at(species)(elem_id) = bias_correction;
+      const double bias_corrected_weight = bias_correction * particle.weight;
       particle_moments_.temperature.at(species)(elem_id) +=
         norm_squared * bias_corrected_weight * particle.species.mass /
         (velocity_dims_ * constants::boltzmann_constant * sum_of_weights_in_element);
     }
+  }
+
+  for (auto& [species, relaxation_temperature] : particle_moments_.relaxation_temperature) {
+    const mfem::Vector& temperature = particle_moments_.temperature.at(species);
+    const mfem::Vector& bias_correction = particle_moments_.temperature_bias_correction.at(species);
+    for (int elem_id = 0; elem_id < relaxation_temperature.Size(); ++elem_id)
+      relaxation_temperature(elem_id) = temperature(elem_id) / bias_correction(elem_id);
+    particle_moments_.energy_conserving_temperature.at(species) = relaxation_temperature;
+    particle_moments_.energy_conserving_bulk_velocity.at(species) = particle_moments_.bulk_velocity.at(species);
   }
 
   return this->particle_moments_.temperature;
@@ -556,6 +581,14 @@ ParticleOperations::getVarianceReducedTemperature(
   for (auto& species_and_temperature : variance_reduced_particle_moments_.temperature) {
     const Species& species = species_and_temperature.first;
     species_and_temperature.second = particle_moments_.temperature.at(species);
+    variance_reduced_particle_moments_.temperature_bias_correction.at(species) =
+      particle_moments_.temperature_bias_correction.at(species);
+    variance_reduced_particle_moments_.relaxation_temperature.at(species) =
+      particle_moments_.relaxation_temperature.at(species);
+    variance_reduced_particle_moments_.energy_conserving_temperature.at(species) =
+      particle_moments_.relaxation_temperature.at(species);
+    variance_reduced_particle_moments_.energy_conserving_bulk_velocity.at(species) =
+      variance_reduced_particle_moments_.bulk_velocity.at(species);
   }
 
   /*
@@ -576,6 +609,14 @@ ParticleOperations::getVarianceReducedTemperature(
     species_and_sum.second = 0.0;
 
   std::unordered_map<Species, std::vector<bool>> variance_reduction_valid;
+  auto residual_weighted_fluctuation_sum = residual_weight_squared_sum;
+  auto weight_residual_product_sum = residual_weight_squared_sum;
+  auto weight_residual_product_velocity_sum = variance_reduced_particle_moments_.bulk_velocity;
+  for (auto& species_and_sum : weight_residual_product_velocity_sum)
+    species_and_sum.second = 0.0;
+  auto weight_residual_product_speed_squared_sum = residual_weight_squared_sum;
+  auto particle_weight_sum = residual_weight_squared_sum;
+  auto particle_weighted_speed_squared_sum = residual_weight_squared_sum;
 
   variance_reduction_valid.reserve(variance_reduced_particle_moments_.temperature.size());
 
@@ -654,6 +695,18 @@ ParticleOperations::getVarianceReducedTemperature(
 
     residual_weight_squared_sum.at(species)(elem_id) +=
       residual_weight * residual_weight;
+
+    residual_weighted_fluctuation_sum.at(species)(elem_id) +=
+      residual_weight * residual_weight * fluctuation_speed_squared;
+
+    const double speed_squared = particle_velocity * particle_velocity;
+    const double weight_residual_product = particle.weight * (1.0 - residual_multiplier) * residual_weight;
+    weight_residual_product_sum.at(species)(elem_id) += weight_residual_product;
+    for (int vel_dim = 0; vel_dim < velocity_dims_; ++vel_dim)
+      weight_residual_product_velocity_sum.at(species)(vel_dim, elem_id) += weight_residual_product * particle_velocity(vel_dim);
+    weight_residual_product_speed_squared_sum.at(species)(elem_id) += weight_residual_product * speed_squared;
+    particle_weight_sum.at(species)(elem_id) += particle.weight;
+    particle_weighted_speed_squared_sum.at(species)(elem_id) += particle.weight * speed_squared;
   }
 
   /*
@@ -715,6 +768,37 @@ ParticleOperations::getVarianceReducedTemperature(
         continue;
 
       variance_reduced_particle_moments_.temperature.at(species)(elem_id) = corrected_temperature;
+      variance_reduced_particle_moments_.temperature_bias_correction.at(species)(elem_id) = bias_factor;
+
+      const double bulk_velocity_variance_temperature =
+        m_over_dkb * residual_weighted_fluctuation_sum.at(species)(elem_id) / bias_denominator;
+      variance_reduced_particle_moments_.relaxation_temperature.at(species)(elem_id) =
+        corrected_temperature - bulk_velocity_variance_temperature;
+
+      double bulk_speed_squared = 0.0;
+      for (int vel_dim = 0; vel_dim < velocity_dims_; ++vel_dim)
+        bulk_speed_squared += std::pow(variance_reduced_particle_moments_.bulk_velocity.at(species)(vel_dim, elem_id), 2);
+      const double specific_energy = bulk_speed_squared + temperature / m_over_dkb;
+      const double energy_bias =
+        weight_residual_product_speed_squared_sum.at(species)(elem_id) -
+        specific_energy * weight_residual_product_sum.at(species)(elem_id);
+      const double particle_mass = particle_weight_sum.at(species)(elem_id);
+      if (particle_mass > 0.0) {
+        const double mass_product = corrected_mass * particle_mass;
+        const double corrected_specific_energy = specific_energy - energy_bias / mass_product;
+        double corrected_bulk_speed_squared = 0.0;
+        for (int vel_dim = 0; vel_dim < velocity_dims_; ++vel_dim) {
+          const double bulk_velocity_component = variance_reduced_particle_moments_.bulk_velocity.at(species)(vel_dim, elem_id);
+          const double momentum_bias =
+            weight_residual_product_velocity_sum.at(species)(vel_dim, elem_id) -
+            bulk_velocity_component * weight_residual_product_sum.at(species)(elem_id);
+          const double corrected_component = bulk_velocity_component - momentum_bias / mass_product;
+          variance_reduced_particle_moments_.energy_conserving_bulk_velocity.at(species)(vel_dim, elem_id) = corrected_component;
+          corrected_bulk_speed_squared += corrected_component * corrected_component;
+        }
+        variance_reduced_particle_moments_.energy_conserving_temperature.at(species)(elem_id) =
+          m_over_dkb * (corrected_specific_energy - corrected_bulk_speed_squared);
+      }
     }
   }
 
@@ -903,6 +987,43 @@ mfem::Vector ParticleOperations::assembleControlVariateCharge_(
   return low_fidelity_operations->assembleChargePerSpecies(
     *low_fidelity_state,
     low_fidelity_state->getSpeciesIndex(species)).getIntegratedCharge();
+}
+
+void ParticleOperations::accumulateForPDFUpdate(const ParticleContainer& particles) {
+  const ParticleMoments& moments = getParticleMoments(particles);
+  for (auto& [species, n_sum] : pdf_update_sums_.number_density) {
+    if (pdf_update_accumulated_steps_ == 0) {
+      n_sum = 0.0;
+      pdf_update_sums_.bulk_velocity.at(species) = 0.0;
+      pdf_update_sums_.temperature.at(species) = 0.0;
+    }
+    n_sum.Add(1.0, moments.number_density.at(species));
+    pdf_update_sums_.bulk_velocity.at(species).Add(1.0, moments.bulk_velocity.at(species));
+    pdf_update_sums_.temperature.at(species).Add(1.0, moments.temperature.at(species));
+  }
+  ++pdf_update_accumulated_steps_;
+}
+
+void ParticleOperations::reestimateDistributionFunctionValues(ParticleContainer& particles) {
+  if (pdf_update_accumulated_steps_ == 0) return;
+  const double inv_steps = 1.0 / pdf_update_accumulated_steps_;
+  for (Particle& particle : particles) {
+    if (!particle.is_alive) continue;
+    const int elem = particle.element;
+    const double n = pdf_update_sums_.number_density.at(particle.species)(elem) * inv_steps;
+    const double T = pdf_update_sums_.temperature.at(particle.species)(elem) * inv_steps;
+    if (!(std::isfinite(n) && n > 0.0 && std::isfinite(T) && T > 0.0)) continue;
+    mfem::Vector primitive_state{
+      n,
+      pdf_update_sums_.bulk_velocity.at(particle.species)(0, elem) * inv_steps,
+      pdf_update_sums_.bulk_velocity.at(particle.species)(1, elem) * inv_steps,
+      pdf_update_sums_.bulk_velocity.at(particle.species)(2, elem) * inv_steps,
+      T};
+    const mfem::Vector particle_velocity(particle.velocity.GetData(), velocity_dims_);
+    particle.particle_distribution_function_value =
+      euler::evaluateMaxwellian(primitive_state, particle_velocity, particle.species);
+  }
+  pdf_update_accumulated_steps_ = 0;
 }
 
 } // namespace mfpic

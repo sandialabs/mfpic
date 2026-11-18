@@ -5,6 +5,8 @@ add_library(libmfpic
   BuildCollisionOperationsFromYaml.cpp
   BuildElectrostaticFieldOperationsFromYaml.cpp
   BuildOutputParametersFromYaml.cpp
+  BuildPDFUpdateParametersFromYaml.cpp
+  EnergyLedger.cpp
   BuildParticleBoundariesFromYaml.cpp
   BuildParticleBoundarySourcesFromYAML.cpp
   BuildSpeciesMapFromYaml.cpp

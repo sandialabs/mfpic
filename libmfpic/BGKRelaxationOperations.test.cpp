@@ -171,4 +171,76 @@ TEST(BGKRelaxationOperations, MomentsAreApproximatelyConservedWhenAllParticlesRe
   EXPECT_NEAR(relaxed_temperature, unrelaxed_temperature, relative_tolerance*unrelaxed_temperature);
 }
 
+double totalKineticEnergy(const ParticleContainer& particles) {
+  double total = 0.0;
+  for (const Particle& particle : particles) total += 0.5 * particle.weight * particle.species.mass * (particle.velocity * particle.velocity);
+  return total;
+}
+
+ParticleContainer makeParticlesWithVaryingWeightsInBothElements(int num_particles) {
+  ParticleContainer particles;
+  for (int iparticle = 0; iparticle < num_particles; iparticle++) {
+    const int element = iparticle % num_elems;
+    particles.addParticle(Particle{
+      .position=mfem::Vector{(element + 0.5) * domain_length / num_elems, 0.0, 0.0},
+      .velocity=mfem::Vector{1.0 * iparticle, -2.0 * iparticle + 50.0, 3.0 * (iparticle % 7)},
+      .element=element,
+      .species=default_species,
+      .weight=1.0 + 0.1 * (iparticle % 5)});
+  }
+  return particles;
+}
+
+TEST(BGKRelaxationOperations, LoneRelaxingParticleInElementKeepsItsVelocity) {
+  Discretization discretization(&mesh, order);
+  ParticleOperations particle_operations(
+    discretization,
+    empty_particle_boundary_factory_list,
+    default_reflecting_particle_boundary_factory,
+    one_species
+  );
+  ParticleContainer unrelaxed_particles;
+  unrelaxed_particles.addParticle(Particle{.velocity=mfem::Vector{100, 200, 300}, .element=0, .species=default_species, .weight=1.0});
+  unrelaxed_particles.addParticle(Particle{.velocity=mfem::Vector{-50, 20, 10}, .element=1, .species=default_species, .weight=1.0});
+  unrelaxed_particles.addParticle(Particle{.velocity=mfem::Vector{70, 80, -90}, .element=1, .species=default_species, .weight=2.0});
+
+  ParticleContainer relaxed_particles = unrelaxed_particles;
+  constexpr double collision_frequency = 1.0;
+  BGKRelaxationOperations relaxer(collision_frequency, default_species);
+  constexpr double dt = 1.0e15 / collision_frequency;
+  RandomNumberGenerator generator;
+  relaxer.performCollisions(dt, generator, relaxed_particles, particle_operations);
+
+  const Particle& unrelaxed_lone_particle = *unrelaxed_particles.begin();
+  const Particle& relaxed_lone_particle = *relaxed_particles.begin();
+  for (int idim = 0; idim < 3; idim++) {
+    EXPECT_THAT(relaxed_lone_particle.velocity[idim], DoubleEq(unrelaxed_lone_particle.velocity[idim]));
+  }
+}
+
+TEST(BGKRelaxationOperations, EnergyIsConservedOnAverageWithoutExactConservation) {
+  Discretization discretization(&mesh, order);
+  ParticleOperations particle_operations(
+    discretization,
+    empty_particle_boundary_factory_list,
+    default_reflecting_particle_boundary_factory,
+    one_species
+  );
+  const ParticleContainer unrelaxed_particles = makeParticlesWithVaryingWeightsInBothElements(2000);
+  const double unrelaxed_energy = totalKineticEnergy(unrelaxed_particles);
+
+  constexpr double collision_frequency = 1.0;
+  BGKRelaxationOperations relaxer(collision_frequency, default_species);
+  constexpr double dt = 1.0e15 / collision_frequency;
+  constexpr int num_trials = 4000;
+  double mean_relative_energy_change = 0.0;
+  for (int trial = 0; trial < num_trials; trial++) {
+    ParticleContainer relaxed_particles = unrelaxed_particles;
+    RandomNumberGenerator generator(trial);
+    relaxer.performCollisions(dt, generator, relaxed_particles, particle_operations);
+    mean_relative_energy_change += (totalKineticEnergy(relaxed_particles) - unrelaxed_energy) / unrelaxed_energy / num_trials;
+  }
+  EXPECT_NEAR(mean_relative_energy_change, 0.0, 1.0e-2);
+}
+
 } // namespace

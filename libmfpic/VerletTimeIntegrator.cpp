@@ -6,6 +6,7 @@
 #include <libmfpic/LowFidelityOperations.hpp>
 #include <libmfpic/ParticleContainer.hpp>
 #include <libmfpic/ParticleOperations.hpp>
+#include <libmfpic/EnergyLedger.hpp>
 #include <libmfpic/VerletTimeIntegrator.hpp>
 
 namespace mfpic {
@@ -34,9 +35,12 @@ void VerletTimeIntegrator::advanceTimestep(
     field_operations.fieldSolve(low_fidelity_field_states[i], low_fidelity_charge);
   }
 
+  recordEnergyLedger("start", particle_container);
   particle_container = particle_operations.accelerate(dt/2, particle_container, particle_field_state);
+  recordEnergyLedger("kick1", particle_container);
   particle_container = particle_operations.move(dt, particle_container);
   particle_container.cleanOutDeadParticles();
+  recordEnergyLedger("move", particle_container);
 
   const VarianceReductionParameters variance_reduction_parameters = particle_operations.getVarianceReductionParameters();
   if ((variance_reduction_parameters.strategy != VarianceReductionParameters::Strategy::None) &&
@@ -61,11 +65,12 @@ void VerletTimeIntegrator::advanceTimestep(
   }
 
   particle_container = particle_operations.accelerate(dt/2, particle_container, particle_field_state);
+  recordEnergyLedger("kick2", particle_container);
 
   for (const std::unique_ptr<CollisionOperations>& collision_operator : collision_operations) {
     collision_operator->performCollisions(dt, generator, particle_container, particle_operations, low_fidelity_states[0], *low_fidelity_operations[0]);
-    // collision_operator->performCollisions(dt, generator, particle_container, particle_operations);
   }
+  recordEnergyLedger("collide", particle_container);
 }
 
 } // namespace mfpic

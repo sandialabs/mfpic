@@ -783,3 +783,26 @@ Output:
     Particle Dump Filename: my_particles.h5part
     Mesh Output Folder: MyMeshOutputs
 ```
+
+## PDF Update
+
+Periodically re-estimates each particle's stored distribution function value
+`f_HF` from the current particle moments (number density, bulk velocity,
+temperature computed directly from the particles in each cell).  This is used
+to keep the variance-reduction control variate fresh as the distribution
+evolves, without relying on the low-fidelity fluid model.
+
+If this block is absent, `f_HF` values are only updated during BGK collisions
+(or at particle creation/injection).
+
+### Stride
+
+How many time steps to take between re-estimation passes.  Default is `1`
+(every step).  Larger values allow studying how quickly `f_HF` goes stale.
+
+#### Example
+
+```yaml
+PDF Update:
+  Stride: 5
+```
