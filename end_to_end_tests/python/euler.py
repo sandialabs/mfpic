@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.constants import Boltzmann as boltzmann_constant
+from constants import boltzmann_constant
 
 
 def kinetic_energy_density(mass_density, momentum_density):
